@@ -17,6 +17,6 @@ makedocs(
 )
 
 deploydocs(
-   repo = "github.com/SciML/SciMLBase.jl.git";
+   repo = "github.com/SciML/SciMLOperators.jl.git";
    push_preview = true
 )
