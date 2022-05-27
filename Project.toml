@@ -1,0 +1,4 @@
+name = "SciMLOperators"
+uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
+authors = ["xtalax <alex.lemony@gmail.com>"]
+version = "0.1.0"
