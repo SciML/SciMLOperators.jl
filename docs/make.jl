@@ -1,24 +1,17 @@
-using Documenter, SciMLBase
+using Documenter, SciMLOperators
 
 makedocs(
-    sitename="SciMLBase.jl",
-    authors="Chris Rackauckas",
-    modules=[SciMLBase],
+    sitename="SciMLOperators.jl",
+    authors="Chris Rackauckas, Alex Jones",
+    modules=[SciMLOperators],
     clean=true,doctest=false,
     format = Documenter.HTML(analytics = "UA-90474609-3",
                              assets = ["assets/favicon.ico"],
                              canonical="https://scimlbase.sciml.ai/stable/"),
     pages=[
         "Home" => "index.md",
-        "Fundamentals" => Any[
-            "fundamentals/Problems.md",
-            "fundamentals/PDE.md",
-            "fundamentals/SciMLFunctions.md",
-            "fundamentals/Differentiation.md",
-            "fundamentals/FAQ.md"
-        ],
-        "Interfaces" => Any[
-            "interfaces/DEAlgorithm.md",
+        "Operators" => Any[
+            "operators/matrix_free_operators.md",
         ]
     ]
 )
