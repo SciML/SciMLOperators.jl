@@ -17,6 +17,8 @@ import Lazy: @forward
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
 
+using DocStringExtensions
+
 # Misc
 
 """
