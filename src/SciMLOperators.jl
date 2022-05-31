@@ -1,6 +1,15 @@
 module SciMLOperators
 
+using LinearAlgebra
+using StaticArrays
+using SparseArrays
+using ArrayInterfaceCore
+using DiffEqBase
+
+using DocStringExtensions
+
 # Misc
+
 """
 $(TYPEDEF)
 """
@@ -20,6 +29,7 @@ abstract type AbstractDiffEqLinearOperator{T} <: AbstractDiffEqOperator{T} end
 $(TYPEDEF)
 """
 abstract type AbstractDiffEqCompositeOperator{T} <: AbstractDiffEqLinearOperator{T} end
+
 """
 $(TYPEDEF)
 """

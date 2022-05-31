@@ -15,6 +15,5 @@ const is_TRAVIS = haskey(ENV, "TRAVIS")
         @time @safetestset "DiffEqOperator tests" begin
             include("operators/diffeqoperator.jl")
         end
-
     end
 end
