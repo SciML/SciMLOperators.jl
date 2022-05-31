@@ -3,6 +3,8 @@ DEFAULT_UPDATE_FUNC(A,u,p,t) = A # no-op used by the basic operators
 # isconstant(::AbstractDiffEqLinearOperator) = true # already defined in DiffEqBase
 update_coefficients!(L::AbstractDiffEqLinearOperator,u,p,t) = L
 
+Base.size(A::AbstractDiffEqOperator{<:Number}, m::Integer) = d <= 2 ? size(A)[d] : 1
+
 # Routines that use the AbstractMatrix representation
 Base.convert(::Type{AbstractArray}, L::AbstractDiffEqLinearOperator) = convert(AbstractMatrix, L)
 Base.size(L::AbstractDiffEqLinearOperator, args...) = size(convert(AbstractMatrix,L), args...)
