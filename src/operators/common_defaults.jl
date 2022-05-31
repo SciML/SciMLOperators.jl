@@ -6,7 +6,6 @@ update_coefficients!(L::AbstractDiffEqLinearOperator,u,p,t) = L
 # Routines that use the AbstractMatrix representation
 Base.convert(::Type{AbstractArray}, L::AbstractDiffEqLinearOperator) = convert(AbstractMatrix, L)
 Base.size(A::AbstractDiffEqOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
-#Base.size(L::AbstractDiffEqLinearOperator, args...) = size(convert(AbstractMatrix,L), args...)
 LinearAlgebra.opnorm(L::AbstractDiffEqLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 Base.@propagate_inbounds Base.getindex(L::AbstractDiffEqLinearOperator, I::Vararg{Any,N}) where {N} = convert(AbstractMatrix,L)[I...]
 Base.getindex(L::AbstractDiffEqLinearOperator, I::Vararg{Int, N}) where {N} =

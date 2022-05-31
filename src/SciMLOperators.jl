@@ -2,13 +2,13 @@ module SciMLOperators
 
 using LinearAlgebra
 using DiffEqBase
-import StaticArrays: StaticArrayStyle
-import SparseArrays: sparse
-import ArrayInterfaceCore: issingular
+import StaticArrays
+import SparseArrays
+import ArrayInterfaceCore
 
-# caching
-import UnPack: @unpack
-import Setfield: @set!
+## caching
+#import UnPack: @unpack
+#import Setfield: @set!
 
 # overloads
 import Lazy: @forward

@@ -18,7 +18,7 @@ update_coefficients(L,u,p,t) = L
 # Traits
 isconstant(::AbstractSciMLOperator) = false
 islinear(::AbstractSciMLOperator) = false
-issquare(::AbstratSciMLOperator) = false
+issquare(::AbstractSciMLOperator) = false
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)

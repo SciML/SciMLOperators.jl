@@ -5,16 +5,20 @@ struct DiffEqIdentity{N} <: AbstractDiffEqLinearOperator{Bool} end
 
 # constructors
 DiffEqIdentity(u::AbstractVector) = DiffEqIdentity{length(u)}()
-function Base.one(A::AbstractDiffEqOperator{<:Number})
+
+function Base.one(A::AbstractDiffEqOperator)
     @assert issquare(A)
     N = size(A, 1)
     DiffEqIdentity{N}()
 end
-function Base.one(A::Type{AbstractOperator{<:Number}})
+
+function Base.one(A::Type{AbstractDiffEqOperator})
     @assert issquare(A)
     N = size(A, 1)
     DiffEqIdentity{N}()
 end
+
+Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = LinearAlgebra.Diagonal(ones(Bool, N))
 
 # traits
 Base.size(::DiffEqIdentity{N}) where {N} = (N, N)
@@ -23,12 +27,11 @@ LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true # TODO - o
 for pred in (:isreal, :issymmetric, :ishermitian, :isposdef)
   @eval LinearAlgebra.$pred(::DiffEqIdentity) = true
 end
-
 issquare(::DiffEqIdentity) = true
-has_ldiv(::IdentityOp) = true
-has_ldiv!(::IdentityOp) = true
-
-Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = LinearAlgebra.Diagonal(ones(Bool, N))
+has_adjoint(::DiffEqIdentity) = true
+has_mul!(::DiffEqIdentity) = true
+has_ldiv(::DiffEqIdentity) = true
+has_ldiv!(::DiffEqIdentity) = true
 
 # opeator application
 for op in (:*, :/, :\)
@@ -118,6 +121,11 @@ struct DiffEqArrayOperator{T,AType<:AbstractMatrix{T},F} <: AbstractDiffEqLinear
     new{eltype(A),AType,typeof(update_func)}(A, update_func)
 end
 
+@forward DiffEqArrayOperator.A (
+                                issquare, SciMLBase.has_ldiv, SciMLBase.has_ldiv!
+                               )
+
+Base.size(A::DiffEqArrayOperator) = size(A.A)
 has_adjoint(::DiffEqArrayOperator) = true
 update_coefficients!(L::DiffEqArrayOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
 isconstant(L::DiffEqArrayOperator) = L.update_func == DEFAULT_UPDATE_FUNC
