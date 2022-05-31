@@ -3,9 +3,9 @@ DEFAULT_UPDATE_FUNC(A,u,p,t) = A # no-op used by the basic operators
 # isconstant(::AbstractDiffEqLinearOperator) = true # already defined in DiffEqBase
 update_coefficients!(L::AbstractDiffEqLinearOperator,u,p,t) = L
 
-# Routines that use the AbstractMatrix representation
 Base.size(A::AbstractDiffEqOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 
+# Routines that use the AbstractMatrix representation
 Base.convert(::Type{AbstractArray}, L::AbstractDiffEqLinearOperator) = convert(AbstractMatrix, L)
 LinearAlgebra.opnorm(L::AbstractDiffEqLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 Base.@propagate_inbounds Base.getindex(L::AbstractDiffEqLinearOperator, I::Vararg{Any,N}) where {N} = convert(AbstractMatrix,L)[I...]
