@@ -60,8 +60,8 @@ export DiffEqScalar, DiffEqArrayOperator, DiffEqIdentity, DiffEqNullOperator
 
 export MatrixFreeOperator
 
-
 export update_coefficients!, update_coefficients,
-    has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
+       issquare, isconstant, islinear,
+       has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
 
 end # module

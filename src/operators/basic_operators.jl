@@ -17,7 +17,7 @@ Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = Diagonal(o
 # traits
 Base.size(::DiffEqIdentity{N}) where {N} = (N, N)
 Base.adjoint(A::DiffEqIdentity) = A
-LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true # TODO - opnorm(Bool.(Matrix(I,4,4)),Inf) isa Float64
+LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true
 for pred in (
              :isreal, :issymmetric, :ishermitian, :isposdef,
             )
@@ -72,7 +72,7 @@ Base.convert(::Type{AbstractMatrix}, ::DiffEqNullOperator{N}) where {N} = Diagon
 # traits
 Base.size(::DiffEqNullOperator{N}) where {N} = (N, N)
 Base.adjoint(A::DiffEqNullOperator) = A
-LinearAlgebra.opnorm(::DiffEqNullOperator{N}, p::Real=2) where {N} = false # TODO - opnorm(Bool.(Matrix(I,4,4)),Inf) isa Float64
+LinearAlgebra.opnorm(::DiffEqNullOperator{N}, p::Real=2) where {N} = false
 for pred in (
              :isreal, :issymmetric, :ishermitian,
             )
@@ -121,6 +121,7 @@ end
 Base.convert(::Type{Number}, α::DiffEqScalar) = α.val
 Base.convert(::Type{DiffEqScalar}, α::Number) = DiffEqScalar(α)
 Base.size(::DiffEqScalar) = ()
+Base.
 update_coefficients!(α::DiffEqScalar,u,p,t) = (α.val = α.update_func(α.val,u,p,t); α)
 isconstant(α::DiffEqScalar) = α.update_func == DEFAULT_UPDATE_FUNC
 
