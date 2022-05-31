@@ -8,9 +8,9 @@ import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
 
-## caching
-#import UnPack: @unpack
-#import Setfield: @set!
+# caching
+import UnPack: @unpack
+import Setfield: @set!
 
 # overloads
 import Lazy: @forward
