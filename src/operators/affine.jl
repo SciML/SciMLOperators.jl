@@ -1,18 +1,27 @@
 #
+struct ScaledDiffEqOperator{T,op}
+    λ::Tλ
+    op::Top
 
-struct ScaledDiffEqOperator
-    λ
-    op
+    function ScaledDiffEqOperator(λ, op::AbstractDiffEqOperator{T}) where{T}
+        T = promote_type(eltype(λ), T)
+        new{T,typeof(λ),typeof(op)}(λ, op)
 end
+
+Base.size(L::ScaledDiffEqOperator) = size(L.op)
+Base.adjoint(L::ScaledDiffEqOperator) = ScaledDiffEqOperator(L.λ', L.op')
+
 """
 Lazy affine operator combinations αA + βB
 
 v = (αAu + βB)u
 """
 struct AffineDiffEqOperator{T,
-                            Ta <: AbstractDiffEqOperator,
-                            Tb <: AbstractDiffEqOperator,
-                            Tα,Tβ,Tc
+                            Ta<:AbstractDiffEqOperator,
+                            Tb<:AbstractDiffEqOperator,
+                            Tα,
+                            Tβ,
+                            Tc,
                            } <: AbstractDiffEqOperator{T}
     A::Ta
     B::Tb
@@ -22,19 +31,38 @@ struct AffineDiffEqOperator{T,
     cache::Tc
     isunset::Bool
 
-    function AffineDiffEqOperator(A::AbstractOperator{Ta}, B::AbstractOperator{Tb}, α, β,
-                      cache = nothing, isunset = cache === nothing) where{Ta,Tb}
+    function AffineDiffEqOperator(A::AbstractDiffEqOperator{Ta},
+                                  B::AbstractDiffEqOperator{Tb}, α, β;
+                                  cache = nothing,
+                                  isunset = cache === nothing
+                                 ) where{Ta,Tb}
         @assert size(A) == size(B)
-        #TODO - update coefficients of A, B separately
-        T = promote_type(Ta,Tb)
-        new{T,typeof(A),typeof(B),typeof(α),typeof(β),typeof(cache)}(A, B, α, β, cache, isunset)
+        T = promote_type(Ta,Tb, eltype(α), eltype(β))
+
+        new{T,
+            typeof(A),
+            typeof(B),
+            typeof(α),
+            typeof(β),
+            typeof(cache),
+            typeof(update_func)
+           }(
+             A, B, α, β, cache, isunset, update_func,
+            )
     end
+end
+
+function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
+    update_coefficients!(L.A, u, p, t)
+    update_coefficients!(L.B, u, p, t)
+    update_coefficients!(L.α, u, p, t)
+    update_coefficients!(L.β, u, p, t)
 end
 
 # traits
 Base.size(A::AffineDiffEqOperator) = size(A.A)
 function Base.adjoint(A::AffineDiffEqOperator)
-    if issquare(A)
+    if issquare(A) & !(A.isunset)
         AffineDiffEqOperator(A.A',A.B',A.α', A.β', A.cache, A.isunset)
     else
         AffineDiffEqOperator(A.A',A.B',A.α', A.β')
