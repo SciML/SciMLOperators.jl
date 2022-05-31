@@ -3,27 +3,55 @@
 #"""
 struct DiffEqIdentity{N} <: AbstractDiffEqLinearOperator{Bool} end
 
-DiffEqIdentity(u) = DiffEqIdentity{eltype(u),length(u)}()
-Base.size(::DiffEqIdentity{N}) where {N} = (N,N)
-Base.size(::DiffEqIdentity{N}, m::Integer) where {N} = (m == 1 || m == 2) ? N : 1
-LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true
-Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = LinearAlgebra.Diagonal(ones(N))
-
-for op in (:*, :/, :\)
-  @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVecOrMat) where {N} = $op(I, x)
-  @eval Base.$op(::DiffEqIdentity{N}, x::AbstractArray) where {N} = $op(I, x)
-  @eval Base.$op(x::AbstractVecOrMat, ::DiffEqIdentity{N}) where {N} = $op(x, I)
-  @eval Base.$op(x::AbstractArray, ::DiffEqIdentity{N}) where {N} = $op(x, I)
-
+# constructors
+DiffEqIdentity(u::AbstractVector) = DiffEqIdentity{length(u)}()
+function Base.one(A::AbstractDiffEqOperator{<:Number})
+    @assert issquare(A)
+    N = size(A, 1)
+    DiffEqIdentity{N}()
 end
-LinearAlgebra.mul!(Y::AbstractVecOrMat, ::DiffEqIdentity, B::AbstractVecOrMat) = Y .= B
-LinearAlgebra.ldiv!(Y::AbstractVecOrMat, ::DiffEqIdentity, B::AbstractVecOrMat) = Y .= B
+function Base.one(A::Type{AbstractOperator{<:Number}})
+    @assert issquare(A)
+    N = size(A, 1)
+    DiffEqIdentity{N}()
+end
 
-LinearAlgebra.mul!(Y::AbstractArray, ::DiffEqIdentity, B::AbstractArray) = Y .= B
-LinearAlgebra.ldiv!(Y::AbstractArray, ::DiffEqIdentity, B::AbstractArray) = Y .= B
-
+# traits
+Base.size(::DiffEqIdentity{N}) where {N} = (N, N)
+Base.adjoint(A::DiffEqIdentity) = A
+LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true # TODO - opnorm(Bool.(Matrix(I, 4, 4)), Inf) isa Float64
 for pred in (:isreal, :issymmetric, :ishermitian, :isposdef)
   @eval LinearAlgebra.$pred(::DiffEqIdentity) = true
+end
+
+issquare(::DiffEqIdentity) = true
+has_ldiv(::IdentityOp) = true
+has_ldiv!(::IdentityOp) = true
+
+Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = LinearAlgebra.Diagonal(ones(Bool, N))
+
+# opeator application
+for op in (:*, :/, :\)
+    @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVecOrMat) where {N} = (@assert length(x) == N; $op(I, x))
+    @eval Base.$op(::DiffEqIdentity{N}, x::AbstractArray) where {N} = (@assert length(x) == N; $op(I, x))
+    @eval Base.$op(x::AbstractVecOrMat, ::DiffEqIdentity{N}) where {N} = (@assert length(x) == N; $op(x, I))
+    @eval Base.$op(x::AbstractArray, ::DiffEqIdentity{N}) where {N} = (@assert length(x) == N; $op(x, I))
+end
+
+function LinearAlgebra.mul!(Y::AbstractVecOrMat, ::DiffEqIdentity{N}, B::AbstractVecOrMat) where{N}
+    @assert size(B, 1) == N
+    copy!(Y, B)
+end
+
+function LinearAlgebra.ldiv!(Y::AbstractVecOrMat, ::DiffEqIdentity{N}, B::AbstractVecOrMat) where{N}
+    @assert size(B, 1) == N
+    copy!(Y, B)
+end
+
+# operator fusion
+for op in (:*, :∘)
+  @eval Base.$op(::DiffEqIdentity{N}, A::AbstractSciMLOperator) where {N} = A
+  @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqIdentity{N}) where {N} = A
 end
 
 #"""
