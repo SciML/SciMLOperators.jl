@@ -1,28 +1,35 @@
 module SciMLOperators
 
+using LinearAlgebra
+using StaticArrays
+using SparseArrays
+using ArrayInterfaceCore
+using DiffEqBase
+
 # Misc
-"""
-$(TYPEDEF)
-"""
+
+#"""
+#$(TYPEDEF)
+#"""
 abstract type AbstractSciMLOperator{T} end
 
-"""
-$(TYPEDEF)
-"""
+#"""
+#$(TYPEDEF)
+#"""
 abstract type AbstractDiffEqOperator{T} <: AbstractSciMLOperator{T} end
 
-"""
-$(TYPEDEF)
-"""
+#"""
+#$(TYPEDEF)
+#"""
 abstract type AbstractDiffEqLinearOperator{T} <: AbstractDiffEqOperator{T} end
 
-"""
-$(TYPEDEF)
-"""
+#"""
+#$(TYPEDEF)
+#"""
 abstract type AbstractDiffEqCompositeOperator{T} <: AbstractDiffEqLinearOperator{T} end
-"""
-$(TYPEDEF)
-"""
+#"""
+#$(TYPEDEF)
+#"""
 abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} end
 
 include("interface.jl")
