@@ -15,7 +15,7 @@ import ArrayInterfaceCore
 # overloads
 import Lazy: @forward
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==
-import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
+import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
 
 # Misc
 

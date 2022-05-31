@@ -222,6 +222,20 @@ function Base.:*(A::DiffEqArrayOperator, B::DiffEqArrayOperator)
     DiffEqArrayOperator(M; update_func=update_func)
 end
 
+for op in (
+           :*, :/, :\,
+          )
+    @eval function Base.$op(L::DiffEqArrayOperator, x::Number)
+        M = $op(L.A, x)
+        update_func = L.update_func #TODO fix
+        DiffEqArrayOperator(M; update_func=update_func)
+    end
+    @eval function Base.$op(x::Number, L::DiffEqArrayOperator)
+        M = $op(L.A, x)
+        update_func = L.update_func #TODO fix
+        DiffEqArrayOperator(M; update_func=update_func)
+    end
+end
 """
     FactorizedDiffEqArrayOperator(F)
 
@@ -240,9 +254,24 @@ struct FactorizedDiffEqArrayOperator{T<:Number,FType<:Union{
 end
 
 # constructor
-function LinearAlgebra.factorize(L::DiffEqArrayOperator)
-    fact = factorize(L.A)
+function LinearAlgebra.factorize(L::AbstractDiffEqLinearOperator)
+    fact = factorize(convert(AbstractMatrix, L))
     FactorizedDiffEqArrayOperator(fact)
+end
+
+for fact in (
+             :lu, :lu!,
+             :qr, :qr!,
+             :cholesky, :cholesky!,
+             :ldlt, :ldlt!,
+             :bunchkaufman, :bunchkaufman!,
+             :lq, :lq!,
+             :svd, :svd!,
+            )
+    @eval LinearAlgebra.$fact(L::AbstractDiffEqLinearOperator, args...) =
+        FactorizedDiffEqArrayOperator($fact(convert(AbstractMatrix, L), args...))
+    @eval LinearAlgebra.$fact(L::AbstractDiffEqLinearOperator; kwargs...) =
+        FactorizedDiffEqArrayOperator($fact(convert(AbstractMatrix, L); kwargs...))
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::FactorizedDiffEqArrayOperator)

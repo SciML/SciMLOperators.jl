@@ -4,8 +4,9 @@ DEFAULT_UPDATE_FUNC(A,u,p,t) = A # no-op used by the basic operators
 update_coefficients!(L::AbstractDiffEqLinearOperator,u,p,t) = L
 
 # Routines that use the AbstractMatrix representation
-Base.convert(::Type{AbstractArray}, L::AbstractDiffEqLinearOperator) = convert(AbstractMatrix, L)
 Base.size(A::AbstractDiffEqOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
+
+Base.convert(::Type{AbstractArray}, L::AbstractDiffEqLinearOperator) = convert(AbstractMatrix, L)
 LinearAlgebra.opnorm(L::AbstractDiffEqLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 Base.@propagate_inbounds Base.getindex(L::AbstractDiffEqLinearOperator, I::Vararg{Any,N}) where {N} = convert(AbstractMatrix,L)[I...]
 Base.getindex(L::AbstractDiffEqLinearOperator, I::Vararg{Int, N}) where {N} =
@@ -13,27 +14,16 @@ Base.getindex(L::AbstractDiffEqLinearOperator, I::Vararg{Int, N}) where {N} =
 for op in (:*, :/, :\)
     @eval Base.$op(L::AbstractDiffEqLinearOperator, x::AbstractArray) = $op(convert(AbstractMatrix,L), x)
     @eval Base.$op(x::AbstractArray, L::AbstractDiffEqLinearOperator) = $op(x, convert(AbstractMatrix,L))
-    @eval Base.$op(L::DiffEqArrayOperator, x::Number) = $op(convert(AbstractMatrix,L), x)
-    @eval Base.$op(x::Number, L::DiffEqArrayOperator) = $op(x, convert(AbstractMatrix,L))
 end
 LinearAlgebra.mul!(Y::AbstractArray, L::AbstractDiffEqLinearOperator, B::AbstractArray) =
   mul!(Y, convert(AbstractMatrix,L), B)
 LinearAlgebra.mul!(Y::AbstractArray, L::AbstractDiffEqLinearOperator, B::AbstractArray, α::Number, β::Number) =
   mul!(Y, convert(AbstractMatrix,L), B, α, β)
 for pred in (:isreal, :issymmetric, :ishermitian, :isposdef)
-  @eval LinearAlgebra.$pred(L::AbstractDiffEqLinearOperator) = $pred(convert(AbstractArray, L))
+    @eval LinearAlgebra.$pred(L::AbstractDiffEqLinearOperator) = $pred(convert(AbstractArray, L))
 end
 for op in (:sum,:prod)
   @eval LinearAlgebra.$op(L::AbstractDiffEqLinearOperator; kwargs...) = $op(convert(AbstractArray, L); kwargs...)
-end
-LinearAlgebra.factorize(L::AbstractDiffEqLinearOperator) =
-  FactorizedDiffEqArrayOperator(factorize(convert(AbstractMatrix, L)))
-for fact in (:lu, :lu!, :qr, :qr!, :cholesky, :cholesky!, :ldlt, :ldlt!,
-  :bunchkaufman, :bunchkaufman!, :lq, :lq!, :svd, :svd!)
-  @eval LinearAlgebra.$fact(L::AbstractDiffEqLinearOperator, args...) =
-    FactorizedDiffEqArrayOperator($fact(convert(AbstractMatrix, L), args...))
-  @eval LinearAlgebra.$fact(L::AbstractDiffEqLinearOperator; kwargs...) =
-    FactorizedDiffEqArrayOperator($fact(convert(AbstractMatrix, L); kwargs...))
 end
 
 # Routines that use the full matrix representation
