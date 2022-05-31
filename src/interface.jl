@@ -18,6 +18,7 @@ update_coefficients(L,u,p,t) = L
 # Traits
 isconstant(::AbstractSciMLOperator) = false
 islinear(::AbstractSciMLOperator) = false
+issquare(::AbstratSciMLOperator) = false
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
@@ -57,6 +58,10 @@ has_ldiv(::AbstractMatrix) = true
 has_ldiv!(::AbstractMatrix) = false
 has_ldiv!(::Union{Diagonal, Factorization}) = true
 
+issquare(::UniformScaling) = true
+issquare(A) = size(A,1) === size(A,2)
+issquare(A...) = @. (&)(issquare(A)...)
+#
 # Other ones from LinearMaps.jl
 # Generic fallbacks
 LinearAlgebra.exp(L::AbstractDiffEqLinearOperator,t) = exp(t*L)
