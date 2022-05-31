@@ -1,6 +1,6 @@
-#"""
-#$(TYPEDEF)
-#"""
+"""
+$(TYPEDEF)
+"""
 struct DiffEqIdentity{N} <: AbstractDiffEqLinearOperator{Bool} end
 
 # constructors

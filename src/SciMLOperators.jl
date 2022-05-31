@@ -2,6 +2,8 @@ module SciMLOperators
 
 using LinearAlgebra
 using DiffEqBase
+using DocStringExtensions
+
 import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
@@ -12,33 +14,34 @@ import ArrayInterfaceCore
 
 # overloads
 import Lazy: @forward
-import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, ==
+import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 
 # Misc
 
-#"""
-#$(TYPEDEF)
-#"""
+"""
+$(TYPEDEF)
+"""
 abstract type AbstractSciMLOperator{T} end
 
-#"""
-#$(TYPEDEF)
-#"""
+"""
+$(TYPEDEF)
+"""
 abstract type AbstractDiffEqOperator{T} <: AbstractSciMLOperator{T} end
 
-#"""
-#$(TYPEDEF)
-#"""
+"""
+$(TYPEDEF)
+"""
 abstract type AbstractDiffEqLinearOperator{T} <: AbstractDiffEqOperator{T} end
 
-#"""
-#$(TYPEDEF)
-#"""
+"""
+$(TYPEDEF)
+"""
 abstract type AbstractDiffEqCompositeOperator{T} <: AbstractDiffEqLinearOperator{T} end
-#"""
-#$(TYPEDEF)
-#"""
+
+"""
+$(TYPEDEF)
+"""
 abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} end
 
 include("interface.jl")
