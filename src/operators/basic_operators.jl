@@ -53,9 +53,9 @@ for op in (:*, :∘)
     @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqIdentity{N}) where {N} = (@assert size(A, 2) == N; DiffEqIdentity{N}())
 end
 
-#"""
-#$(TYPEDEF)
-#"""
+"""
+$(TYPEDEF)
+"""
 struct DiffEqNullOperator{N} <: AbstractDiffEqLinearOperator{Bool} end
 
 # constructors
