@@ -13,7 +13,7 @@ import ArrayInterfaceCore
 # overloads
 import Lazy: @forward
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, ==
-import LinearAlgebra: mul!, ldiv!, lmul!, rmul!
+import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 
 # Misc
 
@@ -49,16 +49,20 @@ include("operators/matrixfree_operators.jl")
 include("operators/composite_operators.jl")
 
 # The (u,p,t) and (du,u,p,t) interface
-for T in [DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOperatorComposition]
+for T in (
+          DiffEqIdentity, DiffEqNullOperator,
+          DiffEqScalar,
+          DiffEqArrayOperator, FactorizedDiffEqArrayOperator,
+          DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOperatorComposition,
+         )
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
     (L::T)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 end
 
-export AffineDiffEqOperator, DiffEqScaledOperator
-
-export DiffEqScalar, DiffEqArrayOperator, DiffEqIdentity, DiffEqNullOperator
-
-export MatrixFreeOperator
+export DiffEqIdentity, DiffEqNullOperator,
+       DiffEqScalar, DiffEqArrayOperator, FactorizedDiffEqArrayOperator,
+       AffineDiffEqOperator, DiffEqScaledOperator,
+       MatrixFreeOperator
 
 export update_coefficients!, update_coefficients,
        issquare, isconstant, islinear,

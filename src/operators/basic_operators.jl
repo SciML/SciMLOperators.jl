@@ -118,25 +118,42 @@ mutable struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
     new{T,typeof(update_func)}(val, update_func)
 end
 
+# constructors
 Base.convert(::Type{Number}, α::DiffEqScalar) = α.val
 Base.convert(::Type{DiffEqScalar}, α::Number) = DiffEqScalar(α)
+
+# traits
 Base.size(::DiffEqScalar) = ()
-Base.
+function Base.adjoint(α::DiffEqScalar) # TODO - test
+    val = α.val'
+    update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
+    DiffEqScalar(val; update_func=update_func)
+end
 update_coefficients!(α::DiffEqScalar,u,p,t) = (α.val = α.update_func(α.val,u,p,t); α)
 isconstant(α::DiffEqScalar) = α.update_func == DEFAULT_UPDATE_FUNC
+has_adjoint(::DiffEqScalar) = true
+has_mul(::DiffEqScalar) = true
+has_ldiv(α::DiffEqScalar) = iszero(α.val)
 
 for op in (:*, :/, :\)
-  for T in (:AbstractArray, :Number)
-    @eval Base.$op(α::DiffEqScalar, x::$T) = $op(α.val, x)
-    @eval Base.$op(x::$T, α::DiffEqScalar) = $op(x, α.val)
-  end
-  @eval Base.$op(x::DiffEqScalar, y::DiffEqScalar) = $op(x.val, y.val)
+    for T in (:AbstractArray, :Number)
+        @eval Base.$op(α::DiffEqScalar, x::$T) = $op(α.val, x)
+        @eval Base.$op(x::$T, α::DiffEqScalar) = $op(x, α.val)
+    end
+    # TODO should result be Number or DiffEqScalar
+    @eval Base.$op(x::DiffEqScalar, y::DiffEqScalar) = $op(x.val, y.val)
+    #@eval function Base.$op(x::DiffEqScalar, y::DiffEqScalar) # TODO - test
+    #    val = $op(x.val, y.val)
+    #    update_func = (oldval,u,p,t) -> x.update_func(oldval,u,p,t) * y.update_func(oldval,u,p,t)
+    #    DiffEqScalar(val; update_func=update_func)
+    #end
 end
 
+# TODO - should result be Number or DiffEqScalar
 for op in (:-, :+)
-  @eval Base.$op(α::DiffEqScalar, x::Number) = $op(α.val, x)
-  @eval Base.$op(x::Number, α::DiffEqScalar) = $op(x, α.val)
-  @eval Base.$op(x::DiffEqScalar, y::DiffEqScalar) = $op(x.val, y.val)
+    @eval Base.$op(α::DiffEqScalar, x::Number) = $op(α.val, x)
+    @eval Base.$op(x::Number, α::DiffEqScalar) = $op(x, α.val)
+    @eval Base.$op(x::DiffEqScalar, y::DiffEqScalar) = $op(x.val, y.val)
 end
 
 LinearAlgebra.lmul!(α::DiffEqScalar, B::AbstractArray) = lmul!(α.val, B)
@@ -161,16 +178,19 @@ struct DiffEqArrayOperator{T,AType<:AbstractMatrix{T},F} <: AbstractDiffEqLinear
     new{eltype(A),AType,typeof(update_func)}(A, update_func)
 end
 
+# constructors
+Base.similar(L::DiffEqArrayOperator, ::Type{T}, dims::Dims) where T = similar(L.A, T, dims)
+
+# traits
 @forward DiffEqArrayOperator.A (
                                 issquare, SciMLBase.has_ldiv, SciMLBase.has_ldiv!
                                )
-
 Base.size(A::DiffEqArrayOperator) = size(A.A)
-has_adjoint(::DiffEqArrayOperator) = true
+Base.adjoint(L::DiffEqArrayOperator) = DiffEqArrayOperator(L.A'; update_func=(A,u,p,t)->L.update_func(L.A,u,p,t)')
+
+has_adjoint(A::DiffEqArrayOperator) = has_adjoint(A.A)
 update_coefficients!(L::DiffEqArrayOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
 isconstant(L::DiffEqArrayOperator) = L.update_func == DEFAULT_UPDATE_FUNC
-Base.similar(L::DiffEqArrayOperator, ::Type{T}, dims::Dims) where T = similar(L.A, T, dims)
-Base.adjoint(L::DiffEqArrayOperator) = DiffEqArrayOperator(L.A'; update_func = (A,u,p,t) -> L.update_func(L.A,u,p,t)')
 
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::DiffEqArrayOperator) = L.A
@@ -191,6 +211,17 @@ Base.ndims(::Type{<:DiffEqArrayOperator{T,AType}}) where {T,AType} = ndims(AType
 ArrayInterfaceCore.issingular(L::DiffEqArrayOperator) = ArrayInterfaceCore.issingular(L.A)
 Base.copy(L::DiffEqArrayOperator) = DiffEqArrayOperator(copy(L.A);update_func=L.update_func)
 
+# operator application
+Base.:*(L::DiffEqArrayOperator, u::AbstractVector) = L.A * u
+LinearAlgebra.mul!(v::AbstractVector, L::DiffEqArrayOperator, u::AbstractVector) = mul!(v, L.A, u)
+
+# operator fusion, composition
+function Base.:*(A::DiffEqArrayOperator, B::DiffEqArrayOperator)
+    M = A.A * B.A
+    update_func = (M,u,p,t) -> A.update_func(M,u,p,t) * B.update_func(M,u,p,t) #TODO
+    DiffEqArrayOperator(M; update_func=update_func)
+end
+
 """
     FactorizedDiffEqArrayOperator(F)
 
@@ -198,12 +229,20 @@ Like DiffEqArrayOperator, but stores a Factorization instead.
 
 Supports left division and `ldiv!` when applied to an array.
 """
-struct FactorizedDiffEqArrayOperator{T<:Number, FType <: Union{
-                                                               Factorization{T}, Diagonal{T}, Bidiagonal{T},
-                                                               Adjoint{T,<:Factorization{T}},
-                                                              }
+struct FactorizedDiffEqArrayOperator{T<:Number,FType<:Union{
+                                                            Factorization{T},
+                                                            Diagonal{T},
+                                                            Bidiagonal{T},
+                                                            Adjoint{T,<:Factorization{T}},
+                                                           }
                                     } <: AbstractDiffEqLinearOperator{T}
-  F::FType
+    F::FType
+end
+
+# constructor
+function LinearAlgebra.factorize(L::DiffEqArrayOperator)
+    fact = factorize(L.A)
+    FactorizedDiffEqArrayOperator(fact)
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::FactorizedDiffEqArrayOperator)
@@ -213,6 +252,7 @@ function Base.convert(::Type{AbstractMatrix}, L::FactorizedDiffEqArrayOperator)
         convert(AbstractMatrix, L.F)
     end
 end
+
 function Base.Matrix(L::FactorizedDiffEqArrayOperator)
     if L.F isa Adjoint
         Matrix(L.F')'
@@ -220,20 +260,17 @@ function Base.Matrix(L::FactorizedDiffEqArrayOperator)
         Matrix(L.F)
     end
 end
-Base.adjoint(L::FactorizedDiffEqArrayOperator) = FactorizedDiffEqArrayOperator(L.F')
+
+# traits
 Base.size(L::FactorizedDiffEqArrayOperator, args...) = size(L.F, args...)
-LinearAlgebra.ldiv!(Y::AbstractVecOrMat, L::FactorizedDiffEqArrayOperator, B::AbstractVecOrMat) = ldiv!(Y, L.F, B)
-LinearAlgebra.ldiv!(L::FactorizedDiffEqArrayOperator, B::AbstractVecOrMat) = ldiv!(L.F, B)
-Base.:\(L::FactorizedDiffEqArrayOperator, x::AbstractVecOrMat) = L.F \ x
+Base.adjoint(L::FactorizedDiffEqArrayOperator) = FactorizedDiffEqArrayOperator(L.F')
 LinearAlgebra.issuccess(L::FactorizedDiffEqArrayOperator) = issuccess(L.F)
 
-LinearAlgebra.ldiv!(y, L::FactorizedDiffEqArrayOperator, x) = ldiv!(y, L.F, x)
-#isconstant(::FactorizedDiffEqArrayOperator) = true
+isconstant(::FactorizedDiffEqArrayOperator) = true
 has_ldiv(::FactorizedDiffEqArrayOperator) = true
 has_ldiv!(::FactorizedDiffEqArrayOperator) = true
 
-# The (u,p,t) and (du,u,p,t) interface
-for T in [DiffEqScalar, DiffEqArrayOperator, FactorizedDiffEqArrayOperator, DiffEqIdentity]
-  (L::T)(u,p,t) = (update_coefficients!(L,u,p,t); L * u)
-  (L::T)(du,u,p,t) = (update_coefficients!(L,u,p,t); mul!(du,L,u))
-end
+# operator application (inversion)
+Base.:\(L::FactorizedDiffEqArrayOperator, x::AbstractVecOrMat) = L.F \ x
+LinearAlgebra.ldiv!(Y::AbstractVector, L::FactorizedDiffEqArrayOperator, B::AbstractVector) = ldiv!(Y, L.F, B)
+LinearAlgebra.ldiv!(L::FactorizedDiffEqArrayOperator, B::AbstractVector) = ldiv!(L.F, B)
