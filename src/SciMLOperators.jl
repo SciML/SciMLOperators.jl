@@ -12,7 +12,7 @@ import ArrayInterfaceCore
 
 # overloads
 import Lazy: @forward
-import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert
+import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!
 
 # Misc
@@ -56,7 +56,7 @@ end
 
 export AffineDiffEqOperator, DiffEqScaledOperator
 
-export DiffEqScalar, DiffEqArrayOperator, DiffEqIdentity
+export DiffEqScalar, DiffEqArrayOperator, DiffEqIdentity, DiffEqNullOperator
 
 export MatrixFreeOperator
 
