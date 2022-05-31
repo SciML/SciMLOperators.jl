@@ -1,10 +1,19 @@
 module SciMLOperators
 
 using LinearAlgebra
-using StaticArrays
-using SparseArrays
-using ArrayInterfaceCore
 using DiffEqBase
+import StaticArrays: StaticArrayStyle
+import SparseArrays: sparse
+import ArrayInterfaceCore: issingular
+
+# caching
+import UnPack: @unpack
+import Setfield: @set!
+
+# overloads
+import Lazy: @forward
+import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert
+import LinearAlgebra: mul!, ldiv!, lmul!, rmul!
 
 # Misc
 
