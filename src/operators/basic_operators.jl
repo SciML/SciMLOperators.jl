@@ -1,20 +1,19 @@
 #"""
 #$(TYPEDEF)
 #"""
-struct DiffEqIdentity{T,N} <: AbstractDiffEqLinearOperator{T} end
+struct DiffEqIdentity{N} <: AbstractDiffEqLinearOperator{Bool} end
 
 DiffEqIdentity(u) = DiffEqIdentity{eltype(u),length(u)}()
-Base.size(::DiffEqIdentity{T,N}) where {T,N} = (N,N)
-Base.size(::DiffEqIdentity{T,N}, m::Integer) where {T,N} = (m == 1 || m == 2) ? N : 1
-LinearAlgebra.opnorm(::DiffEqIdentity{T,N}, p::Real=2) where {T,N} = one(T)
-Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{T,N}) where {T,N} =
-                                              LinearAlgebra.Diagonal(ones(T,N))
+Base.size(::DiffEqIdentity{N}) where {N} = (N,N)
+Base.size(::DiffEqIdentity{N}, m::Integer) where {N} = (m == 1 || m == 2) ? N : 1
+LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true
+Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = LinearAlgebra.Diagonal(ones(N))
 
 for op in (:*, :/, :\)
-  @eval Base.$op(::DiffEqIdentity{T,N}, x::AbstractVecOrMat) where {T,N} = $op(I, x)
-  @eval Base.$op(::DiffEqIdentity{T,N}, x::AbstractArray) where {T,N} = $op(I, x)
-  @eval Base.$op(x::AbstractVecOrMat, ::DiffEqIdentity{T,N}) where {T,N} = $op(x, I)
-  @eval Base.$op(x::AbstractArray, ::DiffEqIdentity{T,N}) where {T,N} = $op(x, I)
+  @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVecOrMat) where {N} = $op(I, x)
+  @eval Base.$op(::DiffEqIdentity{N}, x::AbstractArray) where {N} = $op(I, x)
+  @eval Base.$op(x::AbstractVecOrMat, ::DiffEqIdentity{N}) where {N} = $op(x, I)
+  @eval Base.$op(x::AbstractArray, ::DiffEqIdentity{N}) where {N} = $op(x, I)
 
 end
 LinearAlgebra.mul!(Y::AbstractVecOrMat, ::DiffEqIdentity, B::AbstractVecOrMat) = Y .= B
@@ -26,6 +25,11 @@ LinearAlgebra.ldiv!(Y::AbstractArray, ::DiffEqIdentity, B::AbstractArray) = Y .=
 for pred in (:isreal, :issymmetric, :ishermitian, :isposdef)
   @eval LinearAlgebra.$pred(::DiffEqIdentity) = true
 end
+
+#"""
+#$(TYPEDEF)
+#"""
+struct DiffEqNullOperator{N} <: AbstractDiffEqLinearOperator{Bool} end
 
 """
     DiffEqScalar(val[; update_func])
