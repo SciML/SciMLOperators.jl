@@ -48,30 +48,46 @@ abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} e
 
 include("interface.jl")
 include("operators/basic_operators.jl")
-include("operators/affine.jl")
+include("operators/diffeq_operator.jl")
 include("operators/common_defaults.jl")
-#include("operators/diffeq_operator.jl")
 include("operators/matrixfree_operators.jl")
 include("operators/composite_operators.jl")
 
-# The (u,p,t) and (du,u,p,t) interface
+# (u,p,t) and (du,u,p,t) interface
 for T in (
-          DiffEqIdentity, DiffEqNullOperator,
+          DiffEqIdentity,
+          DiffEqNullOperator,
           DiffEqScalar,
-          DiffEqArrayOperator, FactorizedDiffEqArrayOperator,
-          DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOperatorComposition,
+          ScaledDiffEqOperator,
+          AddedDiffEqOperator,
+
+          DiffEqArrayOperator,
+          FactorizedDiffEqArrayOperator,
+
+          DiffEqOperatorCombination,
+          DiffEqOperatorComposition,
          )
+
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
     (L::T)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 end
 
-export DiffEqIdentity, DiffEqNullOperator,
-       DiffEqScalar, DiffEqArrayOperator, FactorizedDiffEqArrayOperator,
-       AffineDiffEqOperator, DiffEqScaledOperator,
+export DiffEqScalar,
+       DiffEqArrayOperator,
+       FactorizedDiffEqArrayOperator,
+       AffineDiffEqOperator,
        MatrixFreeOperator
 
-export update_coefficients!, update_coefficients,
-#      isconstant, islinear, issquare, iszero,
-       has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
+export update_coefficients!,
+       update_coefficients,
+
+       has_adjoint,
+       has_expmv!,
+       has_expmv,
+       has_exp,
+       has_mul,
+       has_mul!,
+       has_ldiv,
+       has_ldiv!
 
 end # module
