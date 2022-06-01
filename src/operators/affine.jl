@@ -3,27 +3,33 @@
 (λ L)*(u) = λ * L(u)
 """
 struct ScaledDiffEqOperator{T,
-                            λType<:Number,
+                            λType<:DiffEqScalar,
                             LType<:AbstractDiffEqOperator,
                            } <: AbstractDiffEqOperator{T}
     λ::λType
     L::LType
 
-    function ScaledDiffEqOperator(λ, L::AbstractDiffEqOperator{Tl}) where{Tl}
-        T = promote_type(eltype(λ), Tl)
+    function ScaledDiffEqOperator(λ::Union{Number,DiffEqScalar}, L::AbstractDiffEqOperator)
+        λ = λ isa DiffEqScalar ? λ : DiffEqScalar(λ)
+        T = promote_type(eltype.(λ, L)...)
         new{T,typeof(λ),typeof(op)}(λ, L)
     end
 end
 
-function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
+function update_coefficients!(L::ScaledDiffEqOperator, u, p, t)
     update_coefficients!(L.L, u, p, t)
     update_coefficients!(L.λ, u, p, t)
     L
 end
 
 # constructor
-Base.:*(λ::Number, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(λ, L)
-Base.:*(L::AbstractDiffEqOperator, λ::Number) = ScaledDiffEqOperator(λ, L)
+Base.:*(λ::Union{Number,DiffEqScalar}, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(λ, L)
+Base.:*(L::AbstractDiffEqOperator, λ::Union{Number,DiffEqScalar}) = ScaledDiffEqOperator(λ, L)
+Base.:\(λ::Union{Number,DiffEqScalar}, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(inv(λ), L)
+Base.:\(L::AbstractDiffEqOperator, λ::Union{Number,DiffEqScalar}) = ScaledDiffEqOperator(λ, inv(L))
+Base.:/(L::AbstractDiffEqOperator, λ::Union{Number,DiffEqScalar}) = ScaledDiffEqOperator(inv(λ), L)
+Base.:/(λ::Union{Number,DiffEqScalar}, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(λ, inv(L))
+
 Base.:-(L::AbstractDiffEqOperator) = ScaledDiffEqOperator(-true, L)
 Base.:+(L::AbstractDiffEqOperator) = L
 
@@ -33,6 +39,8 @@ Base.convert(::Type{AbstractMatrix}, L::DiffEqScaledOperator) = λ * convert(Abs
 Base.size(L::ScaledDiffEqOperator) = size(L.L)
 Base.adjoint(L::ScaledDiffEqOperator) = ScaledDiffEqOperator(L.λ', L.op')
 
+isconstant(L::ScaledDiffEqOperator) = isconstant(L.L) & isconstant(L.λ)
+iszero(L::ScaledDiffEqOperator) = iszero(L.L) & iszero(L.λ)
 issquare(L::ScaledDiffEqOperator) = issquare(L.L)
 has_adjoint(L::ScaledDiffEqOperator) = has_adjoint(L.L)
 has_ldiv(L::ScaledDiffEqOperator) = has_ldiv(L.L) & !iszero(L.λ)
@@ -40,10 +48,9 @@ has_ldiv!(L::ScaledDiffEqOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
 # operator application
 for op in (
-           :*, :/, :\,
+           :*, :\,
           )
     @eval Base.$op(L::DiffEqScaledOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
-#   @eval Base.$op(x::AbstractVector, L::DiffEqScaledOperator) = $op($op(x, L.L), L.λ)
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::DiffEqScaledOperator, u::AbstractVector)
@@ -52,97 +59,85 @@ function LinearAlgebra.mul!(v::AbstractVector, L::DiffEqScaledOperator, u::Abstr
 end
 
 """
-Lazy affine operator combinations αA + βB
+Lazy operator addition (A + B)
 
-v = (αAu + βB)u
+    (A + B)u = Au + Bu
 """
-struct AffineDiffEqOperator{T,
-                            Ta<:AbstractDiffEqOperator,
-                            Tb<:AbstractDiffEqOperator,
-                            Tα,
-                            Tβ,
-                            Tc,
-                           } <: AbstractDiffEqOperator{T}
+struct AddedDiffEqOperator{T,
+                           Ta<:AbstractDiffEqOperator,
+                           Tb<:AbstractDiffEqOperator,
+                           Tc,
+                          } <: AbstractDiffEqOperator{T}
     A::Ta
     B::Tb
-    α::Tα
-    β::Tβ
 
     cache::Tc
     isunset::Bool
 
-    function AffineDiffEqOperator(A::AbstractDiffEqOperator{Ta},
-                                  B::AbstractDiffEqOperator{Tb}, α, β;
-                                  cache = nothing,
-                                  isunset = cache === nothing,
-                                 ) where{Ta,Tb}
+    function AddedDiffEqOperator(A::AbstractDiffEqOperator,
+                                 B::AbstractDiffEqOperator;
+                                 cache = nothing,
+                                 isunset = cache === nothing,
+                                )
         @assert size(A) == size(B)
-        T = promote_type(Ta,Tb, eltype(α), eltype(β))
+        T = promote_type(eltype.((A,B))...)
 
         new{T,
             typeof(A),
             typeof(B),
-            typeof(α),
-            typeof(β),
             typeof(cache),
-            typeof(update_func)
            }(
-             A, B, α, β, cache, isunset, update_func,
+             A, B, cache, isunset,
             )
     end
 end
 
-function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
+function update_coefficients!(L::AddedDiffEqOperator, u, p, t)
     update_coefficients!(L.A, u, p, t)
     update_coefficients!(L.B, u, p, t)
-    update_coefficients!(L.α, u, p, t)
-    update_coefficients!(L.β, u, p, t)
     L
 end
 
 # traits
-Base.size(A::AffineDiffEqOperator) = size(A.A)
-function Base.adjoint(A::AffineDiffEqOperator)
+Base.size(A::AddedDiffEqOperator) = size(A.A)
+function Base.adjoint(A::AddedDiffEqOperator)
     if issquare(A) & !(A.isunset)
-        AffineDiffEqOperator(A.A',A.B',A.α', A.β', A.cache, A.isunset)
+        AddedDiffEqOperator(A.A',A.B',A.cache, A.isunset)
     else
-        AffineDiffEqOperator(A.A',A.B',A.α', A.β')
+        AddedDiffEqOperator(A.A',A.B')
     end
 end
 
-issquare(L::AffineDiffEqOperator) = issquare(L.A)
-has_adjoint(L::AffineDiffEqOperator) = has_adjoint(L.A) & has_adjoint(L.B)
+issquare(L::AddedDiffEqOperator) = issquare(L.A)
+isconstant(L::AddedDiffEqOperator) = isconstant(L.A) & isconstant(L.B)
+iszero(L::AddedDiffEqOperator) = iszero(L.A) & iszero(L.B)
+has_adjoint(L::AddedDiffEqOperator) = has_adjoint(L.A) & has_adjoint(L.B)
 
-function init_cache(A::AffineDiffEqOperator{<:Number}, u::AbstractField{<:Number})
+function init_cache(A::AddedDiffEqOperator, u::AbstractField)
     cache = A.B * u
 end
 
-function Base.:*(A::AffineDiffEqOperator{<:Number}, u::AbstractField{<:Number})
-    @unpack A, B, α, β = A
-    if iszero(α) | (A isa DiffEqNullOperator)
-        β * (B * u)
-    elseif iszero(β) | (B isa DiffEqNullOperator)
-        α * (A * u)
+function Base.:*(L::AddedDiffEqOperator, u::AbstractVector)
+    @unpack A, B = L
+    if iszero(A)
+        B * u
+    elseif iszero(B)
+        A * u
     else
-        α * (A * u) + β * (B * u)
+        (A * u) + (B * u)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractField{<:Number}, Op::AffineDiffEqOperator{<:Number}, u::AbstractField{<:Number})
-    @unpack A, B, α, β, cache, isunset = Op
+function LinearAlgebra.mul!(v::AbstractField, L::AddedDiffEqOperator, u::AbstractField)
+    @unpack A, B, cache, isunset = Op
 
-    if iszero(α) | (A isa DiffEqNullOperator)
-        mul!(v, B, u)
-        lmul!(β, v)
-        return v
-    elseif iszero(β) | (B isa DiffEqNullOperator)
-        mul!(v, A, u)
-        lmul!(α, v)
-        return v
+    if iszero(A)
+        return mul!(v, B, u)
+    elseif iszero(B)
+        return mul!(v, A, u)
     end
 
     mul!(v, A, u)
-    lmul!(α, v)
 
     if isunset
         cache = init_cache(Op, u)
@@ -150,63 +145,36 @@ function LinearAlgebra.mul!(v::AbstractField{<:Number}, Op::AffineDiffEqOperator
     end
 
     mul!(cache, B, u)
-    lmul!(β, cache)
     axpy!(true, cache, v)
 end
 
-function Base.:+(A::AbstractOperator, B::AbstractOperator)
-    AffineDiffEqOperator(A, B, true, true)
+# operator fusion
+for op in (
+           :+, :-,
+          )
+
+    @eval function Base.$op(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator)
+        AddedDiffEqOperator(A, $op(B))
+    end
+
+    @eval function Base.$op(A::AbstractDiffEqOperator, λ::Union{DiffEqScalar,Number})
+        @assert issquare(A)
+        N  = size(A, 1)
+        Id = DiffEqIdentity{N}()
+        AddedDiffEqOperator(A, $op(λ)*Id)
+    end
+
+    @eval function Base.$op(λ::Union{DiffEqScalar,Number}, A::AbstractDiffEqOperator)
+        @assert issquare(A)
+        N  = size(A, 1)
+        Id = DiffEqIdentity{N}()
+        AddedDiffEqOperator(λ*Id, $op(A))
+    end
 end
 
-function Base.:-(A::AbstractOperator, B::AbstractOperator)
-    AffineDiffEqOperator(A, B, true, -true)
-end
-
-function Base.:+(A::AbstractOperator{<:Number}, λ::Number)
-    N = size(A, 1)
-    Id = DiffEqIdentity{N}()
-    AffineDiffEqOperator(A, Id, true, λ)
-end
-
-function Base.:+(λ::Number, A::AbstractOperator{<:Number})
-    N = size(A, 1)
-    Id = DiffEqIdentity{N}()
-    AffineDiffEqOperator(A, Id, true, λ) # TODO: what if A isn't square
-end
-
-function Base.:-(A::AbstractOperator{<:Number}, λ::Number)
-    N = size(A, 1)
-    Id = DiffEqIdentity{N}()
-    AffineDiffEqOperator(A, Id, -true, λ)
-end
-
-function Base.:-(λ::Number, A::AbstractOperator{<:Number})
-    N = size(A, 1)
-    Id = DiffEqIdentity{N}()
-    AffineDiffEqOperator(Id, A, λ, -true)
-end
-
-function Base.:-(A::AbstractOperator{<:Number})
+function Base.:/(A::AbstractOperator, λ::Number)
     N = size(A, 1)
     Z = DiffEqNullOperator{N}()
-    AffineDiffEqOperator(A, -true, false, Z)
-end
-
-function Base.:*(A::AbstractOperator{<:Number}, λ::Number)
-    N = size(A, 1)
-    Z = DiffEqNullOperator{N}()
-    AffineDiffEqOperator(A, Z, λ, false)
-end
-
-function Base.:*(λ::Number, A::AbstractOperator{<:Number})
-    N = size(A, 1)
-    Z = DiffEqNullOperator{N}()
-    AffineDiffEqOperator(A, Z, λ, false)
-end
-
-function Base.:/(A::AbstractOperator{<:Number}, λ::Number)
-    N = size(A, 1)
-    Z = DiffEqNullOperator{N}()
-    AffineDiffEqOperator(A, Z, -true, λ)
+    AddedDiffEqOperator(A, Z, -true, λ)
 end
 

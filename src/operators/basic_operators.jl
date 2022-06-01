@@ -24,8 +24,8 @@ for pred in (
     @eval LinearAlgebra.$pred(::DiffEqIdentity) = true
 end
 
-issquare(::DiffEqIdentity) = true
 isconstant(::DiffEqIdentity) = true
+issquare(::DiffEqIdentity) = true
 has_adjoint(::DiffEqIdentity) = true
 has_mul!(::DiffEqIdentity) = true
 has_ldiv(::DiffEqIdentity) = true
@@ -36,8 +36,6 @@ for op in (
            :*, :\,
           )
     @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVector) where{N} = (@assert length(x) == N; copy(x))
-    # left multiplication with vector doens't make sense
-#   @eval Base.$op(x::AbstractVector, ::DiffEqIdentity{N}) where{N} = (@assert length(x) == N; copy(x))
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, ::DiffEqIdentity{N}, u::AbstractVector) where{N}
@@ -83,8 +81,9 @@ for pred in (
 end
 LinearAlgebra.isposdef(::DiffEqNullOperator) = false
 
-issquare(::DiffEqNullOperator) = true
 isconstant(::DiffEqNullOperator) = true
+issquare(::DiffEqNullOperator) = true
+iszero(::DiffEqNullOperator) = true
 has_adjoint(::DiffEqNullOperator) = true
 has_mul!(::DiffEqNullOperator) = true
 
@@ -135,6 +134,7 @@ function Base.adjoint(α::DiffEqScalar) # TODO - test
     DiffEqScalar(val; update_func=update_func)
 end
 isconstant(α::DiffEqScalar) = α.update_func == DEFAULT_UPDATE_FUNC
+iszero(α::DiffEqScalar) = iszero(α.val)
 has_adjoint(::DiffEqScalar) = true
 has_mul(::DiffEqScalar) = true
 has_ldiv(α::DiffEqScalar) = iszero(α.val)
@@ -197,7 +197,9 @@ Base.adjoint(L::DiffEqArrayOperator) = DiffEqArrayOperator(L.A'; update_func=(A,
 
 has_adjoint(A::DiffEqArrayOperator) = has_adjoint(A.A)
 update_coefficients!(L::DiffEqArrayOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
+
 isconstant(L::DiffEqArrayOperator) = L.update_func == DEFAULT_UPDATE_FUNC
+iszero(L::DiffEqArrayOperator) = iszero(L.A)
 
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::DiffEqArrayOperator) = L.A

@@ -70,7 +70,7 @@ export DiffEqIdentity, DiffEqNullOperator,
        MatrixFreeOperator
 
 export update_coefficients!, update_coefficients,
-       issquare, isconstant, islinear,
+       issquare, isconstant, islinear, iszero,
        has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
 
 end # module
