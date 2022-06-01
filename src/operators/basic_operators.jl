@@ -27,7 +27,6 @@ end
 getops(::DiffEqIdentity) = ()
 isconstant(::DiffEqIdentity) = true
 iszero(::DiffEqIdentity) = false
-issquare(::DiffEqIdentity) = true
 has_adjoint(::DiffEqIdentity) = true
 has_mul!(::DiffEqIdentity) = true
 has_ldiv(::DiffEqIdentity) = true
@@ -95,7 +94,6 @@ LinearAlgebra.isposdef(::DiffEqNullOperator) = false
 
 getops(::DiffEqNullOperator) = ()
 isconstant(::DiffEqNullOperator) = true
-issquare(::DiffEqNullOperator) = true
 iszero(::DiffEqNullOperator) = true
 has_adjoint(::DiffEqNullOperator) = true
 has_mul!(::DiffEqNullOperator) = true
@@ -222,7 +220,6 @@ for T in ScalingNumberTypes[2:end]
 end
 
 for T in ScalingNumberTypes
-    # ensure doesn't nest
     @eval function ScaledDiffEqOperator(λ::$T, L::ScaledDiffEqOperator)
         λ = DiffEqScalar(λ) * L.λ
         ScaledDiffEqOperator(λ, L.L)
@@ -250,7 +247,6 @@ LinearAlgebra.opnorm(L::ScaledDiffEqOperator, p::Real=2) = abs(L.λ) * opnorm(L.
 getops(L::ScaledDiffEqOperator) = (L.λ, L.A)
 isconstant(L::ScaledDiffEqOperator) = isconstant(L.L) & isconstant(L.λ)
 iszero(L::ScaledDiffEqOperator) = iszero(L.L) & iszero(L.λ)
-issquare(L::ScaledDiffEqOperator) = issquare(L.L)
 has_adjoint(L::ScaledDiffEqOperator) = has_adjoint(L.L)
 has_mul!(L::ScaledDiffEqOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledDiffEqOperator) = has_ldiv(L.L) & !iszero(L.λ)
@@ -318,7 +314,6 @@ for op in (
            :+, :-,
           )
 
-    # prevent nesting
     @eval Base.$op(A::AddedDiffEqOperator, B::AddedDiffEqOperator) = AddedDiffEqOperator(A.ops..., $op(B).ops...)
     @eval Base.$op(A::AbstractDiffEqOperator, B::AddedDiffEqOperator) = AddedDiffEqOperator(A, $op(B).ops...)
     @eval Base.$op(A::AddedDiffEqOperator, B::AbstractDiffEqOperator) = AddedDiffEqOperator(A.ops..., $op(B))
@@ -366,7 +361,6 @@ end
 
 getops(L::AddedDiffEqOperator) = L.ops
 iszero(L::AddedDiffEqOperator) = all(iszero, getops(L))
-issquare(L::AddedDiffEqOperator) = issquare(first(L.ops))
 has_adjoint(L::AddedDiffEqOperator) = all(has_adjoint, L.ops)
 
 getindex(L::AddedDiffEqOperator, i::Int) = sum(op -> op[i], L.ops)
@@ -392,7 +386,7 @@ end
 """
     Lazy operator composition
 """
-struct ComposedDiffEqOperator{T,O,C}
+struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
     ops::O
     cache::C
     isunset::Bool
@@ -408,4 +402,25 @@ struct ComposedDiffEqOperator{T,O,C}
         new{T,typeof(ops),typeof(cache)}(ops, cache, isunset)
     end
 end
+
+# constructors
+Base.∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops)
+
+Base.∘(A::ComposedDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B.ops...)
+Base.∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A, B.ops...)
+Base.∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
+
+Base.*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A, B) # fallback
+
+Base.convert(::Type{AbstractMatrix}, L::ComposedDiffEqOperator) = prod(convert.(AbstractMatrix, ops))
+Base.Matrix(L::ComposedDiffEqOperator) = prod(Matrix.(ops))
+
+# traits
+Base.size(L::ComposedDiffEqOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
+Base.adjoint(L::ComposedDiffEqOperator) = DiffEqComposedOperator(adjoint.(reverse(L.ops)))
+
+islinear(L::ComposedDiffEqOperator) = all(islinear, L.ops)
+iszero(L::ComposedDiffEqOperator) = all(iszero, getops(L))
+has_adjoint(L::ComposedDiffEqOperator) = all(has_adjoint, L.ops)
+
 #
