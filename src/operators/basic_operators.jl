@@ -12,18 +12,20 @@ function Base.one(A::AbstractDiffEqOperator)
     DiffEqIdentity{N}()
 end
 
-Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where {N} = Diagonal(ones(Bool, N))
+Base.convert(::Type{AbstractMatrix}, ::DiffEqIdentity{N}) where{N} = Diagonal(ones(Bool, N))
 
 # traits
-Base.size(::DiffEqIdentity{N}) where {N} = (N, N)
+Base.size(::DiffEqIdentity{N}) where{N} = (N, N)
 Base.adjoint(A::DiffEqIdentity) = A
-LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where {N} = true
+LinearAlgebra.opnorm(::DiffEqIdentity{N}, p::Real=2) where{N} = true
 for pred in (
              :isreal, :issymmetric, :ishermitian, :isposdef,
             )
     @eval LinearAlgebra.$pred(::DiffEqIdentity) = true
 end
+
 issquare(::DiffEqIdentity) = true
+isconstant(::DiffEqIdentity) = true
 has_adjoint(::DiffEqIdentity) = true
 has_mul!(::DiffEqIdentity) = true
 has_ldiv(::DiffEqIdentity) = true
@@ -33,8 +35,8 @@ has_ldiv!(::DiffEqIdentity) = true
 for op in (
            :*, :/, :\,
           )
-    @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVector) where {N} = (@assert length(x) == N; copy(x))
-    @eval Base.$op(x::AbstractVector, ::DiffEqIdentity{N}) where {N} = (@assert length(x) == N; copy(x))
+    @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVector) where{N} = (@assert length(x) == N; copy(x))
+    @eval Base.$op(x::AbstractVector, ::DiffEqIdentity{N}) where{N} = (@assert length(x) == N; copy(x))
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, ::DiffEqIdentity{N}, u::AbstractVector) where{N}
@@ -49,8 +51,8 @@ end
 
 # operator fusion, composition
 for op in (:*, :∘)
-    @eval Base.$op(::DiffEqIdentity{N}, A::AbstractSciMLOperator) where {N} = (@assert size(A, 1) == N; DiffEqIdentity{N}())
-    @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqIdentity{N}) where {N} = (@assert size(A, 2) == N; DiffEqIdentity{N}())
+    @eval Base.$op(::DiffEqIdentity{N}, A::AbstractSciMLOperator) where{N} = (@assert size(A, 1) == N; DiffEqIdentity{N}())
+    @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqIdentity{N}) where{N} = (@assert size(A, 2) == N; DiffEqIdentity{N}())
 end
 
 """
@@ -67,19 +69,21 @@ function Base.zero(A::AbstractDiffEqOperator)
     DiffEqNullOperator{N}()
 end
 
-Base.convert(::Type{AbstractMatrix}, ::DiffEqNullOperator{N}) where {N} = Diagonal(zeros(Bool, N))
+Base.convert(::Type{AbstractMatrix}, ::DiffEqNullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
 
 # traits
-Base.size(::DiffEqNullOperator{N}) where {N} = (N, N)
+Base.size(::DiffEqNullOperator{N}) where{N} = (N, N)
 Base.adjoint(A::DiffEqNullOperator) = A
-LinearAlgebra.opnorm(::DiffEqNullOperator{N}, p::Real=2) where {N} = false
+LinearAlgebra.opnorm(::DiffEqNullOperator{N}, p::Real=2) where{N} = false
 for pred in (
              :isreal, :issymmetric, :ishermitian,
             )
     @eval LinearAlgebra.$pred(::DiffEqNullOperator) = true
 end
 LinearAlgebra.isposdef(::DiffEqNullOperator) = false
+
 issquare(::DiffEqNullOperator) = true
+isconstant(::DiffEqIdentity) = true
 has_adjoint(::DiffEqNullOperator) = true
 has_mul!(::DiffEqNullOperator) = true
 
@@ -87,8 +91,8 @@ has_mul!(::DiffEqNullOperator) = true
 for op in (
            :*, :/, :\,
           )
-    @eval Base.$op(::DiffEqNullOperator{N}, x::AbstractVector) where {N} = (@assert length(x) == N; zero(x))
-    @eval Base.$op(x::AbstractVector, ::DiffEqNullOperator{N}) where {N} = (@assert length(x) == N; zero(x))
+    @eval Base.$op(::DiffEqNullOperator{N}, x::AbstractVector) where{N} = (@assert length(x) == N; zero(x))
+    @eval Base.$op(x::AbstractVector, ::DiffEqNullOperator{N}) where{N} = (@assert length(x) == N; zero(x))
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, ::DiffEqNullOperator{N}, u::AbstractArray) where{N}
@@ -98,12 +102,14 @@ end
 
 # operator fusion, composition
 for op in (:*, :∘)
-    @eval Base.$op(::DiffEqNullOperator{N}, A::AbstractSciMLOperator) where {N} = (@assert size(A, 1) == N; DiffEqNullOperator{N}())
-    @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqNullOperator{N}) where {N} = (@assert size(A, 2) == N; DiffEqNullOperator{N}())
+    @eval Base.$op(::DiffEqNullOperator{N}, A::AbstractSciMLOperator) where{N} = (@assert size(A, 1) == N; DiffEqNullOperator{N}())
+    @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqNullOperator{N}) where{N} = (@assert size(A, 2) == N; DiffEqNullOperator{N}())
 end
 
 """
     DiffEqScalar(val[; update_func])
+
+    (α::DiffEqScalar)(a::Number) = α * a
 
 Represents a time-dependent scalar/scaling operator. The update function
 is called by `update_coefficients!` and is assumed to have the following
@@ -111,12 +117,14 @@ signature:
 
     update_func(oldval,u,p,t) -> newval
 """
-mutable struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
+mutable struct DiffEqScalar{T<:Number,F} #<: AbstractDiffEqLinearOperator{T}
   val::T
   update_func::F
-  DiffEqScalar(val::T; update_func=DEFAULT_UPDATE_FUNC) where {T} =
+  DiffEqScalar(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
     new{T,typeof(update_func)}(val, update_func)
 end
+
+update_coefficients!(α::DiffEqScalar,u,p,t) = (α.val = α.update_func(α.val,u,p,t); α)
 
 # constructors
 Base.convert(::Type{Number}, α::DiffEqScalar) = α.val
@@ -129,7 +137,6 @@ function Base.adjoint(α::DiffEqScalar) # TODO - test
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
     DiffEqScalar(val; update_func=update_func)
 end
-update_coefficients!(α::DiffEqScalar,u,p,t) = (α.val = α.update_func(α.val,u,p,t); α)
 isconstant(α::DiffEqScalar) = α.update_func == DEFAULT_UPDATE_FUNC
 has_adjoint(::DiffEqScalar) = true
 has_mul(::DiffEqScalar) = true
@@ -149,10 +156,10 @@ for op in (:*, :/, :\)
     #end
 end
 
-# TODO - should result be Number or DiffEqScalar
 for op in (:-, :+)
     @eval Base.$op(α::DiffEqScalar, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::DiffEqScalar) = $op(x, α.val)
+    # TODO - should result be Number or DiffEqScalar
     @eval Base.$op(x::DiffEqScalar, y::DiffEqScalar) = $op(x.val, y.val)
 end
 
@@ -174,12 +181,12 @@ the following signature:
 struct DiffEqArrayOperator{T,AType<:AbstractMatrix{T},F} <: AbstractDiffEqLinearOperator{T}
   A::AType
   update_func::F
-  DiffEqArrayOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where {AType} =
+  DiffEqArrayOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
     new{eltype(A),AType,typeof(update_func)}(A, update_func)
 end
 
 # constructors
-Base.similar(L::DiffEqArrayOperator, ::Type{T}, dims::Dims) where T = similar(L.A, T, dims)
+Base.similar(L::DiffEqArrayOperator, ::Type{T}, dims::Dims) whereT = similar(L.A, T, dims)
 
 # traits
 @forward DiffEqArrayOperator.A (
@@ -195,7 +202,7 @@ isconstant(L::DiffEqArrayOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::DiffEqArrayOperator) = L.A
 Base.@propagate_inbounds Base.setindex!(L::DiffEqArrayOperator, v, i::Int) = (L.A[i] = v)
-Base.@propagate_inbounds Base.setindex!(L::DiffEqArrayOperator, v, I::Vararg{Int, N}) where {N} = (L.A[I...] = v)
+Base.@propagate_inbounds Base.setindex!(L::DiffEqArrayOperator, v, I::Vararg{Int, N}) where{N} = (L.A[I...] = v)
 
 Base.eachcol(L::DiffEqArrayOperator) = eachcol(L.A)
 Base.eachrow(L::DiffEqArrayOperator) = eachrow(L.A)
@@ -203,11 +210,11 @@ Base.length(L::DiffEqArrayOperator) = length(L.A)
 Base.iterate(L::DiffEqArrayOperator,args...) = iterate(L.A,args...)
 Base.axes(L::DiffEqArrayOperator) = axes(L.A)
 Base.eachindex(L::DiffEqArrayOperator) = eachindex(L.A)
-Base.IndexStyle(::Type{<:DiffEqArrayOperator{T,AType}}) where {T,AType} = Base.IndexStyle(AType)
+Base.IndexStyle(::Type{<:DiffEqArrayOperator{T,AType}}) where{T,AType} = Base.IndexStyle(AType)
 Base.copyto!(L::DiffEqArrayOperator, rhs) = (copyto!(L.A, rhs); L)
 Base.copyto!(L::DiffEqArrayOperator, rhs::Base.Broadcast.Broadcasted{<:StaticArrays.StaticArrayStyle}) = (copyto!(L.A, rhs); L)
 Base.Broadcast.broadcastable(L::DiffEqArrayOperator) = L
-Base.ndims(::Type{<:DiffEqArrayOperator{T,AType}}) where {T,AType} = ndims(AType)
+Base.ndims(::Type{<:DiffEqArrayOperator{T,AType}}) where{T,AType} = ndims(AType)
 ArrayInterfaceCore.issingular(L::DiffEqArrayOperator) = ArrayInterfaceCore.issingular(L.A)
 Base.copy(L::DiffEqArrayOperator) = DiffEqArrayOperator(copy(L.A);update_func=L.update_func)
 
