@@ -114,7 +114,7 @@ signature:
 
     update_func(oldval,u,p,t) -> newval
 """
-mutable struct DiffEqScalar{T<:Number,F} #<: AbstractDiffEqLinearOperator{T}
+mutable struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
   val::T
   update_func::F
   DiffEqScalar(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
