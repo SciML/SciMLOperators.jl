@@ -62,32 +62,48 @@ function Base.:*(A::DiffEqArrayOperator, B::DiffEqArrayOperator)
     DiffEqArrayOperator(M; update_func=update_func)
 end
 
+
+
+NumberCompatibleTypes =  (
+                          :DiffEqScalar,
+                          :Number,
+                         )
 for op in (
            :*, :/, :\,
           )
-    @eval function Base.$op(L::DiffEqArrayOperator, x::Number)
-        M = $op(L.A, x)
-        update_func = L.update_func #TODO what is it?
-        DiffEqArrayOperator(M; update_func=update_func)
-    end
-    @eval function Base.$op(x::Number, L::DiffEqArrayOperator)
-        M = $op(L.A, x)
-        update_func = L.update_func #TODO what is it?
-        DiffEqArrayOperator(M; update_func=update_func)
+
+    for T in NumberCompatibleTypes
+        @eval function Base.$op(L::DiffEqArrayOperator, x::$T)
+            A = $op(L.A, x)
+            update_func = L.update_func #TODO
+            DiffEqArrayOperator(A; update_func=update_func)
+        end
+        @eval function Base.$op(x::$T, L::DiffEqArrayOperator)
+            A = $op(x, L.A)
+            update_func = L.update_func #TODO
+            DiffEqArrayOperator(A; update_func=update_func)
+        end
     end
 end
+
+MatMulCompatibleTypes = (
+                         :AbstractMatrix,
+                         :UniformScaling,
+                        )
 
 for op in (
            :+, :-, :*,
           )
-    @eval function Base.$op(L::DiffEqArrayOperator, M::Union{UniformScaling,AbstractMatrix})
-        A = $op(L.A, M)
-        DiffEqArrayOperator(A)
-    end
+    for T in MatMulCompatibleTypes
+        @eval function Base.$op(L::DiffEqArrayOperator, M::$T)
+            A = $op(L.A, M)
+            DiffEqArrayOperator(A)
+        end
 
-    @eval function Base.$op(M::Union{UniformScaling,AbstractMatrix}, L::DiffEqArrayOperator)
-        A = $op(M, L.A)
-        DiffEqArrayOperator(A)
+        @eval function Base.$op(M::$T, L::DiffEqArrayOperator)
+            A = $op(M, L.A)
+            DiffEqArrayOperator(A)
+        end
     end
 end
 

@@ -53,6 +53,11 @@ include("operators/matrixfree_operators.jl")
 #include("operators/composite_operators.jl")
 include("operators/common_defaults.jl")
 
+# Define a helper function `sparse1` that handles
+# `DiffEqArrayOperator` and `ScaledDiffEqOperator`.
+# We should define `sparse` for these types in `SciMLBase` instead,
+# but that package doesn't know anything about sparse arrays yet, so
+# we'll introduce a temporary work-around here.
 _sparse(L) = sparse(L)
 _sparse(L::DiffEqArrayOperator) = _sparse(L.A)
 _sparse(L::ScaledDiffEqOperator) = L.λ * _sparse(L.L)

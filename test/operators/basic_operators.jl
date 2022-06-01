@@ -97,13 +97,43 @@ end
     @test abs(DiffEqScalar(-x)) == x
 end
 
-@testset "Operator Algebra" begin
-    @testset "AddedDiffEqOperator" begin
-    end
+@testset "ScaledDiffEqOperator" begin
+    # TODO change A to a differnt type of diffeqoperator
+    A = rand(N,N) |> DiffEqArrayOperator
 
-    @testset "ScaledDiffEqOperator" begin
-    end
+    for T in (
+              DiffEqScalar,
+              Number,
+              UniformScaling
+             )
+        u = rand(N)
+        α = rand()
+        β = rand()
 
+         αAu =     α * A * u
+        βαAu = β * α * A * u
+
+        α = α |> T
+        β = β |> T
+
+        op1 = α * A # not ScaledDiffEqOperator
+        op2 = A * α # as * shortcircuits for DiffEqArrayOp
+
+        op1 = ScaledDiffEqOperator(α, A)
+        op2 = ScaledDiffEqOperator(α, A)
+
+        @test op1 isa ScaledDiffEqOperator
+        @test op2 isa ScaledDiffEqOperator
+
+        @test op1 * u ≈ αAu
+        @test op2 * u ≈ αAu
+
+        @test (β * op1) * u ≈ βαAu
+        @test (β * op2) * u ≈ βαAu
+    end
+end
+
+@testset "AddedDiffEqOperator" begin
     A = rand(N,N) |> DiffEqArrayOperator
     B = rand(N,N) |> DiffEqArrayOperator
     C = rand(N,N) |> DiffEqArrayOperator
@@ -129,6 +159,11 @@ end
         @test op3 * u ≈ op(  A*u, β*B*u)
         @test op4 * u ≈ op(α*A*u, β*B*u)
     end
+end
 
+@testset "ComposedDiffEqOperator" begin
+end
+
+@testset "Operator Algebra" begin
 end
 #

@@ -140,11 +140,12 @@ mutable struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
         new{T,typeof(update_func)}(val, update_func)
 end
 
-update_coefficients!(α::DiffEqScalar,u,p,t) = (α.val = α.update_func(α.val,u,p,t); α)
-
 # constructors
 Base.convert(::Type{Number}, α::DiffEqScalar) = α.val
 Base.convert(::Type{DiffEqScalar}, α::Number) = DiffEqScalar(α)
+
+DiffEqScalar(α::DiffEqScalar) = α
+DiffEqScalar(λ::UniformScaling) = DiffEqScalar(λ.λ)
 
 # traits
 Base.size(α::DiffEqScalar) = ()
@@ -340,12 +341,12 @@ for op in (
 
     @eval function Base.$op(A::AbstractMatrix, L::AbstractDiffEqOperator)
         @assert size(A) == size(L)
-        AddedDiffEqOperator(DiffEqArrayOperator, $op(L))
+        AddedDiffEqOperator(DiffEqArrayOperator(A), $op(L))
     end
 
     @eval function Base.$op(L::AbstractDiffEqOperator, A::AbstractMatrix)
         @assert size(A) == size(L)
-        AddedDiffEqOperator(L, $op(DiffEqArrayOperator))
+        AddedDiffEqOperator(L, DiffEqArrayOperator($op(A)))
     end
 end
 
