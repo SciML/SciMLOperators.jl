@@ -1,4 +1,7 @@
 #
+"""
+(λ L)*(u) = λ * L(u)
+"""
 struct ScaledDiffEqOperator{T,
                             λType<:Number,
                             LType<:AbstractDiffEqOperator,
@@ -15,12 +18,14 @@ end
 function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
     update_coefficients!(L.L, u, p, t)
     update_coefficients!(L.λ, u, p, t)
-    nothing
+    L
 end
 
 # constructor
 Base.:*(λ::Number, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(λ, L)
 Base.:*(L::AbstractDiffEqOperator, λ::Number) = ScaledDiffEqOperator(λ, L)
+Base.:-(L::AbstractDiffEqOperator) = ScaledDiffEqOperator(-true, L)
+Base.:+(L::AbstractDiffEqOperator) = L
 
 Base.convert(::Type{AbstractMatrix}, L::DiffEqScaledOperator) = λ * convert(AbstractMatrix, L.L)
 
@@ -92,7 +97,7 @@ function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
     update_coefficients!(L.B, u, p, t)
     update_coefficients!(L.α, u, p, t)
     update_coefficients!(L.β, u, p, t)
-    nothing
+    L
 end
 
 # traits
@@ -105,7 +110,8 @@ function Base.adjoint(A::AffineDiffEqOperator)
     end
 end
 
-issquare(A::AffineDiffEqOperator) = issquare(A.A)
+issquare(L::AffineDiffEqOperator) = issquare(L.A)
+has_adjoint(L::AffineDiffEqOperator) = has_adjoint(L.A) & has_adjoint(L.B)
 
 function init_cache(A::AffineDiffEqOperator{<:Number}, u::AbstractField{<:Number})
     cache = A.B * u
@@ -148,11 +154,11 @@ function LinearAlgebra.mul!(v::AbstractField{<:Number}, Op::AffineDiffEqOperator
     axpy!(true, cache, v)
 end
 
-function Base.:+(A::AbstractOperator{<:Number}, B::AbstractOperator{<:Number})
+function Base.:+(A::AbstractOperator, B::AbstractOperator)
     AffineDiffEqOperator(A, B, true, true)
 end
 
-function Base.:-(A::AbstractOperator{<:Number}, B::AbstractOperator{<:Number})
+function Base.:-(A::AbstractOperator, B::AbstractOperator)
     AffineDiffEqOperator(A, B, true, -true)
 end
 
