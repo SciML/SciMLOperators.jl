@@ -1,6 +1,11 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
+using SciMLOperators: DiffEqIdentity,
+                      DiffEqNullOperator,
+                      ScaledDiffEqOperator,
+                      AddedDiffEqOperator
+
 Random.seed!(0)
 N = 8
 

@@ -8,6 +8,7 @@ function update_coefficients!(L::AbstractDiffEqOperator, u, p, t)
     L
 end
 isconstant(L::AbstractDiffEqOperator) = all(isconstant, getops(L))
+#@deprecate is_constant(L::AbstractDiffEqOperator) isconstant(L)
 #iszero(L::AbstractDiffEqOperator) = all(iszero, getops(L))
 
 Base.size(A::AbstractDiffEqOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
