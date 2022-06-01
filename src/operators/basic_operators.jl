@@ -388,3 +388,24 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedDiffEqOperator, u::Abstra
         axpy!(true, L.cache, v)
     end
 end
+
+"""
+    Lazy operator composition
+"""
+struct ComposedDiffEqOperator{T,O,C}
+    ops::O
+    cache::C
+    isunset::Bool
+    function ComposedDiffEqOperator(ops::AbstractDiffEqOperator...)
+        for i in 1:length(ops)-1
+            opcurr = op[i]
+            opnext = op[i+1]
+            @assert size(opcurr, 1) == size(opnext, 2) "Cannot $opnext ∘ $opcurr. Size mismatich"
+        end
+
+        T = promote_type(eltype.(ops)...)
+        isunset = cache === nothing
+        new{T,typeof(ops),typeof(cache)}(ops, cache, isunset)
+    end
+end
+#
