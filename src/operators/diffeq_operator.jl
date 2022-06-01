@@ -67,13 +67,27 @@ for op in (
           )
     @eval function Base.$op(L::DiffEqArrayOperator, x::Number)
         M = $op(L.A, x)
-        update_func = L.update_func #TODO fix
+        update_func = L.update_func #TODO what is it?
         DiffEqArrayOperator(M; update_func=update_func)
     end
     @eval function Base.$op(x::Number, L::DiffEqArrayOperator)
         M = $op(L.A, x)
-        update_func = L.update_func #TODO fix
+        update_func = L.update_func #TODO what is it?
         DiffEqArrayOperator(M; update_func=update_func)
+    end
+end
+
+for op in (
+           :+, :-, :*,
+          )
+    @eval function Base.$op(L::DiffEqArrayOperator, M::Union{UniformScaling,AbstractMatrix})
+        A = $op(L.A, M)
+        DiffEqArrayOperator(A)
+    end
+
+    @eval function Base.$op(M::Union{UniformScaling,AbstractMatrix}, L::DiffEqArrayOperator)
+        A = $op(M, L.A)
+        DiffEqArrayOperator(A)
     end
 end
 
@@ -145,6 +159,7 @@ has_ldiv!(::FactorizedDiffEqArrayOperator) = true
 Base.:\(L::FactorizedDiffEqArrayOperator, x::AbstractVecOrMat) = L.F \ x
 LinearAlgebra.ldiv!(Y::AbstractVector, L::FactorizedDiffEqArrayOperator, B::AbstractVector) = ldiv!(Y, L.F, B)
 LinearAlgebra.ldiv!(L::FactorizedDiffEqArrayOperator, B::AbstractVector) = ldiv!(L.F, B)
+
 """
 AffineDiffEqOperator{T} <: AbstractDiffEqOperator{T}
 
@@ -180,6 +195,7 @@ end
 
 Base.size(L::AffineDiffEqOperator) = size(L.As[1])
 
+getops(L::AffineDiffEqOperator) = (L.As..., L.Bs...)
 
 function (L::AffineDiffEqOperator)(u,p,t::Number)
     update_coefficients!(L,u,p,t)

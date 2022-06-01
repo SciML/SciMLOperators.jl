@@ -14,7 +14,7 @@ import Setfield: @set!
 
 # overloads
 import Lazy: @forward
-import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==
+import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==, iszero
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
 
 using DocStringExtensions
@@ -49,9 +49,13 @@ abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} e
 include("interface.jl")
 include("operators/basic_operators.jl")
 include("operators/diffeq_operator.jl")
-include("operators/common_defaults.jl")
 include("operators/matrixfree_operators.jl")
-include("operators/composite_operators.jl")
+#include("operators/composite_operators.jl")
+include("operators/common_defaults.jl")
+
+_sparse(L) = sparse(L)
+_sparse(L::DiffEqArrayOperator) = _sparse(L.A)
+_sparse(L::ScaledDiffEqOperator) = L.λ * _sparse(L.L)
 
 # (u,p,t) and (du,u,p,t) interface
 for T in (
@@ -64,8 +68,8 @@ for T in (
           DiffEqArrayOperator,
           FactorizedDiffEqArrayOperator,
 
-          DiffEqOperatorCombination,
-          DiffEqOperatorComposition,
+#         DiffEqOperatorCombination,
+#         DiffEqOperatorComposition,
          )
 
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)

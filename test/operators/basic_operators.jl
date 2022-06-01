@@ -96,4 +96,39 @@ end
 
     @test abs(DiffEqScalar(-x)) == x
 end
+
+@testset "Operator Algebra" begin
+    @testset "AddedDiffEqOperator" begin
+    end
+
+    @testset "ScaledDiffEqOperator" begin
+    end
+
+    A = rand(N,N) |> DiffEqArrayOperator
+    B = rand(N,N) |> DiffEqArrayOperator
+    C = rand(N,N) |> DiffEqArrayOperator
+    α = rand() |> DiffEqScalar
+    β = rand() |> DiffEqScalar
+    u = rand(N)
+
+    for op in (
+               +, -
+              )
+        op1 = op(A  , B  )
+        op2 = op(α*A, B  )
+        op3 = op(A  , β*B)
+        op4 = op(α*A, β*B)
+
+        @test op1 isa AddedDiffEqOperator
+        @test op2 isa AddedDiffEqOperator
+        @test op3 isa AddedDiffEqOperator
+        @test op4 isa AddedDiffEqOperator
+
+        @test op1 * u ≈ op(  A*u,   B*u)
+        @test op2 * u ≈ op(α*A*u,   B*u)
+        @test op3 * u ≈ op(  A*u, β*B*u)
+        @test op4 * u ≈ op(α*A*u, β*B*u)
+    end
+
+end
 #
