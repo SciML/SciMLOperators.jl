@@ -2,7 +2,6 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 Random.seed!(0)
-
 N = 8
 
 @testset "DiffEqIdentity" begin
@@ -19,16 +18,15 @@ N = 8
     @test Id' isa DiffEqIdentity{N}
 
     for op in (
-               *, /, \,
+               *, \,
               )
         @test op(Id, u) ≈ u
-        @test op(u, Id) ≈ u
     end
 
     v .= 0; @test mul!(v, Id, u) ≈ u
     v .= 0; @test ldiv!(v, Id, u) ≈ u
 
-    # fix after working on composition operator
+    # TODO fix after working on composition operator
     #for op in (
     #           *, ∘,
     #          )
@@ -50,16 +48,11 @@ end
     @test size(Z) == (N, N)
     @test Z' isa DiffEqNullOperator{N}
 
-    for op in (
-               *, /, \,
-              )
-        @test op(Z, u) ≈ zero(u)
-        @test op(u, Z) ≈ zero(u)
-    end
+    @test *(Z, u) ≈ zero(u)
 
-    v .= 0; @test mul!(v, Z, u) ≈ zero(u)
+    v = rand(N); @test mul!(v, Z, u) ≈ zero(u)
 
-    # fix after working on composition operator
+    # TODO fix after working on composition operator
     #for op in (
     #           *, ∘,
     #          )
@@ -69,6 +62,34 @@ end
 end
 
 @testset "DiffEqScalar" begin
+    a = rand()
+    x = rand()
+    α = DiffEqScalar(x)
+    u = rand(N)
+
+    @test α isa DiffEqScalar
+    @test convert(Number, α) isa Number
+    @test convert(DiffEqScalar, a) isa DiffEqScalar
+
+    @test size(α) == ()
+
+    for op in (
+               *, /, \, +, -,
+              )
+        @test op(α, a) ≈ op(x, a)
+        @test op(a, α) ≈ op(a, x)
+    end
+
+    v = copy(u); @test lmul!(α, u) == v * x
+    v = copy(u); @test rmul!(u, α) == x * v
+
+    v .= 0; @test mul!(v, α, u) == u * x
+
+    v = rand(N)
+    w = copy(v)
+    @test axpy!(α, u, v) == u * x + w
+
+    @test abs(DiffEqScalar(-x)) == x
 end
 
 @testset "DiffEqArrayOperator" begin
