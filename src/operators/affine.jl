@@ -36,7 +36,7 @@ for fact in (
              :lq, :lq!,
              :svd, :svd!
             )
-    @eval LinearAlgebra.$fact(L::DiffEqScaledOperator, args...) = L.coeff * fact(L.op, args...)
+    @eval LinearAlgebra.$fact(L::ScaledDiffEqOperator, args...) = L.λ * fact(L.L, args...)
 end
 
 Base.convert(::Type{AbstractMatrix}, L::ScaledDiffEqOperator) = λ * convert(AbstractMatrix, L.L)
@@ -120,12 +120,11 @@ end
 
 getops(L::AddedDiffEqOperator) = (L.A, L.B)
 isconstant(L::AddedDiffEqOperator) = isconstant(L.A) & isconstant(L.B)
-iszero(L::AddedDiffEqOperator) = iszero(L.A) & iszero(L.B)
+iszero(L::AddedDiffEqOperator) = all(iszero, getops(L))
 issquare(L::AddedDiffEqOperator) = issquare(L.A)
-iszero(L::AddedDiffEqOperator) = iszero(L.A) & iszero(L.B)
 has_adjoint(L::AddedDiffEqOperator) = has_adjoint(L.A) & has_adjoint(L.B)
 
-function init_cache(A::AddedDiffEqOperator, u::AbstractField)
+function init_cache(A::AddedDiffEqOperator, u::AbstractVector)
     cache = A.B * u
 end
 
@@ -140,7 +139,7 @@ function Base.:*(L::AddedDiffEqOperator, u::AbstractVector)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractField, L::AddedDiffEqOperator, u::AbstractField)
+function LinearAlgebra.mul!(v::AbstractVector, L::AddedDiffEqOperator, u::AbstractVector)
     @unpack A, B, cache, isunset = Op
 
     if iszero(A)
@@ -183,10 +182,4 @@ for op in (
         AddedDiffEqOperator(λ*Id, $op(A))
     end
 end
-
-function Base.:/(A::AbstractOperator, λ::Number)
-    N = size(A, 1)
-    Z = DiffEqNullOperator{N}()
-    AddedDiffEqOperator(A, Z, -true, λ)
-end
-
+#

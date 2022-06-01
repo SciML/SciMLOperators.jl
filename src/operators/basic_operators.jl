@@ -130,7 +130,7 @@ Base.convert(::Type{Number}, α::DiffEqScalar) = α.val
 Base.convert(::Type{DiffEqScalar}, α::Number) = DiffEqScalar(α)
 
 # traits
-Base.size(α::DiffEqScalar) = (α.val)
+Base.size(α::DiffEqScalar) = ()
 function Base.adjoint(α::DiffEqScalar) # TODO - test
     val = α.val'
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
@@ -225,6 +225,8 @@ Base.ndims(::Type{<:DiffEqArrayOperator{T,AType}}) where{T,AType} = ndims(AType)
 ArrayInterfaceCore.issingular(L::DiffEqArrayOperator) = ArrayInterfaceCore.issingular(L.A)
 Base.copy(L::DiffEqArrayOperator) = DiffEqArrayOperator(copy(L.A);update_func=L.update_func)
 
+getops(L::DiffEqArrayOperator) = (L.A)
+
 # operator application
 Base.:*(L::DiffEqArrayOperator, u::AbstractVector) = L.A * u
 LinearAlgebra.mul!(v::AbstractVector, L::DiffEqArrayOperator, u::AbstractVector) = mul!(v, L.A, u)
@@ -310,6 +312,7 @@ Base.size(L::FactorizedDiffEqArrayOperator, args...) = size(L.F, args...)
 Base.adjoint(L::FactorizedDiffEqArrayOperator) = FactorizedDiffEqArrayOperator(L.F')
 LinearAlgebra.issuccess(L::FactorizedDiffEqArrayOperator) = issuccess(L.F)
 
+getops(::FactorizedDiffEqArrayOperator) = ()
 isconstant(::FactorizedDiffEqArrayOperator) = true
 has_ldiv(::FactorizedDiffEqArrayOperator) = true
 has_ldiv!(::FactorizedDiffEqArrayOperator) = true
