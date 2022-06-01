@@ -33,10 +33,11 @@ has_ldiv!(::DiffEqIdentity) = true
 
 # opeator application
 for op in (
-           :*, :/, :\,
+           :*, :\,
           )
     @eval Base.$op(::DiffEqIdentity{N}, x::AbstractVector) where{N} = (@assert length(x) == N; copy(x))
-    @eval Base.$op(x::AbstractVector, ::DiffEqIdentity{N}) where{N} = (@assert length(x) == N; copy(x))
+    # left multiplication with vector doens't make sense
+#   @eval Base.$op(x::AbstractVector, ::DiffEqIdentity{N}) where{N} = (@assert length(x) == N; copy(x))
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, ::DiffEqIdentity{N}, u::AbstractVector) where{N}
@@ -50,7 +51,7 @@ function LinearAlgebra.ldiv!(v::AbstractVector, ::DiffEqIdentity{N}, u::Abstract
 end
 
 # operator fusion, composition
-for op in (:*, :∘)
+for op in (:*, :∘, :/, :\)
     @eval Base.$op(::DiffEqIdentity{N}, A::AbstractSciMLOperator) where{N} = (@assert size(A, 1) == N; DiffEqIdentity{N}())
     @eval Base.$op(A::AbstractSciMLOperator, ::DiffEqIdentity{N}) where{N} = (@assert size(A, 2) == N; DiffEqIdentity{N}())
 end
@@ -83,17 +84,13 @@ end
 LinearAlgebra.isposdef(::DiffEqNullOperator) = false
 
 issquare(::DiffEqNullOperator) = true
-isconstant(::DiffEqIdentity) = true
+isconstant(::DiffEqNullOperator) = true
 has_adjoint(::DiffEqNullOperator) = true
 has_mul!(::DiffEqNullOperator) = true
 
 # opeator application
-for op in (
-           :*, :/, :\,
-          )
-    @eval Base.$op(::DiffEqNullOperator{N}, x::AbstractVector) where{N} = (@assert length(x) == N; zero(x))
-    @eval Base.$op(x::AbstractVector, ::DiffEqNullOperator{N}) where{N} = (@assert length(x) == N; zero(x))
-end
+Base.:*(::DiffEqNullOperator{N}, x::AbstractVector) where{N} = (@assert length(x) == N; zero(x))
+Base.:*(x::AbstractVector, ::DiffEqNullOperator{N}) where{N} = (@assert length(x) == N; zero(x))
 
 function LinearAlgebra.mul!(v::AbstractVector, ::DiffEqNullOperator{N}, u::AbstractArray) where{N}
     @assert length(u) == length(v) == N
@@ -143,7 +140,10 @@ has_mul(::DiffEqScalar) = true
 has_ldiv(α::DiffEqScalar) = iszero(α.val)
 
 for op in (:*, :/, :\)
-    for T in (:AbstractArray, :Number)
+    for T in (
+              :Number,
+              :AbstractArray, # TODO - to act on AbstractArrays, it needs a notion of size?
+             )
         @eval Base.$op(α::DiffEqScalar, x::$T) = $op(α.val, x)
         @eval Base.$op(x::$T, α::DiffEqScalar) = $op(x, α.val)
     end
@@ -159,7 +159,7 @@ end
 for op in (:-, :+)
     @eval Base.$op(α::DiffEqScalar, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::DiffEqScalar) = $op(x, α.val)
-    # TODO - should result be Number or DiffEqScalar
+    # TODO - should result be Number or DiffEqScalar?
     @eval Base.$op(x::DiffEqScalar, y::DiffEqScalar) = $op(x.val, y.val)
 end
 
@@ -186,7 +186,7 @@ struct DiffEqArrayOperator{T,AType<:AbstractMatrix{T},F} <: AbstractDiffEqLinear
 end
 
 # constructors
-Base.similar(L::DiffEqArrayOperator, ::Type{T}, dims::Dims) whereT = similar(L.A, T, dims)
+Base.similar(L::DiffEqArrayOperator, ::Type{T}, dims::Dims) where{T} = similar(L.A, T, dims)
 
 # traits
 @forward DiffEqArrayOperator.A (
@@ -243,6 +243,7 @@ for op in (
         DiffEqArrayOperator(M; update_func=update_func)
     end
 end
+
 """
     FactorizedDiffEqArrayOperator(F)
 
