@@ -2,7 +2,6 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 Random.seed!(0)
-
 N = 8
 
 @testset "DiffEqIdentity" begin
@@ -28,7 +27,7 @@ N = 8
     v .= 0; @test mul!(v, Id, u) ≈ u
     v .= 0; @test ldiv!(v, Id, u) ≈ u
 
-    # fix after working on composition operator
+    # TODO fix after working on composition operator
     #for op in (
     #           *, ∘,
     #          )
@@ -59,7 +58,7 @@ end
 
     v .= 0; @test mul!(v, Z, u) ≈ zero(u)
 
-    # fix after working on composition operator
+    # TODO fix after working on composition operator
     #for op in (
     #           *, ∘,
     #          )
