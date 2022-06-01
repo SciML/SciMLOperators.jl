@@ -124,10 +124,16 @@ end
 LinearAlgebra.ldiv!(Y::AbstractArray, L::DiffEqScaledOperator, B::AbstractArray) =
   lmul!(1/L.coeff, ldiv!(Y, L.op, B))
 LinearAlgebra.factorize(L::DiffEqScaledOperator) = L.coeff * factorize(L.op)
-for fact in (:lu, :lu!, :qr, :qr!, :cholesky, :cholesky!, :ldlt, :ldlt!,
-  :bunchkaufman, :bunchkaufman!, :lq, :lq!, :svd, :svd!)
-  @eval LinearAlgebra.$fact(L::DiffEqScaledOperator, args...) =
-    L.coeff * fact(L.op, args...)
+for fact in (
+             :lu, :lu!,
+             :qr, :qr!,
+             :cholesky, :cholesky!,
+             :ldlt, :ldlt!,
+             :bunchkaufman, :bunchkaufman!,
+             :lq, :lq!,
+             :svd, :svd!
+            )
+    @eval LinearAlgebra.$fact(L::DiffEqScaledOperator, args...) = L.coeff * fact(L.op, args...)
 end
 
 isconstant(L::AbstractDiffEqCompositeOperator) = all(isconstant, getops(L))

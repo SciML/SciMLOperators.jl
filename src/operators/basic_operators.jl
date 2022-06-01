@@ -24,7 +24,9 @@ for pred in (
     @eval LinearAlgebra.$pred(::DiffEqIdentity) = true
 end
 
+getops(::DiffEqIdentity) = ()
 isconstant(::DiffEqIdentity) = true
+iszero(::DiffEqIdentity) = false
 issquare(::DiffEqIdentity) = true
 has_adjoint(::DiffEqIdentity) = true
 has_mul!(::DiffEqIdentity) = true
@@ -81,6 +83,7 @@ for pred in (
 end
 LinearAlgebra.isposdef(::DiffEqNullOperator) = false
 
+getops(::DiffEqNullOperator) = ()
 isconstant(::DiffEqNullOperator) = true
 issquare(::DiffEqNullOperator) = true
 iszero(::DiffEqNullOperator) = true
@@ -127,12 +130,14 @@ Base.convert(::Type{Number}, α::DiffEqScalar) = α.val
 Base.convert(::Type{DiffEqScalar}, α::Number) = DiffEqScalar(α)
 
 # traits
-Base.size(::DiffEqScalar) = ()
+Base.size(α::DiffEqScalar) = (α.val)
 function Base.adjoint(α::DiffEqScalar) # TODO - test
     val = α.val'
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
     DiffEqScalar(val; update_func=update_func)
 end
+
+getops(α::DiffEqScalar) = (α.val)
 isconstant(α::DiffEqScalar) = α.update_func == DEFAULT_UPDATE_FUNC
 iszero(α::DiffEqScalar) = iszero(α.val)
 has_adjoint(::DiffEqScalar) = true

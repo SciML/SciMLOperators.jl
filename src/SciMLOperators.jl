@@ -48,8 +48,9 @@ abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} e
 
 include("interface.jl")
 include("operators/basic_operators.jl")
+include("operators/affine.jl")
 include("operators/common_defaults.jl")
-include("operators/diffeq_operator.jl")
+#include("operators/diffeq_operator.jl")
 include("operators/matrixfree_operators.jl")
 include("operators/composite_operators.jl")
 
@@ -70,7 +71,7 @@ export DiffEqIdentity, DiffEqNullOperator,
        MatrixFreeOperator
 
 export update_coefficients!, update_coefficients,
-       isconstant, islinear, issquare, iszero,
+#      isconstant, islinear, issquare, iszero,
        has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
 
 end # module

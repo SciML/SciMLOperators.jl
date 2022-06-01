@@ -16,12 +16,6 @@ struct ScaledDiffEqOperator{T,
     end
 end
 
-function update_coefficients!(L::ScaledDiffEqOperator, u, p, t)
-    update_coefficients!(L.L, u, p, t)
-    update_coefficients!(L.λ, u, p, t)
-    L
-end
-
 # constructor
 Base.:*(λ::Union{Number,DiffEqScalar}, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(λ, L)
 Base.:*(L::AbstractDiffEqOperator, λ::Union{Number,DiffEqScalar}) = ScaledDiffEqOperator(λ, L)
@@ -33,12 +27,31 @@ Base.:/(λ::Union{Number,DiffEqScalar}, L::AbstractDiffEqOperator) = ScaledDiffE
 Base.:-(L::AbstractDiffEqOperator) = ScaledDiffEqOperator(-true, L)
 Base.:+(L::AbstractDiffEqOperator) = L
 
-Base.convert(::Type{AbstractMatrix}, L::DiffEqScaledOperator) = λ * convert(AbstractMatrix, L.L)
+for fact in (
+             :lu, :lu!,
+             :qr, :qr!,
+             :cholesky, :cholesky!,
+             :ldlt, :ldlt!,
+             :bunchkaufman, :bunchkaufman!,
+             :lq, :lq!,
+             :svd, :svd!
+            )
+    @eval LinearAlgebra.$fact(L::DiffEqScaledOperator, args...) = L.coeff * fact(L.op, args...)
+end
+
+Base.convert(::Type{AbstractMatrix}, L::ScaledDiffEqOperator) = λ * convert(AbstractMatrix, L.L)
+Base.Matrix(L::ScaledDiffEqOperator) = L.λ * Matrix(L.L)
 
 # traits
 Base.size(L::ScaledDiffEqOperator) = size(L.L)
 Base.adjoint(L::ScaledDiffEqOperator) = ScaledDiffEqOperator(L.λ', L.op')
+LinearAlgebra.opnorm(L::ScaledDiffEqOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
+# getindex
+Base.getindex(L::ScaledDiffEqOperator, i::Int) = L.coeff * L.op[i]
+Base.getindex(L::ScaledDiffEqOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]
+
+getops(L::ScaledDiffEqOperator) = (L.λ, L.A)
 isconstant(L::ScaledDiffEqOperator) = isconstant(L.L) & isconstant(L.λ)
 iszero(L::ScaledDiffEqOperator) = iszero(L.L) & iszero(L.λ)
 issquare(L::ScaledDiffEqOperator) = issquare(L.L)
@@ -50,10 +63,10 @@ has_ldiv!(L::ScaledDiffEqOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 for op in (
            :*, :\,
           )
-    @eval Base.$op(L::DiffEqScaledOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
+    @eval Base.$op(L::ScaledDiffEqOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::DiffEqScaledOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, L::ScaledDiffEqOperator, u::AbstractVector)
     mul!(v, L.L, u)
     lmul!(L.λ, v)
 end
@@ -92,11 +105,8 @@ struct AddedDiffEqOperator{T,
     end
 end
 
-function update_coefficients!(L::AddedDiffEqOperator, u, p, t)
-    update_coefficients!(L.A, u, p, t)
-    update_coefficients!(L.B, u, p, t)
-    L
-end
+Base.convert(::Type{AbstractMatrix}, L::AddedDiffEqOperator) = convert(AbstractMatrix, L.A) + convert(AbstractMatrix, L.B)
+Base.Matrix(L::AddedDiffEqOperator) = Matrix(L.A) + Matrix(L.B)
 
 # traits
 Base.size(A::AddedDiffEqOperator) = size(A.A)
@@ -108,8 +118,10 @@ function Base.adjoint(A::AddedDiffEqOperator)
     end
 end
 
-issquare(L::AddedDiffEqOperator) = issquare(L.A)
+getops(L::AddedDiffEqOperator) = (L.A, L.B)
 isconstant(L::AddedDiffEqOperator) = isconstant(L.A) & isconstant(L.B)
+iszero(L::AddedDiffEqOperator) = iszero(L.A) & iszero(L.B)
+issquare(L::AddedDiffEqOperator) = issquare(L.A)
 iszero(L::AddedDiffEqOperator) = iszero(L.A) & iszero(L.B)
 has_adjoint(L::AddedDiffEqOperator) = has_adjoint(L.A) & has_adjoint(L.B)
 

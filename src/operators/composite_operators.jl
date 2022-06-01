@@ -4,13 +4,13 @@
 
 
 # Define a helper function `sparse1` that handles
-# `DiffEqArrayOperator` and `DiffEqScaledOperator`.
+# `DiffEqArrayOperator` and `ScaledDiffEqOperator`.
 # We should define `sparse` for these types in `SciMLBase` instead,
 # but that package doesn't know anything about sparse arrays yet, so
 # we'll introduce a temporary work-around here.
-sparse1(A) = sparse(A)
-sparse1(A::DiffEqArrayOperator) = sparse1(A.A)
-sparse1(A::DiffEqScaledOperator) = A.coeff * sparse1(A.op)
+sparse1(L) = sparse(L)
+sparse1(L::DiffEqArrayOperator) = sparse1(L.A)
+sparse1(L::ScaledDiffEqOperator) = L.λ * sparse1(L.L)
 
 
 # Linear Combination
