@@ -29,3 +29,7 @@ end
 # Routines that use the full matrix representation
 Base.Matrix(L::AbstractDiffEqLinearOperator) = Matrix(convert(AbstractMatrix, L))
 LinearAlgebra.exp(L::AbstractDiffEqLinearOperator) = exp(Matrix(L))
+
+# write interfae here
+Base.adjoint(A::AbstractDiffEqLinearOperator) = Adjoint(A)
+

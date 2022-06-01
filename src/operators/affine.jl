@@ -1,15 +1,50 @@
 #
-struct ScaledDiffEqOperator{T,op}
-    λ::Tλ
-    op::Top
+struct ScaledDiffEqOperator{T,
+                            λType<:Number,
+                            LType<:AbstractDiffEqOperator,
+                           } <: AbstractDiffEqOperator{T}
+    λ::λType
+    L::LType
 
-    function ScaledDiffEqOperator(λ, op::AbstractDiffEqOperator{T}) where{T}
-        T = promote_type(eltype(λ), T)
-        new{T,typeof(λ),typeof(op)}(λ, op)
+    function ScaledDiffEqOperator(λ, L::AbstractDiffEqOperator{Tl}) where{Tl}
+        T = promote_type(eltype(λ), Tl)
+        new{T,typeof(λ),typeof(op)}(λ, L)
+    end
 end
 
-Base.size(L::ScaledDiffEqOperator) = size(L.op)
+function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
+    update_coefficients!(L.L, u, p, t)
+    update_coefficients!(L.λ, u, p, t)
+    nothing
+end
+
+# constructor
+Base.:*(λ::Number, L::AbstractDiffEqOperator) = ScaledDiffEqOperator(λ, L)
+Base.:*(L::AbstractDiffEqOperator, λ::Number) = ScaledDiffEqOperator(λ, L)
+
+Base.convert(::Type{AbstractMatrix}, L::DiffEqScaledOperator) = λ * convert(AbstractMatrix, L.L)
+
+# traits
+Base.size(L::ScaledDiffEqOperator) = size(L.L)
 Base.adjoint(L::ScaledDiffEqOperator) = ScaledDiffEqOperator(L.λ', L.op')
+
+issquare(L::ScaledDiffEqOperator) = issquare(L.L)
+has_adjoint(L::ScaledDiffEqOperator) = has_adjoint(L.L)
+has_ldiv(L::ScaledDiffEqOperator) = has_ldiv(L.L) & !iszero(L.λ)
+has_ldiv!(L::ScaledDiffEqOperator) = has_ldiv!(L.L) & !iszero(L.λ)
+
+# operator application
+for op in (
+           :*, :/, :\,
+          )
+    @eval Base.$op(L::DiffEqScaledOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
+#   @eval Base.$op(x::AbstractVector, L::DiffEqScaledOperator) = $op($op(x, L.L), L.λ)
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::DiffEqScaledOperator, u::AbstractVector)
+    mul!(v, L.L, u)
+    lmul!(L.λ, v)
+end
 
 """
 Lazy affine operator combinations αA + βB
@@ -34,7 +69,7 @@ struct AffineDiffEqOperator{T,
     function AffineDiffEqOperator(A::AbstractDiffEqOperator{Ta},
                                   B::AbstractDiffEqOperator{Tb}, α, β;
                                   cache = nothing,
-                                  isunset = cache === nothing
+                                  isunset = cache === nothing,
                                  ) where{Ta,Tb}
         @assert size(A) == size(B)
         T = promote_type(Ta,Tb, eltype(α), eltype(β))
@@ -57,6 +92,7 @@ function update_coefficients!(L::AffineDiffEqOperator, u, p, t)
     update_coefficients!(L.B, u, p, t)
     update_coefficients!(L.α, u, p, t)
     update_coefficients!(L.β, u, p, t)
+    nothing
 end
 
 # traits
