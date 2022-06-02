@@ -27,7 +27,6 @@ Base.@kwdef struct SciMLOperatorTraits{S,O}
     has_mul! = false
     has_ldiv = false
     has_ldiv! = false
-
 end
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
@@ -36,8 +35,6 @@ Base.eltype(::AbstractSciMLOperator{T}) where T = T
 
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
-
-isconstant(::AbstractSciMLLinearOperator) = true
 
 islinear(::AbstractSciMLOperator) = false
 Base.iszero(::AbstractSciMLOperator) = false
@@ -83,25 +80,25 @@ has_ldiv!(::Union{Diagonal, Factorization}) = true
 issquare(::UniformScaling) = true
 issquare(A) = size(A,1) === size(A,2)
 issquare(A...) = @. (&)(issquare(A)...)
-#
-# Other ones from LinearMaps.jl
-# Generic fallbacks
-LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
-has_exp(L::AbstractSciMLLinearOperator) = true
-expmv(L::AbstractSciMLLinearOperator,u,p,t) = exp(L,t)*u
-expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
-# Factorizations have no fallback and just error
-#
 
 ###
 # default linear operator traits
 ###
 
-Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
-Base.adjoint(A::AbstractSciMLLinearOperator) = Adjoint(A) # TODO write fallback interfae for adjoint operator here
+LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
+has_exp(L::AbstractSciMLLinearOperator) = true
+expmv(L::AbstractSciMLLinearOperator,u,p,t) = exp(L,t)*u
+expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
 
-Base.@propagate_inbounds Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N} = convert(AbstractMatrix,L)[I...]
-Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Int, N}) where {N} = convert(AbstractMatrix,L)[I...]
+Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
+Base.adjoint(A::AbstractSciMLLinearOperator) = Adjoint(A) # TODO write lazy adjoint operator interface here
+
+Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N}
+    convert(AbstractMatrix, L)[I...]
+end
+function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Int, N}) where {N}
+    convert(AbstractMatrix,L)[I...]
+end
 
 LinearAlgebra.exp(L::AbstractSciMLLinearOperator) = exp(Matrix(L))
 LinearAlgebra.opnorm(L::AbstractSciMLLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
@@ -109,14 +106,18 @@ for pred in (
              :isreal,
              :issymmetric,
              :ishermitian,
-             :isposdef
+             :isposdef,
             )
-    @eval LinearAlgebra.$pred(L::AbstractSciMLLinearOperator) = $pred(convert(AbstractMatrix, L))
+    @eval function LinearAlgebra.$pred(L::AbstractSciMLLinearOperator)
+        $pred(convert(AbstractMatrix, L))
+    end
 end
 for op in (
            :sum,:prod
           )
-  @eval LinearAlgebra.$op(L::AbstractSciMLLinearOperator; kwargs...) = $op(convert(AbstractMatrix, L); kwargs...)
+  @eval function LinearAlgebra.$op(L::AbstractSciMLLinearOperator; kwargs...)
+      $op(convert(AbstractMatrix, L); kwargs...)
+  end
 end
 
 for op in (
@@ -125,6 +126,10 @@ for op in (
     @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVector) = $op(convert(AbstractMatrix,L), x)
 end
 
-LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector) = mul!(v, convert(AbstractMatrix,L), u)
-LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α, β) = mul!(v, convert(AbstractMatrix,L), u, α, β)
+function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector)
+    mul!(v, convert(AbstractMatrix,L), u)
+end
+function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α, β)
+    mul!(v, convert(AbstractMatrix,L), u, α, β)
+end
 #
