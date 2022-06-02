@@ -3,22 +3,6 @@
 # AbstractSciMLOperator Traits
 ###
 
-# SciML
-#isconstant = false
-#islinear = false
-#iszero = false
-
-#has_adjoint = false
-#has_mul = false
-#has_mul! = false
-#has_ldiv = false
-#has_ldiv! = false
-
-#LinearAlgebra.isreal
-#LinearAlgebra.issymmetric
-#LinearAlgebra.ishermitian
-#LinearAlgbera.isposdef
-
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 Base.eltype(::Type{AbstractSciMLOperator{T}}) where T = T
 Base.eltype(::AbstractSciMLOperator{T}) where T = T
@@ -58,20 +42,59 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 =#
 
 # Extra standard assumptions
-isconstant(::AbstractSciMLLinearOperator) = true
+isconstant(L) = true
 isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 
-isconstant(::AbstractMatrix) = true
-islinear(::AbstractMatrix) = true
-has_adjoint(::AbstractMatrix) = true
-has_mul(::AbstractMatrix) = true
-has_mul!(::AbstractMatrix) = true
-has_ldiv(::AbstractMatrix) = true
-has_ldiv!(::AbstractMatrix) = false
-has_ldiv!(::Union{Diagonal, Bidiagonal, Factorization}) = true
+islinear(::Union{
+                 # LinearAlgebra
+                 AbstractMatrix,
+                 UniformScaling,
+                 Factorization,
 
-issquare(::UniformScaling) = true
+                 # Base
+                 Number,
+
+                 # SciMLOperator
+                 AbstractSciMLLinearOperator,
+                }
+        ) = true
+
+has_mul(L) = true
+has_mul!(L) = false
+
+has_ldiv(::Union{
+                 AbstractMatrix,
+                 Factorization,
+                }
+        ) = true
+
+has_ldiv!(L) = false
+has_ldiv!(::Union{
+                  Diagonal,
+                  Bidiagonal,
+                  Factorization
+                 }
+         ) = true
+
+has_adjoint(::Union{
+                    # LinearAlgebra
+                    AbstractMatrix,
+                    UniformScaling,
+                    Factorization,
+
+                    # Base
+                    Number,
+
+                    # SciMLOperator
+                    AbstractSciMLLinearOperator,
+                   }
+           ) = true
+
 issquare(A) = size(A,1) === size(A,2)
+issquare(::Union{
+                 UniformScaling,
+                }
+        ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
 ###
