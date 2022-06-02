@@ -47,11 +47,9 @@ $(TYPEDEF)
 abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} end
 
 include("interface.jl")
-include("operators/basic_operators.jl")
-include("operators/diffeq_operator.jl")
-include("operators/matrixfree_operators.jl")
-#include("operators/composite_operators.jl")
-include("operators/common_defaults.jl")
+include("basic.jl")
+include("sciml.jl")
+include("common.jl")
 
 # Define a helper function `sparse1` that handles
 # `DiffEqArrayOperator` and `ScaledDiffEqOperator`.
