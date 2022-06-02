@@ -251,7 +251,7 @@ Base.size(L::SciMLScaledOperator) = size(L.L)
 Base.adjoint(L::SciMLScaledOperator) = SciMLScaledOperator(L.λ', L.op')
 LinearAlgebra.opnorm(L::SciMLScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
-getops(L::SciMLScaledOperator) = (L.λ, L.A)
+getops(L::SciMLScaledOperator) = (L.λ, L.L)
 islinear(L::SciMLScaledOperator) = all(islinear, L.ops)
 isconstant(L::SciMLScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 iszero(L::SciMLScaledOperator) = iszero(L.L) & iszero(L.λ)
