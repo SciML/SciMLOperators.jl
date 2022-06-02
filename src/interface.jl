@@ -31,7 +31,7 @@ for T in (
 
           SciMLMatrixOperator,
           SciMLFactorizedOperator,
-#         SciMLFunctionOperator,
+          SciMLFunctionOperator,
          )
 
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)

@@ -3,31 +3,21 @@
 # AbstractSciMLOperator Traits
 ###
 
-"""
-    Set of SciML operator traits
-"""
-Base.@kwdef struct SciMLOperatorTraits{S,O}
-    # Base
-    size::S = nothing
+# SciML
+#isconstant = false
+#islinear = false
+#iszero = false
 
-    # LinearAlgebra
-    opnorm::O = nothing
-    isreal::Bool = true
-    issymmetric::Bool = false
-    ishermitian::Bool = false
+#has_adjoint = false
+#has_mul = false
+#has_mul! = false
+#has_ldiv = false
+#has_ldiv! = false
 
-    # SciML
-    isconstant::Bool = false
-    islinear::Bool = false
-    issquare::Bool = false
-    iszero::Bool = false
-
-    has_adjoint = false
-    has_mul = false
-    has_mul! = false
-    has_ldiv = false
-    has_ldiv! = false
-end
+#LinearAlgebra.isreal
+#LinearAlgebra.issymmetric
+#LinearAlgebra.ishermitian
+#LinearAlgbera.isposdef
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 Base.eltype(::Type{AbstractSciMLOperator{T}}) where T = T
@@ -36,8 +26,11 @@ Base.eltype(::AbstractSciMLOperator{T}) where T = T
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
 
-islinear(::AbstractSciMLOperator) = false
 Base.iszero(::AbstractSciMLOperator) = false
+
+islinear(::AbstractSciMLOperator) = false
+islinear(::AbstractSciMLLinearOperator) = true
+
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
@@ -67,7 +60,6 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 # Extra standard assumptions
 isconstant(::AbstractSciMLLinearOperator) = true
 isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
-islinear(o::AbstractSciMLLinearOperator) = isconstant(o)
 
 isconstant(::AbstractMatrix) = true
 islinear(::AbstractMatrix) = true
