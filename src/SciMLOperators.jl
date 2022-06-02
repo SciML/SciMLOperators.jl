@@ -67,12 +67,11 @@ for T in (
           DiffEqScalar,
           ScaledDiffEqOperator,
           AddedDiffEqOperator,
+          ComposedDiffEqOperator,
 
           DiffEqArrayOperator,
           FactorizedDiffEqArrayOperator,
-
-#         DiffEqOperatorCombination,
-#         DiffEqOperatorComposition,
+#         DiffEqFunctionOperator,
          )
 
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
