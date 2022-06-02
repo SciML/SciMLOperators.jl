@@ -1,6 +1,6 @@
 #
 ###
-# (u,p,t) and (du,u,p,t) interface
+# AbstractSciMLOperator (u,p,t) and (du,u,p,t) interface
 ###
 
 #=
