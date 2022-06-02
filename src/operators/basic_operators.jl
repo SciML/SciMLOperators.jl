@@ -418,6 +418,16 @@ struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
     end
 end
 
+function init_cache(L::ComposedDiffEqOperator, u::AbstractVector)
+    cache = ()
+    vec = u
+    for i in reverse(2:length(L.ops))
+        vec = op[i] * vec
+        cache = push(cache, vec)
+    end
+    cache
+end
+
 # constructors
 Base.:∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops)
 
@@ -426,9 +436,12 @@ Base.:∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEq
 Base.:∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
 
 # operator fusion falls back on composition
+Base.:*(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops...)
+
 Base.:*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A, B)
 Base.:*(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
 Base.:*(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
+
 
 Base.Matrix(L::ComposedDiffEqOperator) = prod(Matrix, L.ops)
 Base.convert(::Type{AbstractMatrix}, L::ComposedDiffEqOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
