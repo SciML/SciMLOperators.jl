@@ -1,10 +1,21 @@
 module SciMLOperators
 
 using LinearAlgebra
-using StaticArrays
-using SparseArrays
-using ArrayInterfaceCore
 using DiffEqBase
+using DocStringExtensions
+
+import StaticArrays
+import SparseArrays
+import ArrayInterfaceCore
+
+## caching
+#import UnPack: @unpack
+#import Setfield: @set!
+
+# overloads
+import Lazy: @forward
+import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==
+import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
 
 using DocStringExtensions
 
@@ -43,19 +54,23 @@ include("operators/matrixfree_operators.jl")
 include("operators/composite_operators.jl")
 
 # The (u,p,t) and (du,u,p,t) interface
-for T in [DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOperatorComposition]
+for T in (
+          DiffEqIdentity, DiffEqNullOperator,
+          DiffEqScalar,
+          DiffEqArrayOperator, FactorizedDiffEqArrayOperator,
+          DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOperatorComposition,
+         )
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
     (L::T)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 end
 
-export AffineDiffEqOperator, DiffEqScaledOperator
-
-export DiffEqScalar, DiffEqArrayOperator, DiffEqIdentity
-
-export MatrixFreeOperator
-
+export DiffEqIdentity, DiffEqNullOperator,
+       DiffEqScalar, DiffEqArrayOperator, FactorizedDiffEqArrayOperator,
+       AffineDiffEqOperator, DiffEqScaledOperator,
+       MatrixFreeOperator
 
 export update_coefficients!, update_coefficients,
-    has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
+       issquare, isconstant, islinear,
+       has_adjoint, has_expmv!, has_expmv, has_exp, has_mul, has_mul!, has_ldiv, has_ldiv!
 
 end # module
