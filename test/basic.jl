@@ -5,7 +5,9 @@ using SciMLOperators: SciMLIdentity,
                       SciMLNullOperator,
                       SciMLScaledOperator,
                       SciMLAddedOperator,
-                      SciMLComposedOperator
+                      SciMLComposedOperator,
+
+                      getops
 
 Random.seed!(0)
 N = 8
