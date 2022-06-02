@@ -44,8 +44,6 @@ convert(::Type{AbstractMatrix}, L::DiffEqOperatorComposition) =
 SparseArrays.sparse(L::DiffEqOperatorComposition) = prod(sparse1, reverse(L.ops))
 
 size(L::DiffEqOperatorComposition) = (size(L.ops[end], 1), size(L.ops[1], 2))
-size(L::DiffEqOperatorComposition, m::Integer) = size(L)[m]
-opnorm(L::DiffEqOperatorComposition) = prod(opnorm, L.ops)
 Base.:*(L::DiffEqOperatorComposition, x::AbstractArray) = foldl((acc, op) -> op*acc, L.ops; init=x)
 Base.:*(x::AbstractArray, L::DiffEqOperatorComposition) = foldl((acc, op) -> acc*op, reverse(L.ops); init=x)
 /(L::DiffEqOperatorComposition, x::AbstractArray) = foldl((acc, op) -> op/acc, L.ops; init=x)
@@ -65,10 +63,4 @@ function ldiv!(y::AbstractVector, L::DiffEqOperatorComposition, b::AbstractVecto
     ldiv!(L.caches[i-1], L.ops[i], L.caches[i])
   end
   ldiv!(y, L.ops[1], L.caches[1])
-end
-factorize(L::DiffEqOperatorComposition) = prod(factorize, reverse(L.ops))
-for fact in (:lu, :lu!, :qr, :qr!, :cholesky, :cholesky!, :ldlt, :ldlt!,
-  :bunchkaufman, :bunchkaufman!, :lq, :lq!, :svd, :svd!)
-  @eval LinearAlgebra.$fact(L::DiffEqOperatorComposition, args...) =
-    prod(op -> $fact(op, args...), reverse(L.ops))
 end
