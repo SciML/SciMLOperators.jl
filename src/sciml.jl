@@ -250,56 +250,65 @@ function update_coefficients!(L::AffineSciMLOperator,u,p,t)
     for B in L.Bs; update_coefficients!(B,u,p,t); end
 end
 
-@deprecate is_constant(L::AbstractSciMLOperator) isconstant(L)
-
 """
     Matrix free operators (given by a function)
 """
-struct SciMLFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractSciMLOperator{T}
+struct SciMLFunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
     op::F
     """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
     op_adjoint::Fa
+    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    op_inverse::Fi
+    """ Size """
+    size::S
+    """ Parameters """
     p::P
-    traits::Tr
 
     function SciMLFunctionOperator(op;
                                    isinplace=false,
-                                   adjoint=nothing,
+                                   op_adjoint=nothing,
+                                   op_inverse=nothing,
                                    p=nothing,
-                                   traits=nothing,
-                                   isselfadjoint=false,
-                                   kwargs...
+
+                                   # LinearAlgebra
+                                   opnorm=nothing,
+                                   isreal=true,
+                                   issymmetric=false,
+                                   ishermitian=false,
                                   )
         T = eltype(op)
 
-        if isselfadjoint & (adjoint === nothing)
+        if LinearAlgebra.ishermitian(op) & (adjoint === nothing)
             adjoint = op
-        end
-
-        if traits === nothing
-            SciMLOperatorTraits(;kwargs...,
-                                has_adjoint=adjoint !== nothing,
-                                eltype=promote_type(op),
-                               )
         end
 
         new{isinplace,
             T,
             typeof(op),
             typeof(op_adjoint),
+            typeof(op_inverse),
+            typeof(size),
             typeof(p),
-            typeof(traits)
            }(
-             op, adjoint, p, traits
+             op, op_adjoint, op_inverse, size, p,
             )
     end
 end
 
-#Base.:*(L::SciMLFunctionOperator, u::AbstractVector) = L.op(u, p, t)
-#Base.:\
-#LinearAlgebra.mul!()
-#LinearAlgebra.ldiv!()
-#LinearAlgebra.ldiv!()
+Base.size(L::SciMLFunctionOperator) = L.size
+Base.adjoint(L::SciMLFunctionOperator) = SciMLFunctionOperator(L.op_adjoint; op_inverse=L.op)
 
+has_adjoint(L::SciMLFunctionOperator) = L.op_adjoint isa Nothing
+has_mul!(L::SciMLFunctionOperator{iip}) where{iip} = iip
+has_ldiv(L::SciMLFunctionOperator{iip}) where{iip} = L.op_inverse isa Nothing
+has_ldiv!(L::SciMLFunctionOperator{iip}) where{iip} = iip & has_ldiv(L)
+
+getops(L::SciMLFunctionOperator) = (L.p,)
+
+# operator application
+Base.:*(L::SciMLFunctionOperator, u::AbstractVector) = L.op(u, p, t)
+Base.:\(L::SciMLFunctionOperator, u::AbstractVector) = L.op_inverse(u, p, t)
+LinearAlgebra.mul!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector) = L.op(v, u, p, t)
+LinearAlgebra.ldiv!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector) = L.op_inverse(v, u, p, t)
 #
