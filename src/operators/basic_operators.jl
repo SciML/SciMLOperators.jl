@@ -418,8 +418,6 @@ struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
     end
 end
 
-# check operator ordering everywhere
-
 # constructors
 Base.:∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops)
 
@@ -428,17 +426,21 @@ Base.:∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEq
 Base.:∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
 
 # operator fusion falls back on composition
-Base.:*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = A ∘ B
-#Base.:*(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A[])
+Base.:*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A, B)
+Base.:*(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
+Base.:*(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
 
-Base.convert(::Type{AbstractMatrix}, L::ComposedDiffEqOperator) = prod(convert.(AbstractMatrix, ops))
-Base.Matrix(L::ComposedDiffEqOperator) = prod(Matrix.(ops))
+Base.Matrix(L::ComposedDiffEqOperator) = prod(Matrix, L.ops)
+Base.convert(::Type{AbstractMatrix}, L::ComposedDiffEqOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
+
+SparseArrays.sparse(L::ComposedDiffEqOperator) = prod(_sparse, L.ops)
 
 # traits
 Base.size(L::ComposedDiffEqOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
 Base.adjoint(L::ComposedDiffEqOperator) = ComposedDiffEqOperator(adjoint.(reverse(L.ops)))
-opnorm(L::ComposedDiffEqOperator) = prod(opnorm, L.ops)
+LinearAlgebra.opnorm(L::ComposedDiffEqOperator) = prod(opnorm, L.ops)
 
+getops(L::AddedDiffEqOperator) = L.ops
 islinear(L::ComposedDiffEqOperator) = all(islinear, L.ops)
 iszero(L::ComposedDiffEqOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedDiffEqOperator) = all(has_adjoint, L.ops)
@@ -479,6 +481,15 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedDiffEqOperator, u::Ab
     vecs = (u, reverse(L.cache)..., v)
     for i in 1:length(L.ops)
         ldiv!(vecs[i], L.ops[i], vecs[i+1])
+    end
+    v
+end
+
+function LinearAlgebra.ldiv!(L::ComposedDiffEqOperator, u::AbstractVector)
+    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
+
+    for i in 1:length(L.ops)
+        ldiv!(L.ops[i], vecs[i])
     end
     v
 end

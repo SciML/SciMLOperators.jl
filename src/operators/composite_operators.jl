@@ -37,30 +37,3 @@ Base.:*(L1::AbstractDiffEqLinearOperator, L2::DiffEqOperatorComposition) = DiffE
 ∘(L1::AbstractDiffEqLinearOperator, L2::DiffEqOperatorComposition) = DiffEqOperatorComposition((L2.ops..., L1))
 Base.:*(L1::DiffEqOperatorComposition, L2::DiffEqOperatorComposition) = DiffEqOperatorComposition((L2.ops..., L1.ops...))
 ∘(L1::DiffEqOperatorComposition, L2::DiffEqOperatorComposition) = DiffEqOperatorComposition((L2.ops..., L1.ops...))
-getops(L::DiffEqOperatorComposition) = L.ops
-Matrix(L::DiffEqOperatorComposition) = prod(Matrix, reverse(L.ops))
-convert(::Type{AbstractMatrix}, L::DiffEqOperatorComposition) =
-  prod(op -> convert(AbstractMatrix, op), reverse(L.ops))
-SparseArrays.sparse(L::DiffEqOperatorComposition) = prod(sparse1, reverse(L.ops))
-
-size(L::DiffEqOperatorComposition) = (size(L.ops[end], 1), size(L.ops[1], 2))
-Base.:*(L::DiffEqOperatorComposition, x::AbstractArray) = foldl((acc, op) -> op*acc, L.ops; init=x)
-Base.:*(x::AbstractArray, L::DiffEqOperatorComposition) = foldl((acc, op) -> acc*op, reverse(L.ops); init=x)
-/(L::DiffEqOperatorComposition, x::AbstractArray) = foldl((acc, op) -> op/acc, L.ops; init=x)
-/(x::AbstractArray, L::DiffEqOperatorComposition) = foldl((acc, op) -> acc/op, L.ops; init=x)
-\(L::DiffEqOperatorComposition, x::AbstractArray) = foldl((acc, op) -> op\acc, reverse(L.ops); init=x)
-\(x::AbstractArray, L::DiffEqOperatorComposition) = foldl((acc, op) -> acc\op, reverse(L.ops); init=x)
-function mul!(y::AbstractVector, L::DiffEqOperatorComposition, b::AbstractVector)
-  mul!(L.caches[1], L.ops[1], b)
-  for i in 2:length(L.ops) - 1
-    mul!(L.caches[i], L.ops[i], L.caches[i-1])
-  end
-  mul!(y, L.ops[end], L.caches[end])
-end
-function ldiv!(y::AbstractVector, L::DiffEqOperatorComposition, b::AbstractVector)
-  ldiv!(L.caches[end], L.ops[end], b)
-  for i in length(L.ops) - 1:-1:2
-    ldiv!(L.caches[i-1], L.ops[i], L.caches[i])
-  end
-  ldiv!(y, L.ops[1], L.caches[1])
-end
