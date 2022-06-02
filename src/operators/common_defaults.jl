@@ -1,7 +1,15 @@
 # The `update_coefficients!` interface
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A # no-op used by the basic operators
 # isconstant(::AbstractDiffEqLinearOperator) = true # already defined in DiffEqBase
-update_coefficients!(L::AbstractDiffEqLinearOperator,u,p,t) = L
+function update_coefficients!(L::AbstractDiffEqOperator, u, p, t)
+    for op in getops(L)
+        update_coefficients!(op, u, p, t)
+    end
+    L
+end
+isconstant(L::AbstractDiffEqOperator) = all(isconstant, getops(L))
+#@deprecate is_constant(L::AbstractDiffEqOperator) isconstant(L)
+#iszero(L::AbstractDiffEqOperator) = all(iszero, getops(L))
 
 Base.size(A::AbstractDiffEqOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 
@@ -29,3 +37,6 @@ end
 # Routines that use the full matrix representation
 Base.Matrix(L::AbstractDiffEqLinearOperator) = Matrix(convert(AbstractMatrix, L))
 LinearAlgebra.exp(L::AbstractDiffEqLinearOperator) = exp(Matrix(L))
+
+# write fallback interfae for adjoint operator here
+Base.adjoint(A::AbstractDiffEqLinearOperator) = Adjoint(A)

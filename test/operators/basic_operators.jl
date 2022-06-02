@@ -1,6 +1,11 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
+using SciMLOperators: DiffEqIdentity,
+                      DiffEqNullOperator,
+                      ScaledDiffEqOperator,
+                      AddedDiffEqOperator
+
 Random.seed!(0)
 N = 8
 
@@ -92,39 +97,73 @@ end
     @test abs(DiffEqScalar(-x)) == x
 end
 
-@testset "DiffEqArrayOperator" begin
+@testset "ScaledDiffEqOperator" begin
+    # TODO change A to a differnt type of diffeqoperator
+    A = rand(N,N) |> DiffEqArrayOperator
+
+    for T in (
+              DiffEqScalar,
+              Number,
+              UniformScaling
+             )
+        u = rand(N)
+        α = rand()
+        β = rand()
+
+         αAu =     α * A * u
+        βαAu = β * α * A * u
+
+        α = α |> T
+        β = β |> T
+
+        op1 = α * A # not ScaledDiffEqOperator
+        op2 = A * α # as * shortcircuits for DiffEqArrayOp
+
+        op1 = ScaledDiffEqOperator(α, A)
+        op2 = ScaledDiffEqOperator(α, A)
+
+        @test op1 isa ScaledDiffEqOperator
+        @test op2 isa ScaledDiffEqOperator
+
+        @test op1 * u ≈ αAu
+        @test op2 * u ≈ αAu
+
+        @test (β * op1) * u ≈ βαAu
+        @test (β * op2) * u ≈ βαAu
+    end
+end
+
+@testset "AddedDiffEqOperator" begin
+    A = rand(N,N) |> DiffEqArrayOperator
+    B = rand(N,N) |> DiffEqArrayOperator
+    C = rand(N,N) |> DiffEqArrayOperator
+    α = rand() |> DiffEqScalar
+    β = rand() |> DiffEqScalar
     u = rand(N)
-    p = nothing
-    t = 0
 
-    A  = rand(N,N)
-    At = A'
+    for op in (
+               +, -
+              )
+        op1 = op(A  , B  )
+        op2 = op(α*A, B  )
+        op3 = op(A  , β*B)
+        op4 = op(α*A, β*B)
 
-    AA  = DiffEqArrayOperator(A)
-    AAt = AA'
+        @test op1 isa AddedDiffEqOperator
+        @test op2 isa AddedDiffEqOperator
+        @test op3 isa AddedDiffEqOperator
+        @test op4 isa AddedDiffEqOperator
 
-    @test AA  isa DiffEqArrayOperator
-    @test AAt isa DiffEqArrayOperator
+        @test op1 * u ≈ op(  A*u,   B*u)
+        @test op2 * u ≈ op(α*A*u,   B*u)
+        @test op3 * u ≈ op(  A*u, β*B*u)
+        @test op4 * u ≈ op(α*A*u, β*B*u)
+    end
+end
 
-    FF  = factorize(AA)
-    FFt = FF'
+@testset "ComposedDiffEqOperator" begin
+end
 
-    @test FF  isa FactorizedDiffEqArrayOperator
-    @test FFt isa FactorizedDiffEqArrayOperator
-
-    @test eachindex(A)  === eachindex(AA)
-    @test eachindex(A') === eachindex(AAt) === eachindex(DiffEqArrayOperator(At))
-
-    @test A  ≈ convert(AbstractMatrix, AA ) ≈ convert(AbstractMatrix, FF )
-    @test At ≈ convert(AbstractMatrix, AAt) ≈ convert(AbstractMatrix, FFt)
-
-    @test A  ≈ Matrix(AA ) ≈ Matrix(FF )
-    @test At ≈ Matrix(AAt) ≈ Matrix(FFt)
-
-    @test A  * u ≈ AA(u,p,t)  ≈ FF(u,p,t)
-    @test At * u ≈ AAt(u,p,t) ≈ FFt(u,p,t)
-
-    @test A  \ u ≈ AA  \ u ≈ FF  \ u
-    @test At \ u ≈ AAt \ u ≈ FFt \ u
+@testset "Operator Algebra" begin
 end
 #
