@@ -36,21 +36,13 @@ include("traits.jl")
 include("basic.jl")
 include("sciml.jl")
 include("interface.jl")
-
-# Define a helper function `sparse1` that handles
-# `SciMLMatrixOperator` and `SciMLScaledOperator`.
-# We should define `sparse` for these types in `SciMLBase` instead,
-# but that package doesn't know anything about sparse arrays yet, so
-# we'll introduce a temporary work-around here.
-_sparse(L) = sparse(L)
-_sparse(L::SciMLMatrixOperator) = _sparse(L.A)
-_sparse(L::SciMLScaledOperator) = L.λ * _sparse(L.L)
+include("utils.jl")
 
 export SciMLScalar,
        SciMLMatrixOperator,
        SciMLFactorizedOperator,
        AffineSciMLOperator,
-       MatrixFreeOperator
+       SciMLFunctionOperator
 
 export update_coefficients!,
        update_coefficients,
