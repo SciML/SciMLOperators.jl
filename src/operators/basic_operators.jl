@@ -385,9 +385,13 @@ end
 
 """
     Lazy operator composition
+
+    ∘(A, B, C)(u) = A(B(C(u)))
 """
 struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
+    """ Tuple of N operators to be applied in reverse"""
     ops::O
+    """ Tuple of N-1 cache vectors"""
     cache::C
     isunset::Bool
     function ComposedDiffEqOperator(ops::AbstractDiffEqOperator...)
@@ -404,23 +408,43 @@ struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
 end
 
 # constructors
-Base.∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops)
+Base.:∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops)
 
-Base.∘(A::ComposedDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B.ops...)
-Base.∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A, B.ops...)
-Base.∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
+Base.:∘(A::ComposedDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B.ops...)
+Base.:∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A, B.ops...)
+Base.:∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
 
-Base.*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A, B) # fallback
+# operator fusion falls back on composition
+Base.:*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = A ∘ B
 
 Base.convert(::Type{AbstractMatrix}, L::ComposedDiffEqOperator) = prod(convert.(AbstractMatrix, ops))
 Base.Matrix(L::ComposedDiffEqOperator) = prod(Matrix.(ops))
 
 # traits
 Base.size(L::ComposedDiffEqOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
-Base.adjoint(L::ComposedDiffEqOperator) = DiffEqComposedOperator(adjoint.(reverse(L.ops)))
+Base.adjoint(L::ComposedDiffEqOperator) = ComposedDiffEqOperator(adjoint.(reverse(L.ops)))
+opnorm(L::DiffEqOperatorComposition) = prod(opnorm, L.ops)
 
 islinear(L::ComposedDiffEqOperator) = all(islinear, L.ops)
 iszero(L::ComposedDiffEqOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedDiffEqOperator) = all(has_adjoint, L.ops)
+
+# operator application
+Base.:*(L::DiffEqOperatorComposition, x::AbstractArray) = foldl((acc, op) -> op*acc, L.ops; init=x)
+function Base.:*(L::ComposedDiffEqOperator, u::AbstractVector)
+    x = u
+    for op in reverse(L.ops)
+        x = op * x
+    end
+
+    x
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedDiffEqOperator, u::AbstractVector)
+    @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
+
+    for i in reverse(1:length(L.ops))
+    end
+end
 
 #
