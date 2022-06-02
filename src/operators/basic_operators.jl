@@ -395,7 +395,9 @@ end
     Matrix free operators (given by a function)
 """
 struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T}
+    """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
     op::F
+    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
     op_adjoint::Fa
     p::P
     traits::Tr
@@ -405,10 +407,22 @@ struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T
                                     adjoint=nothing,
                                     p=nothing,
                                     traits=nothing,
+                                    isselfadjoint=false,
                                     kwargs...
                                    )
-        traits = traits !== nothing ? traits : SciMLOperatorTraits(;kwargs...)
         T = eltype(op)
+
+        if isselfadjoint & (adjoint === nothing)
+            adjoint = op
+        end
+
+        if traits === nothing
+            SciMLOperatorTraits(;kwargs...,
+                                has_adjoint=adjoint !== nothing,
+                                eltype=promote_type(op),
+                               )
+        end
+
         new{isinplace,
             T,
             typeof(op),
@@ -421,7 +435,7 @@ struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T
     end
 end
 
-Base.:*(L::DiffEqFunctionOperator, u::AbstractVector) = L.op(u, p, t)
+#Base.:*(L::DiffEqFunctionOperator, u::AbstractVector) = L.op(u, p, t)
 #Base.:\
 #LinearAlgebra.mul!()
 #LinearAlgebra.ldiv!()
@@ -441,10 +455,10 @@ struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
     """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
     cache::C
     isunset::Bool
-    function ComposedDiffEqOperator(ops::AbstractDiffEqOperator...)
-        for i in 1:length(ops)-1
-            opcurr = op[i]
-            opnext = op[i+1]
+    function ComposedDiffEqOperator(ops::AbstractDiffEqOperator...; cache = nothing)
+        for i in reverse(2:length(ops))
+            opcurr = ops[i]
+            opnext = ops[i-1]
             @assert size(opcurr, 1) == size(opnext, 2) "Cannot $opnext ∘ $opcurr. Size mismatich"
         end
 
@@ -465,8 +479,7 @@ function init_cache(L::ComposedDiffEqOperator, u::AbstractVector)
 end
 
 # constructors
-Base.:∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops)
-
+Base.:∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops...)
 Base.:∘(A::ComposedDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B.ops...)
 Base.:∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A, B.ops...)
 Base.:∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)

@@ -6,6 +6,7 @@
 Base.@kwdef struct SciMLOperatorTraits{S,O}
     # Base
     size::S = nothing
+    #eltype::T
 
     # LinearAlgebra
     opnorm::O = nothing
