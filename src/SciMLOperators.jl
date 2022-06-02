@@ -1,8 +1,8 @@
 module SciMLOperators
 
-using LinearAlgebra
 using DocStringExtensions
 
+using LinearAlgebra
 import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
@@ -11,10 +11,6 @@ import Lazy: @forward
 import Setfield: @set!
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, iszero, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
-
-using DocStringExtensions
-
-# Misc
 
 """
 $(TYPEDEF)
@@ -36,10 +32,10 @@ $(TYPEDEF)
 """
 abstract type AbstractMatrixFreeOperator{T} <: AbstractSciMLOperator{T} end
 
-include("interface.jl")
+include("traits.jl")
 include("basic.jl")
 include("sciml.jl")
-include("common.jl")
+include("interface.jl")
 
 # Define a helper function `sparse1` that handles
 # `SciMLMatrixOperator` and `SciMLScaledOperator`.
@@ -49,24 +45,6 @@ include("common.jl")
 _sparse(L) = sparse(L)
 _sparse(L::SciMLMatrixOperator) = _sparse(L.A)
 _sparse(L::SciMLScaledOperator) = L.λ * _sparse(L.L)
-
-# (u,p,t) and (du,u,p,t) interface
-for T in (
-          SciMLIdentity,
-          SciMLNullOperator,
-          SciMLScalar,
-          SciMLScaledOperator,
-          SciMLAddedOperator,
-          SciMLComposedOperator,
-
-          SciMLMatrixOperator,
-          SciMLFactorizedOperator,
-#         SciMLFunctionOperator,
-         )
-
-    (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
-    (L::T)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
-end
 
 export SciMLScalar,
        SciMLMatrixOperator,
