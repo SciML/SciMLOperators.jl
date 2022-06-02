@@ -14,7 +14,7 @@ import Setfield: @set!
 
 # overloads
 import Lazy: @forward
-import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, ==, iszero
+import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, iszero, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
 
 using DocStringExtensions

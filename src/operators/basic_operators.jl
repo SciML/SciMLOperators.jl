@@ -26,8 +26,8 @@ end
 
 getops(::DiffEqIdentity) = ()
 isconstant(::DiffEqIdentity) = true
+islinear(L::DiffEqIdentity) = true
 iszero(::DiffEqIdentity) = false
-issquare(::DiffEqIdentity) = true
 has_adjoint(::DiffEqIdentity) = true
 has_mul!(::DiffEqIdentity) = true
 has_ldiv(::DiffEqIdentity) = true
@@ -54,7 +54,9 @@ function LinearAlgebra.ldiv!(v::AbstractVector, ::DiffEqIdentity{N}, u::Abstract
 end
 
 # operator fusion, composition
-for op in (:*, :∘, :/, :\)
+for op in (
+           :*, :∘, :/, :\,
+          )
     @eval function Base.$op(::DiffEqIdentity{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
         DiffEqIdentity{N}()
@@ -95,7 +97,7 @@ LinearAlgebra.isposdef(::DiffEqNullOperator) = false
 
 getops(::DiffEqNullOperator) = ()
 isconstant(::DiffEqNullOperator) = true
-issquare(::DiffEqNullOperator) = true
+islinear(L::DiffEqNullOperator) = true
 iszero(::DiffEqNullOperator) = true
 has_adjoint(::DiffEqNullOperator) = true
 has_mul!(::DiffEqNullOperator) = true
@@ -133,7 +135,7 @@ signature:
 
     update_func(oldval,u,p,t) -> newval
 """
-mutable struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
+struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
     val::T
     update_func::F
     DiffEqScalar(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
@@ -156,13 +158,16 @@ function Base.adjoint(α::DiffEqScalar) # TODO - test
 end
 
 getops(α::DiffEqScalar) = (α.val)
+islinear(L::DiffEqScalar) = true
 isconstant(α::DiffEqScalar) = α.update_func == DEFAULT_UPDATE_FUNC
 iszero(α::DiffEqScalar) = iszero(α.val)
 has_adjoint(::DiffEqScalar) = true
 has_mul(::DiffEqScalar) = true
 has_ldiv(α::DiffEqScalar) = iszero(α.val)
 
-for op in (:*, :/, :\)
+for op in (
+           :*, :/, :\,
+          )
     for T in (
               :Number,
               :AbstractArray,
@@ -222,7 +227,6 @@ for T in ScalingNumberTypes[2:end]
 end
 
 for T in ScalingNumberTypes
-    # ensure doesn't nest
     @eval function ScaledDiffEqOperator(λ::$T, L::ScaledDiffEqOperator)
         λ = DiffEqScalar(λ) * L.λ
         ScaledDiffEqOperator(λ, L.L)
@@ -248,9 +252,9 @@ Base.adjoint(L::ScaledDiffEqOperator) = ScaledDiffEqOperator(L.λ', L.op')
 LinearAlgebra.opnorm(L::ScaledDiffEqOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledDiffEqOperator) = (L.λ, L.A)
+islinear(L::ScaledDiffEqOperator) = all(islinear, L.ops)
 isconstant(L::ScaledDiffEqOperator) = isconstant(L.L) & isconstant(L.λ)
 iszero(L::ScaledDiffEqOperator) = iszero(L.L) & iszero(L.λ)
-issquare(L::ScaledDiffEqOperator) = issquare(L.L)
 has_adjoint(L::ScaledDiffEqOperator) = has_adjoint(L.L)
 has_mul!(L::ScaledDiffEqOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledDiffEqOperator) = has_ldiv(L.L) & !iszero(L.λ)
@@ -266,7 +270,7 @@ for fact in (
              :ldlt, :ldlt!,
              :bunchkaufman, :bunchkaufman!,
              :lq, :lq!,
-             :svd, :svd!
+             :svd, :svd!,
             )
     @eval LinearAlgebra.$fact(L::ScaledDiffEqOperator, args...) = L.λ * fact(L.L, args...)
 end
@@ -318,7 +322,6 @@ for op in (
            :+, :-,
           )
 
-    # prevent nesting
     @eval Base.$op(A::AddedDiffEqOperator, B::AddedDiffEqOperator) = AddedDiffEqOperator(A.ops..., $op(B).ops...)
     @eval Base.$op(A::AbstractDiffEqOperator, B::AddedDiffEqOperator) = AddedDiffEqOperator(A, $op(B).ops...)
     @eval Base.$op(A::AddedDiffEqOperator, B::AbstractDiffEqOperator) = AddedDiffEqOperator(A.ops..., $op(B))
@@ -366,7 +369,6 @@ end
 
 getops(L::AddedDiffEqOperator) = L.ops
 iszero(L::AddedDiffEqOperator) = all(iszero, getops(L))
-issquare(L::AddedDiffEqOperator) = issquare(first(L.ops))
 has_adjoint(L::AddedDiffEqOperator) = all(has_adjoint, L.ops)
 
 getindex(L::AddedDiffEqOperator, i::Int) = sum(op -> op[i], L.ops)
@@ -388,3 +390,118 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedDiffEqOperator, u::Abstra
         axpy!(true, L.cache, v)
     end
 end
+
+"""
+    Lazy operator composition
+
+    ∘(A, B, C)(u) = A(B(C(u)))
+
+    ops = (A, B, C)
+    cache = (B*C*u , C*u)
+"""
+struct ComposedDiffEqOperator{T,O,C} <: AbstractDiffEqOperator{T}
+    """ Tuple of N operators to be applied in reverse"""
+    ops::O
+    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    cache::C
+    isunset::Bool
+    function ComposedDiffEqOperator(ops::AbstractDiffEqOperator...; cache = nothing)
+        for i in reverse(2:length(ops))
+            opcurr = ops[i]
+            opnext = ops[i-1]
+            @assert size(opcurr, 1) == size(opnext, 2) "Cannot $opnext ∘ $opcurr. Size mismatich"
+        end
+
+        T = promote_type(eltype.(ops)...)
+        isunset = cache === nothing
+        new{T,typeof(ops),typeof(cache)}(ops, cache, isunset)
+    end
+end
+
+function init_cache(L::ComposedDiffEqOperator, u::AbstractVector)
+    cache = ()
+    vec = u
+    for i in reverse(2:length(L.ops))
+        vec = op[i] * vec
+        cache = push(cache, vec)
+    end
+    cache
+end
+
+# constructors
+Base.:∘(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops...)
+Base.:∘(A::ComposedDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B.ops...)
+Base.:∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEqOperator(A, B.ops...)
+Base.:∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
+
+# operator fusion falls back on composition
+Base.:*(ops::AbstractDiffEqOperator...) = reduce(*, ops) # pairwise fusion
+Base.:*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A, B)
+Base.:*(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
+Base.:*(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
+
+
+Base.Matrix(L::ComposedDiffEqOperator) = prod(Matrix, L.ops)
+Base.convert(::Type{AbstractMatrix}, L::ComposedDiffEqOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
+
+SparseArrays.sparse(L::ComposedDiffEqOperator) = prod(_sparse, L.ops)
+
+# traits
+Base.size(L::ComposedDiffEqOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
+Base.adjoint(L::ComposedDiffEqOperator) = ComposedDiffEqOperator(adjoint.(reverse(L.ops)))
+LinearAlgebra.opnorm(L::ComposedDiffEqOperator) = prod(opnorm, L.ops)
+
+getops(L::ComposedDiffEqOperator) = L.ops
+islinear(L::ComposedDiffEqOperator) = all(islinear, L.ops)
+iszero(L::ComposedDiffEqOperator) = all(iszero, getops(L))
+has_adjoint(L::ComposedDiffEqOperator) = all(has_adjoint, L.ops)
+has_mul!(L::ComposedDiffEqOperator) = all(has_mul!, L.ops)
+has_ldiv(L::ComposedDiffEqOperator) = all(has_ldiv, L.ops)
+has_ldiv!(L::ComposedDiffEqOperator) = all(has_mul!, L.ops)
+
+factorize(L::ComposedDiffEqOperator) = prod(factorize, reverse(L.ops))
+for fact in (
+             :lu, :lu!,
+             :qr, :qr!,
+             :cholesky, :cholesky!,
+             :ldlt, :ldlt!,
+             :bunchkaufman, :bunchkaufman!,
+             :lq, :lq!,
+             :svd, :svd!,
+            )
+    @eval LinearAlgebra.$fact(L::ComposedDiffEqOperator, args...) = prod(op -> $fact(op, args...), reverse(L.ops))
+end
+
+# operator application
+Base.:*(L::ComposedDiffEqOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
+Base.:\(L::ComposedDiffEqOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedDiffEqOperator, u::AbstractVector)
+    @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
+
+    vecs = (v, L.cache..., u)
+    for i in reverse(1:length(L.ops))
+        mul!(vecs[i], L.ops[i], vecs[i+1])
+    end
+    v
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedDiffEqOperator, u::AbstractVector)
+    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
+
+    vecs = (u, reverse(L.cache)..., v)
+    for i in 1:length(L.ops)
+        ldiv!(vecs[i], L.ops[i], vecs[i+1])
+    end
+    v
+end
+
+function LinearAlgebra.ldiv!(L::ComposedDiffEqOperator, u::AbstractVector)
+    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
+
+    for i in 1:length(L.ops)
+        ldiv!(L.ops[i], vecs[i])
+    end
+    v
+end
+#
