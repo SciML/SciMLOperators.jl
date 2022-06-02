@@ -40,3 +40,29 @@ end
 
 update_coefficients!(L,u,p,t) = nothing
 update_coefficients(L,u,p,t) = L
+
+function SciMLOperator(L;
+                       update_func=DEFAULT_UPDATE_FUNC,
+                       islinear=false,
+                       issymmetric=false,
+                       kwargs...,
+                      )
+
+    if update_func === DEFAULT_UPDATE_FUNC
+        isconstant = true
+    end
+
+    if L isa AbstractSciMLOperator
+        L
+    elseif L isa Union{
+                       Number, UniformScaling,
+                      }
+        SciMLScalar(L; update_func=update_func)
+    elseif L isa AbstractMatrix
+        SciMLMatrixOperator(L; update_func=update_func)
+    elseif L isa Factorization
+        SciMLFactorizedOperator(L)
+    else
+        SciMLFunctionOperator(L, kwargs...)
+    end
+end
