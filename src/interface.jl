@@ -6,7 +6,6 @@
 Base.@kwdef struct SciMLOperatorTraits{S,O}
     # Base
     size::S = nothing
-    #eltype::T
 
     # LinearAlgebra
     opnorm::O = nothing
@@ -21,8 +20,11 @@ Base.@kwdef struct SciMLOperatorTraits{S,O}
     iszero::Bool = false
 
     has_adjoint = false
+    has_mul = false
+    has_mul! = false
     has_ldiv = false
     has_ldiv! = false
+
 end
 
 #=
@@ -43,6 +45,8 @@ update_coefficients(L,u,p,t) = L
 # Traits
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
+
+isconstant(::AbstractSciMLLinearOperator) = true
 
 islinear(::AbstractSciMLOperator) = false
 Base.iszero(::AbstractSciMLOperator) = false

@@ -1,7 +1,6 @@
 module SciMLOperators
 
 using LinearAlgebra
-using DiffEqBase
 using DocStringExtensions
 
 import StaticArrays

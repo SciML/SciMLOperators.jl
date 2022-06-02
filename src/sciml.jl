@@ -19,7 +19,7 @@ Base.similar(L::SciMLMatrixOperator, ::Type{T}, dims::Dims) where{T} = similar(L
 
 # traits
 @forward SciMLMatrixOperator.A (
-                                issquare, SciMLBase.has_ldiv, SciMLBase.has_ldiv!
+                                issquare, has_ldiv, has_ldiv!
                                )
 Base.size(L::SciMLMatrixOperator) = size(L.A)
 Base.adjoint(L::SciMLMatrixOperator) = SciMLMatrixOperator(L.A'; update_func=(A,u,p,t)->L.update_func(L.A,u,p,t)')
@@ -65,25 +65,30 @@ end
 
 
 
-NumberCompatibleTypes =  (
-                          :SciMLScalar,
-                          :Number,
-                         )
 for op in (
            :*, :/, :\,
           )
 
-    for T in NumberCompatibleTypes
-        @eval function Base.$op(L::SciMLMatrixOperator, x::$T)
-            A = $op(L.A, x)
-            update_func = L.update_func #TODO
-            SciMLMatrixOperator(A; update_func=update_func)
-        end
-        @eval function Base.$op(x::$T, L::SciMLMatrixOperator)
-            A = $op(x, L.A)
-            update_func = L.update_func #TODO
-            SciMLMatrixOperator(A; update_func=update_func)
-        end
+    @eval function Base.$op(L::SciMLMatrixOperator, x::Number)
+        A = $op(L.A, x)
+        update_func = L.update_func #TODO
+        SciMLMatrixOperator(A; update_func=update_func)
+    end
+    @eval function Base.$op(x::Number, L::SciMLMatrixOperator)
+        A = $op(x, L.A)
+        update_func = L.update_func #TODO
+        SciMLMatrixOperator(A; update_func=update_func)
+    end
+
+    @eval function Base.$op(L::SciMLMatrixOperator, x::SciMLScalar)
+        A = $op(L.A, x.val)
+        update_func = L.update_func #TODO
+        SciMLMatrixOperator(A; update_func=update_func)
+    end
+    @eval function Base.$op(x::SciMLScalar, L::SciMLMatrixOperator)
+        A = $op(x.val, L.A)
+        update_func = L.update_func #TODO
+        SciMLMatrixOperator(A; update_func=update_func)
     end
 end
 
@@ -173,7 +178,7 @@ has_ldiv(::SciMLFactorizedOperator) = true
 has_ldiv!(::SciMLFactorizedOperator) = true
 
 # operator application (inversion)
-Base.:\(L::SciMLFactorizedOperator, x::AbstractVecOrMat) = L.F \ x
+Base.:\(L::SciMLFactorizedOperator, x::AbstractVector) = L.F \ x
 LinearAlgebra.ldiv!(Y::AbstractVector, L::SciMLFactorizedOperator, B::AbstractVector) = ldiv!(Y, L.F, B)
 LinearAlgebra.ldiv!(L::SciMLFactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
 
