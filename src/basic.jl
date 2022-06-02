@@ -191,10 +191,10 @@ for op in (:-, :+)
     @eval Base.$op(x::SciMLScalar, y::SciMLScalar) = $op(x.val, y.val)
 end
 
-LinearAlgebra.lmul!(α::SciMLScalar, B::AbstractArray) = lmul!(α.val, B)
-LinearAlgebra.rmul!(B::AbstractArray, α::SciMLScalar) = rmul!(B, α.val)
-LinearAlgebra.mul!(Y::AbstractArray, α::SciMLScalar, B::AbstractArray) = mul!(Y, α.val, B)
-LinearAlgebra.axpy!(α::SciMLScalar, X::AbstractArray, Y::AbstractArray) = axpy!(α.val, X, Y)
+LinearAlgebra.lmul!(α::SciMLScalar, B::AbstractVector) = lmul!(α.val, B)
+LinearAlgebra.rmul!(B::AbstractVector, α::SciMLScalar) = rmul!(B, α.val)
+LinearAlgebra.mul!(Y::AbstractVector, α::SciMLScalar, B::AbstractVector) = mul!(Y, α.val, B)
+LinearAlgebra.axpy!(α::SciMLScalar, X::AbstractVector, Y::AbstractVector) = axpy!(α.val, X, Y)
 Base.abs(α::SciMLScalar) = abs(α.val)
 
 """
