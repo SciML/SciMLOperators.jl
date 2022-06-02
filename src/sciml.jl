@@ -28,7 +28,7 @@ has_adjoint(A::SciMLMatrixOperator) = has_adjoint(A.A)
 update_coefficients!(L::SciMLMatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
 
 isconstant(L::SciMLMatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
-iszero(L::SciMLMatrixOperator) = iszero(L.A)
+Base.iszero(L::SciMLMatrixOperator) = iszero(L.A)
 
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::SciMLMatrixOperator) = L.A
@@ -253,7 +253,7 @@ end
 """
     Matrix free operators (given by a function)
 """
-struct SciMLFunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T}
+struct SciMLFunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T} # TODO
     """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
     op::F
     """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
@@ -309,6 +309,10 @@ getops(L::SciMLFunctionOperator) = (L.p,)
 # operator application
 Base.:*(L::SciMLFunctionOperator, u::AbstractVector) = L.op(u, p, t)
 Base.:\(L::SciMLFunctionOperator, u::AbstractVector) = L.op_inverse(u, p, t)
-LinearAlgebra.mul!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector) = L.op(v, u, p, t)
-LinearAlgebra.ldiv!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector) = L.op_inverse(v, u, p, t)
+function LinearAlgebra.mul!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector)
+    L.op(v, u, p, t)
+end
+function LinearAlgebra.ldiv!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector)
+    L.op_inverse(v, u, p, t)
+end
 #

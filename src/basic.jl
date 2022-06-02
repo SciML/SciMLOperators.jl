@@ -27,7 +27,6 @@ end
 getops(::SciMLIdentity) = ()
 isconstant(::SciMLIdentity) = true
 islinear(L::SciMLIdentity) = true
-iszero(::SciMLIdentity) = false
 has_adjoint(::SciMLIdentity) = true
 has_mul!(::SciMLIdentity) = true
 has_ldiv(::SciMLIdentity) = true
@@ -98,7 +97,7 @@ LinearAlgebra.isposdef(::SciMLNullOperator) = false
 getops(::SciMLNullOperator) = ()
 isconstant(::SciMLNullOperator) = true
 islinear(L::SciMLNullOperator) = true
-iszero(::SciMLNullOperator) = true
+Base.iszero(::SciMLNullOperator) = true
 has_adjoint(::SciMLNullOperator) = true
 has_mul!(::SciMLNullOperator) = true
 
@@ -160,7 +159,7 @@ end
 getops(α::SciMLScalar) = (α.val)
 islinear(L::SciMLScalar) = true
 isconstant(α::SciMLScalar) = α.update_func == DEFAULT_UPDATE_FUNC
-iszero(α::SciMLScalar) = iszero(α.val)
+Base.iszero(α::SciMLScalar) = iszero(α.val)
 has_adjoint(::SciMLScalar) = true
 has_mul(::SciMLScalar) = true
 has_ldiv(α::SciMLScalar) = iszero(α.val)
@@ -253,7 +252,7 @@ LinearAlgebra.opnorm(L::SciMLScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L
 getops(L::SciMLScaledOperator) = (L.λ, L.L)
 islinear(L::SciMLScaledOperator) = all(islinear, L.ops)
 isconstant(L::SciMLScaledOperator) = isconstant(L.L) & isconstant(L.λ)
-iszero(L::SciMLScaledOperator) = iszero(L.L) & iszero(L.λ)
+Base.iszero(L::SciMLScaledOperator) = iszero(L.L) & iszero(L.λ)
 has_adjoint(L::SciMLScaledOperator) = has_adjoint(L.L)
 has_mul!(L::SciMLScaledOperator) = has_mul!(L.L)
 has_ldiv(L::SciMLScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
@@ -366,7 +365,7 @@ function Base.adjoint(L::SciMLAddedOperator)
 end
 
 getops(L::SciMLAddedOperator) = L.ops
-iszero(L::SciMLAddedOperator) = all(iszero, getops(L))
+Base.iszero(L::SciMLAddedOperator) = all(iszero, getops(L))
 has_adjoint(L::SciMLAddedOperator) = all(has_adjoint, L.ops)
 
 getindex(L::SciMLAddedOperator, i::Int) = sum(op -> op[i], L.ops)
@@ -448,7 +447,7 @@ LinearAlgebra.opnorm(L::SciMLComposedOperator) = prod(opnorm, L.ops)
 
 getops(L::SciMLComposedOperator) = L.ops
 islinear(L::SciMLComposedOperator) = all(islinear, L.ops)
-iszero(L::SciMLComposedOperator) = all(iszero, getops(L))
+Base.iszero(L::SciMLComposedOperator) = all(iszero, getops(L))
 has_adjoint(L::SciMLComposedOperator) = all(has_adjoint, L.ops)
 has_mul!(L::SciMLComposedOperator) = all(has_mul!, L.ops)
 has_ldiv(L::SciMLComposedOperator) = all(has_ldiv, L.ops)
