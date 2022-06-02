@@ -167,8 +167,17 @@ end
     A = rand(N,N) |> DiffEqArrayOperator
     B = rand(N,N) |> DiffEqArrayOperator
     C = rand(N,N) |> DiffEqArrayOperator
-    u = rand(N)
 
-    @test ∘(A, B, C) isa ComposedDiffEqOperator
+    u = rand(N)
+    ABCmulu = (A * B * C) * u
+    ABCdivu = (A * B * C) \ u
+
+    op = ∘(A, B, C)
+
+    @test op isa ComposedDiffEqOperator
+    @test *(op.ops...) isa DiffEqArrayOperator
+
+    @test op * u ≈ ABCmulu
+    @test op \ u ≈ ABCdivu
 end
 #

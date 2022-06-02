@@ -392,56 +392,6 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedDiffEqOperator, u::Abstra
 end
 
 """
-    Matrix free operators (given by a function)
-"""
-struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T}
-    """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
-    op::F
-    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
-    op_adjoint::Fa
-    p::P
-    traits::Tr
-
-    function DiffEqFunctionOperator(op;
-                                    isinplace=false,
-                                    adjoint=nothing,
-                                    p=nothing,
-                                    traits=nothing,
-                                    isselfadjoint=false,
-                                    kwargs...
-                                   )
-        T = eltype(op)
-
-        if isselfadjoint & (adjoint === nothing)
-            adjoint = op
-        end
-
-        if traits === nothing
-            SciMLOperatorTraits(;kwargs...,
-                                has_adjoint=adjoint !== nothing,
-                                eltype=promote_type(op),
-                               )
-        end
-
-        new{isinplace,
-            T,
-            typeof(op),
-            typeof(op_adjoint),
-            typeof(p),
-            typeof(traits)
-           }(
-             op, adjoint, p, traits
-            )
-    end
-end
-
-#Base.:*(L::DiffEqFunctionOperator, u::AbstractVector) = L.op(u, p, t)
-#Base.:\
-#LinearAlgebra.mul!()
-#LinearAlgebra.ldiv!()
-#LinearAlgebra.ldiv!()
-
-"""
     Lazy operator composition
 
     ∘(A, B, C)(u) = A(B(C(u)))
@@ -485,8 +435,7 @@ Base.:∘(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ComposedDiffEq
 Base.:∘(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ComposedDiffEqOperator(A.ops..., B)
 
 # operator fusion falls back on composition
-Base.:*(ops::AbstractDiffEqOperator...) = ComposedDiffEqOperator(ops...)
-
+Base.:*(ops::AbstractDiffEqOperator...) = reduce(*, ops) # pairwise fusion
 Base.:*(A::AbstractDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A, B)
 Base.:*(A::ComposedDiffEqOperator, B::AbstractDiffEqOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
 Base.:*(A::AbstractDiffEqOperator, B::ComposedDiffEqOperator) = ∘(A * B.ops[1], B.ops[2:end]...)

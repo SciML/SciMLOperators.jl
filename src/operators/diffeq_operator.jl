@@ -253,4 +253,55 @@ function update_coefficients!(L::AffineDiffEqOperator,u,p,t)
 end
 
 @deprecate is_constant(L::AbstractDiffEqOperator) isconstant(L)
+
+"""
+    Matrix free operators (given by a function)
+"""
+struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T}
+    """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    op::F
+    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    op_adjoint::Fa
+    p::P
+    traits::Tr
+
+    function DiffEqFunctionOperator(op;
+                                    isinplace=false,
+                                    adjoint=nothing,
+                                    p=nothing,
+                                    traits=nothing,
+                                    isselfadjoint=false,
+                                    kwargs...
+                                   )
+        T = eltype(op)
+
+        if isselfadjoint & (adjoint === nothing)
+            adjoint = op
+        end
+
+        if traits === nothing
+            SciMLOperatorTraits(;kwargs...,
+                                has_adjoint=adjoint !== nothing,
+                                eltype=promote_type(op),
+                               )
+        end
+
+        new{isinplace,
+            T,
+            typeof(op),
+            typeof(op_adjoint),
+            typeof(p),
+            typeof(traits)
+           }(
+             op, adjoint, p, traits
+            )
+    end
+end
+
+#Base.:*(L::DiffEqFunctionOperator, u::AbstractVector) = L.op(u, p, t)
+#Base.:\
+#LinearAlgebra.mul!()
+#LinearAlgebra.ldiv!()
+#LinearAlgebra.ldiv!()
+
 #
