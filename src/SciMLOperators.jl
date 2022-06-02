@@ -8,12 +8,8 @@ import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
 
-# caching
-import UnPack: @unpack
-import Setfield: @set!
-
-# overloads
 import Lazy: @forward
+import Setfield: @set!
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, iszero, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
 
@@ -29,22 +25,17 @@ abstract type AbstractSciMLOperator{T} end
 """
 $(TYPEDEF)
 """
-abstract type AbstractDiffEqOperator{T} <: AbstractSciMLOperator{T} end
+abstract type AbstractSciMLLinearOperator{T} <: AbstractSciMLOperator{T} end
 
 """
 $(TYPEDEF)
 """
-abstract type AbstractDiffEqLinearOperator{T} <: AbstractDiffEqOperator{T} end
+abstract type AbstractSciMLCompositeOperator{T} <: AbstractSciMLOperator{T} end
 
 """
 $(TYPEDEF)
 """
-abstract type AbstractDiffEqCompositeOperator{T} <: AbstractDiffEqLinearOperator{T} end
-
-"""
-$(TYPEDEF)
-"""
-abstract type AbstractMatrixFreeOperator{T} <: AbstractDiffEqLinearOperator{T} end
+abstract type AbstractMatrixFreeOperator{T} <: AbstractSciMLOperator{T} end
 
 include("interface.jl")
 include("basic.jl")
@@ -52,36 +43,36 @@ include("sciml.jl")
 include("common.jl")
 
 # Define a helper function `sparse1` that handles
-# `DiffEqArrayOperator` and `ScaledDiffEqOperator`.
+# `SciMLMatrixOperator` and `SciMLScaledOperator`.
 # We should define `sparse` for these types in `SciMLBase` instead,
 # but that package doesn't know anything about sparse arrays yet, so
 # we'll introduce a temporary work-around here.
 _sparse(L) = sparse(L)
-_sparse(L::DiffEqArrayOperator) = _sparse(L.A)
-_sparse(L::ScaledDiffEqOperator) = L.λ * _sparse(L.L)
+_sparse(L::SciMLMatrixOperator) = _sparse(L.A)
+_sparse(L::SciMLScaledOperator) = L.λ * _sparse(L.L)
 
 # (u,p,t) and (du,u,p,t) interface
 for T in (
-          DiffEqIdentity,
-          DiffEqNullOperator,
-          DiffEqScalar,
-          ScaledDiffEqOperator,
-          AddedDiffEqOperator,
-          ComposedDiffEqOperator,
+          SciMLIdentity,
+          SciMLNullOperator,
+          SciMLScalar,
+          SciMLScaledOperator,
+          SciMLAddedOperator,
+          SciMLComposedOperator,
 
-          DiffEqArrayOperator,
-          FactorizedDiffEqArrayOperator,
-#         DiffEqFunctionOperator,
+          SciMLMatrixOperator,
+          SciMLFactorizedOperator,
+#         SciMLFunctionOperator,
          )
 
     (L::T)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
     (L::T)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 end
 
-export DiffEqScalar,
-       DiffEqArrayOperator,
-       FactorizedDiffEqArrayOperator,
-       AffineDiffEqOperator,
+export SciMLScalar,
+       SciMLMatrixOperator,
+       SciMLFactorizedOperator,
+       AffineSciMLOperator,
        MatrixFreeOperator
 
 export update_coefficients!,
