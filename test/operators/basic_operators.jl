@@ -4,7 +4,9 @@ using Random
 using SciMLOperators: DiffEqIdentity,
                       DiffEqNullOperator,
                       ScaledDiffEqOperator,
-                      AddedDiffEqOperator
+                      AddedDiffEqOperator,
+                      ComposedDiffEqOperator,
+                      DiffEqFunctionOperator
 
 Random.seed!(0)
 N = 8
@@ -162,8 +164,11 @@ end
 end
 
 @testset "ComposedDiffEqOperator" begin
-end
+    A = rand(N,N) |> DiffEqArrayOperator
+    B = rand(N,N) |> DiffEqArrayOperator
+    C = rand(N,N) |> DiffEqArrayOperator
+    u = rand(N)
 
-@testset "Operator Algebra" begin
+    @test ∘(A, B, C) isa ComposedDiffEqOperator
 end
 #

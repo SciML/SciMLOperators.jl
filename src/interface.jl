@@ -1,5 +1,29 @@
 ### AbstractSciMLOperator Interface
 
+"""
+    Set of SciML operator traits
+"""
+Base.@kwdef struct SciMLOperatorTraits{S,O}
+    # Base
+    size::S = nothing
+
+    # LinearAlgebra
+    opnorm::O = nothing
+    isreal::Bool = true
+    issymmetric::Bool = false
+    ishermitian::Bool = false
+
+    # SciML
+    isconstant::Bool = false
+    islinear::Bool = false
+    issquare::Bool = false
+    iszero::Bool = false
+
+    has_adjoint = false
+    has_ldiv = false
+    has_ldiv! = false
+end
+
 #=
 1. Function call and multiplication: L(du, u, p, t) for inplace and du = L(u, p, t) for
    out-of-place, meaning L*u and mul!(du, L, u).

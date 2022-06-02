@@ -135,7 +135,7 @@ signature:
 
     update_func(oldval,u,p,t) -> newval
 """
-mutable struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
+struct DiffEqScalar{T<:Number,F} <: AbstractDiffEqLinearOperator{T}
     val::T
     update_func::F
     DiffEqScalar(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
@@ -392,6 +392,42 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedDiffEqOperator, u::Abstra
 end
 
 """
+    Matrix free operators (given by a function)
+"""
+struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T}
+    op::F
+    op_adjoint::Fa
+    p::P
+    traits::Tr
+
+    function DiffEqFunctionOperator(op;
+                                    isinplace=false,
+                                    adjoint=nothing,
+                                    p=nothing,
+                                    traits=nothing,
+                                    kwargs...
+                                   )
+        traits = traits !== nothing ? traits : SciMLOperatorTraits(;kwargs...)
+        T = eltype(op)
+        new{isinplace,
+            T,
+            typeof(op),
+            typeof(op_adjoint),
+            typeof(p),
+            typeof(traits)
+           }(
+             op, adjoint, p, traits
+            )
+    end
+end
+
+Base.:*(L::DiffEqFunctionOperator, u::AbstractVector) = L.op(u, p, t)
+#Base.:\
+#LinearAlgebra.mul!()
+#LinearAlgebra.ldiv!()
+#LinearAlgebra.ldiv!()
+
+"""
     Lazy operator composition
 
     ∘(A, B, C)(u) = A(B(C(u)))
@@ -453,7 +489,7 @@ Base.size(L::ComposedDiffEqOperator) = (size(first(L.ops), 1), size(last(L.ops),
 Base.adjoint(L::ComposedDiffEqOperator) = ComposedDiffEqOperator(adjoint.(reverse(L.ops)))
 LinearAlgebra.opnorm(L::ComposedDiffEqOperator) = prod(opnorm, L.ops)
 
-getops(L::AddedDiffEqOperator) = L.ops
+getops(L::ComposedDiffEqOperator) = L.ops
 islinear(L::ComposedDiffEqOperator) = all(islinear, L.ops)
 iszero(L::ComposedDiffEqOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedDiffEqOperator) = all(has_adjoint, L.ops)

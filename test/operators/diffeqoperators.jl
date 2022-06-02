@@ -39,4 +39,11 @@ N = 8
     @test A  \ u ≈ AA  \ u ≈ FF  \ u
     @test At \ u ≈ AAt \ u ≈ FFt \ u
 end
+
+@testset "DiffEqFunctionOperator" begin
+end
+
+@testset "Operator Algebra" begin
+    # try out array arithmatic
+end
 #
