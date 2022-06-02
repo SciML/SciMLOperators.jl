@@ -66,6 +66,7 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
 # Extra standard assumptions
 isconstant(::AbstractSciMLLinearOperator) = true
+isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 islinear(o::AbstractSciMLLinearOperator) = isconstant(o)
 
 isconstant(::AbstractMatrix) = true
@@ -75,7 +76,7 @@ has_mul(::AbstractMatrix) = true
 has_mul!(::AbstractMatrix) = true
 has_ldiv(::AbstractMatrix) = true
 has_ldiv!(::AbstractMatrix) = false
-has_ldiv!(::Union{Diagonal, Factorization}) = true
+has_ldiv!(::Union{Diagonal, Bidiagonal, Factorization}) = true
 
 issquare(::UniformScaling) = true
 issquare(A) = size(A,1) === size(A,2)

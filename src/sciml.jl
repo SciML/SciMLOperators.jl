@@ -8,10 +8,10 @@ the following signature:
     update_func(A::AbstractMatrix,u,p,t) -> [modifies A]
 """
 struct SciMLMatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLLinearOperator{T}
-  A::AType
-  update_func::F
-  SciMLMatrixOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
-    new{eltype(A),AType,typeof(update_func)}(A, update_func)
+    A::AType
+    update_func::F
+    SciMLMatrixOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
+        new{eltype(A),AType,typeof(update_func)}(A, update_func)
 end
 
 # constructors
