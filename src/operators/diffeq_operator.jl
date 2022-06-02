@@ -279,13 +279,6 @@ struct DiffEqFunctionOperator{isinplace,T,F,Fa,P,Tr} <: AbstractDiffEqOperator{T
             adjoint = op
         end
 
-        if traits === nothing
-            SciMLOperatorTraits(;kwargs...,
-                                has_adjoint=adjoint !== nothing,
-                                eltype=promote_type(op),
-                               )
-        end
-
         new{isinplace,
             T,
             typeof(op),
