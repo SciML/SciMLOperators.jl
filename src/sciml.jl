@@ -365,6 +365,10 @@ end
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
 
+    if ishermitian(L) | (isreal(L) & issymmetric(L))
+        return L
+    end
+
     op = L.op_adjoint
     op_adjoint = L.op
 

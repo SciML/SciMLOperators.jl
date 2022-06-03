@@ -41,12 +41,13 @@ N = 8
 end
 
 @testset "FunctionOperator" begin
-    A = rand(N,N) |> Symmetric
-    F = lu(A)
 
     u = rand(N)
     p = nothing
-    t = nothing
+    t = 0.0
+
+    A = rand(N,N) |> Symmetric
+    F = lu(A)
 
     f1(u, p, t)  = A * u
     f1i(u, p, t) = A \ u
@@ -86,6 +87,8 @@ end
                            ishermitian=true,
                            isposdef=true,
                           )
+
+    @test op1' === op1
 
     @test size(op1) == (N,N)
     @test has_adjoint(op1)
