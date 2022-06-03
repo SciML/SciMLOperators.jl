@@ -449,6 +449,7 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
 end
 
 function init_cache(L::ComposedOperator, u::AbstractVector)
+    # for 3 arg mul!
     cache = ()
     vec = u
     for i in reverse(2:length(L.ops))
@@ -456,6 +457,9 @@ function init_cache(L::ComposedOperator, u::AbstractVector)
         cache = push(cache, vec)
     end
     cache
+
+    # for 5 arg mul!
+    cache = similar(u)
 end
 
 # constructors
@@ -516,11 +520,11 @@ end
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
     @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    copy!(cache, v)
+    copy!(L.cache, v) # TODO have separate cache for 5 arg mul!
 
     mul!(v, L, u)
     lmul!(α, v)
-    axpy!(β, cache, v)
+    axpy!(β, L.cache, v)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
