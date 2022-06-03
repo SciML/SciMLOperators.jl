@@ -255,66 +255,125 @@ end
 """
     Matrix free operators (given by a function)
 """
-struct FunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T} # TODO
-    """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
+struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOperator{T}
+    """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
-    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    """ Adjoint operator"""
     op_adjoint::Fa
-    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    """ Inverse operator"""
     op_inverse::Fi
+    """ Adjoint inverse operator"""
+    op_adjoint_inverse::Fai
     """ Size """
     size::S
+    """ Traits """
+    traits::Tr
     """ Parameters """
     p::P
+    """ Time """
+    t::Tt
 
-    function FunctionOperator(op;
-                              isinplace=false,
+    function FunctionOperator(op, traits=nothing;
+
+                              isinplace=nothing,
+                              T=nothing,
+                              size=nothing,
+
                               op_adjoint=nothing,
                               op_inverse=nothing,
-                              p=nothing,
+                              op_adjoint_inverse=nothing,
 
-                              # LinearAlgebra
+                              p=nothing,
+                              t=nothing,
+
+                              # traits
                               opnorm=nothing,
                               isreal=true,
                               issymmetric=false,
                               ishermitian=false,
+                              isposdef=false,
                              )
-        T = eltype(op)
+        isinplace isa Nothing  && @error "Please specify funciton signature: if isinplace=false, we call the operator as op(u, p, t), and if isinplace=true, we call the operator as op(du, u, p, t). Further, it is assumed that the function call would be nonallocating when called in-place"
+        T isa Nothing  && @error "Please provide a Number type for the Operator"
+        size isa Nothing  && @error "Please provide a size (m, n)"
 
-        if LinearAlgebra.ishermitian(op) & (adjoint === nothing)
-            adjoint = op
+        adjointable = ishermitian | (isreal & issymmetric)
+        invertible  = !(op_inverse isa Nothing)
+
+        if adjointable & (op_adjoint isa Nothing) 
+            op_adjoint = op
         end
 
+        if invertible & (op_adjoint_inverse isa Nothing)
+            op_adjoint_inverse = op_inverse
+        end
+
+        traits = !(traits isa Nothing) ? traits : (;
+                                                   opnorm = opnorm,
+                                                   isreal = isreal,
+                                                   issymmetric = issymmetric,
+                                                   ishermitian = ishermitian,
+                                                   isposdef = isposdef,
+                                                  )
         new{isinplace,
             T,
             typeof(op),
             typeof(op_adjoint),
             typeof(op_inverse),
+            typeof(op_adjoint_inverse),
             typeof(size),
+            typeof(traits),
             typeof(p),
+            typeof(t),
            }(
-             op, op_adjoint, op_inverse, size, p,
+             op, op_adjoint, op_inverse, size, traits, p, t,
             )
     end
 end
 
+function update_coefficients!(L::FunctionOperator, u, p, t)
+    @set! L.p = p
+    @set! L.t = t
+    L
+end
+
 Base.size(L::FunctionOperator) = L.size
-Base.adjoint(L::FunctionOperator) = FunctionOperator(L.op_adjoint; op_inverse=L.op)
+function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
+    op = L.op_adjoint
+
+    args   = (op, traits=L.traits)
+    kwargs = (;
+              isinplace = iip,
+              T = T,
+              size = reverse(L.size),
+
+              op_adjoint = L.op,
+              op_inverse = L.op_adjoint_inverse,
+              op_adjoint_inverse = L.op_inverse,
+
+              p = L.p,
+              t = L.t,
+             )
+
+    FunctionOperator(args...; kwargs...)
+end
+
+LinearAlgebra.opnorm(L::FunctionOperator) = L.traits.opnorm
 
 has_adjoint(L::FunctionOperator) = L.op_adjoint isa Nothing
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = L.op_inverse isa Nothing
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & has_ldiv(L)
 
-getops(L::FunctionOperator) = (L.p,)
-
 # operator application
-Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, p, t)
-Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, p, t)
+Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
+Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, L.p, L.t)
+
 function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
-    L.op(v, u, p, t)
+    L.op(v, u, L.p, L.t)
 end
+
 function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
-    L.op_inverse(v, u, p, t)
+    L.op_inverse(v, u, L.p, L.t)
 end
 #
