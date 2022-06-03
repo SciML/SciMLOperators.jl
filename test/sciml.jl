@@ -43,6 +43,7 @@ end
 @testset "AffineOperator" begin
     u = rand(N)
     A = rand(N,N)
+    D = Diagonal(A)
     b = rand(N)
     α = rand()
     β = rand()
@@ -51,11 +52,17 @@ end
 
     @test L * u ≈ A * u + b
     v=rand(N); @test mul!(v, L, u) ≈ A * u + b
-    v=rand(N); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*v
+    v=rand(N); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*w
 
-    @test L \ u ≈ A \ (u - b)
-#   v=rand(N); @test ldiv!(v, L, u) ≈ A \ (u-b)
-#   v=rand(N); @test ldiv!(L, u) ≈ A \ (u-b)
+    L = AffineOperator(MatrixOperator(D), b)
+    @test L \ u ≈ D \ (u - b)
+    #
+    #   TODO uncomment later
+    #   ldiv! for MatrixOperator defined in
+    #   https://github.com/SciML/SciMLOperators.jl/pull/22
+    #
+#   v=rand(N); @test ldiv!(v, L, u) ≈ D \ (u-b)
+#   v=rand(N); @test ldiv!(L, u) ≈ D \ (u-b)
 end
 
 @testset "SciMLFunctionOperator" begin
