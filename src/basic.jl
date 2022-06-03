@@ -243,6 +243,7 @@ Base.:-(L::AbstractSciMLOperator) = SciMLScaledOperator(-true, L)
 Base.:+(L::AbstractSciMLOperator) = L
 
 Base.convert(::Type{AbstractMatrix}, L::SciMLScaledOperator) = L.λ.val * convert(AbstractMatrix, L.L)
+SparseArrays.sparse(L::SciMLScaledOperator) = L.λ * sparse(L.L)
 
 # traits
 Base.size(L::SciMLScaledOperator) = size(L.L)

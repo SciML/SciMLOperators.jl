@@ -30,6 +30,8 @@ update_coefficients!(L::SciMLMatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); 
 isconstant(L::SciMLMatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::SciMLMatrixOperator) = iszero(L.A)
 
+SparseArrays.sparse(L::SciMLMatrixOperator) = sparse(L.A)
+
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::SciMLMatrixOperator) = L.A
 Base.@propagate_inbounds Base.setindex!(L::SciMLMatrixOperator, v, i::Int) = (L.A[i] = v)

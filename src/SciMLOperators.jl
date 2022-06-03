@@ -6,11 +6,13 @@ using LinearAlgebra
 import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
-
 import Lazy: @forward
 import Setfield: @set!
+
+# overload
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, iszero, ==
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
+import SparseArrays: sparse
 
 """
 $(TYPEDEF)
@@ -36,7 +38,6 @@ include("traits.jl")
 include("basic.jl")
 include("sciml.jl")
 include("interface.jl")
-include("utils.jl")
 
 export SciMLScalar,
        SciMLMatrixOperator,
