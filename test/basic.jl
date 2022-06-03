@@ -3,9 +3,9 @@ using Random
 
 using SciMLOperators: IdentityOperator,
                       NullOperator,
-                      SciMLScaledOperator,
-                      SciMLAddedOperator,
-                      SciMLComposedOperator,
+                      ScaledOperator,
+                      AddedOperator,
+                      ComposedOperator,
 
                       getops
 
@@ -100,7 +100,7 @@ end
     @test abs(ScalarOperator(-x)) == x
 end
 
-@testset "SciMLScaledOperator" begin
+@testset "ScaledOperator" begin
     # TODO change A to a differnt type of ScalarOperator
     A = rand(N,N) |> MatrixOperator
 
@@ -119,14 +119,14 @@ end
         α = α |> T
         β = β |> T
 
-        op1 = α * A # not SciMLScaledOperator
+        op1 = α * A # not ScaledOperator
         op2 = A * α # as * shortcircuits for ScalarOperator
 
-        op1 = SciMLScaledOperator(α, A)
-        op2 = SciMLScaledOperator(α, A)
+        op1 = ScaledOperator(α, A)
+        op2 = ScaledOperator(α, A)
 
-        @test op1 isa SciMLScaledOperator
-        @test op2 isa SciMLScaledOperator
+        @test op1 isa ScaledOperator
+        @test op2 isa ScaledOperator
 
         @test op1 * u ≈ αAu
         @test op2 * u ≈ αAu
@@ -136,7 +136,7 @@ end
     end
 end
 
-@testset "SciMLAddedOperator" begin
+@testset "AddedOperator" begin
     A = rand(N,N) |> MatrixOperator
     B = rand(N,N) |> MatrixOperator
     C = rand(N,N) |> MatrixOperator
@@ -152,10 +152,10 @@ end
         op3 = op(A  , β*B)
         op4 = op(α*A, β*B)
 
-        @test op1 isa SciMLAddedOperator
-        @test op2 isa SciMLAddedOperator
-        @test op3 isa SciMLAddedOperator
-        @test op4 isa SciMLAddedOperator
+        @test op1 isa AddedOperator
+        @test op2 isa AddedOperator
+        @test op3 isa AddedOperator
+        @test op4 isa AddedOperator
 
         @test op1 * u ≈ op(  A*u,   B*u)
         @test op2 * u ≈ op(α*A*u,   B*u)
@@ -164,7 +164,7 @@ end
     end
 end
 
-@testset "SciMLComposedOperator" begin
+@testset "ComposedOperator" begin
     A = rand(N,N) |> MatrixOperator
     B = rand(N,N) |> MatrixOperator
     C = rand(N,N) |> MatrixOperator
@@ -175,7 +175,7 @@ end
 
     op = ∘(A, B, C)
 
-    @test op isa SciMLComposedOperator
+    @test op isa ComposedOperator
     @test *(op.ops...) isa MatrixOperator
 
     @test op * u ≈ ABCmulu
