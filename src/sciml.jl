@@ -293,7 +293,12 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOpera
                               ishermitian=false,
                               isposdef=false,
                              )
-        isinplace isa Nothing  && @error "Please specify funciton signature: if isinplace=false, we call the operator as op(u, p, t), and if isinplace=true, we call the operator as op(du, u, p, t). Further, it is assumed that the function call would be nonallocating when called in-place"
+        isinplace isa Nothing  && @error "Please provide a funciton signature
+        by specifying `isinplace` as either `true`, or `false`.
+        If `isinplace = false`, the signature is `op(u, p, t)`,
+        and if `isinplace = true`, the signature is `op(du, u, p, t)`.
+        Further, it is assumed that the function call would be nonallocating
+        when called in-place"
         T isa Nothing  && @error "Please provide a Number type for the Operator"
         size isa Nothing  && @error "Please provide a size (m, n)"
 
@@ -358,11 +363,19 @@ function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
     FunctionOperator(args...; kwargs...)
 end
 
-LinearAlgebra.opnorm(L::FunctionOperator) = L.traits.opnorm
-LinearAlgebra.isreal = L.traits.isreal
-LinearAlgebra.issymmetric = L.traits.issymmetric
-LinearAlgebra.ishermitian = L.traits.ishermitian
-LinearAlgebra.isposdef = L.traits.isposdef
+function LinearAlgebra.opnorm(L::FunctionOperator, p)
+  L.traits.opnorm === nothing && error("""
+    M.opnorm is nothing, please define opnorm as a function that takes one
+    argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
+    defined")`
+  """)
+  opn = L.opnorm
+  return opn isa Number ? opn : M.opnorm(p)
+end
+LinearAlgebra.isreal(L::FunctionOperator) = L.traits.isreal
+LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
+LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
+LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
 has_adjoint(L::FunctionOperator) = L.op_adjoint isa Nothing
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
