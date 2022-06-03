@@ -197,18 +197,18 @@ LinearAlgebra.axpy!(α::ScalarOperator, X::AbstractVector, Y::AbstractVector) = 
 Base.abs(α::ScalarOperator) = abs(α.val)
 
 """
-    SciMLScaledOperator
+    ScaledOperator
 
     (λ L)*(u) = λ * L(u)
 """
-struct SciMLScaledOperator{T,
-                            λType<:ScalarOperator,
-                            LType<:AbstractSciMLOperator,
-                           } <: AbstractSciMLOperator{T}
+struct ScaledOperator{T,
+                      λType<:ScalarOperator,
+                      LType<:AbstractSciMLOperator,
+                     } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
 
-    function SciMLScaledOperator(λ::ScalarOperator, L::AbstractSciMLOperator)
+    function ScaledOperator(λ::ScalarOperator, L::AbstractSciMLOperator)
         T = promote_type(eltype.((λ, L))...)
         new{T,typeof(λ),typeof(L)}(λ, L)
     end
@@ -222,46 +222,46 @@ ScalingNumberTypes = (
 
 # constructors
 for T in ScalingNumberTypes[2:end]
-    @eval SciMLScaledOperator(λ::$T, L::AbstractSciMLOperator) = SciMLScaledOperator(ScalarOperator(λ), L)
+    @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(ScalarOperator(λ), L)
 end
 
 for T in ScalingNumberTypes
-    @eval function SciMLScaledOperator(λ::$T, L::SciMLScaledOperator)
+    @eval function ScaledOperator(λ::$T, L::ScaledOperator)
         λ = ScalarOperator(λ) * L.λ
-        SciMLScaledOperator(λ, L.L)
+        ScaledOperator(λ, L.L)
     end
     
-    @eval Base.:*(λ::$T, L::AbstractSciMLOperator) = SciMLScaledOperator(λ, L)
-    @eval Base.:*(L::AbstractSciMLOperator, λ::$T) = SciMLScaledOperator(λ, L)
-    @eval Base.:\(λ::$T, L::AbstractSciMLOperator) = SciMLScaledOperator(inv(λ), L)
-    @eval Base.:\(L::AbstractSciMLOperator, λ::$T) = SciMLScaledOperator(λ, inv(L))
-    @eval Base.:/(L::AbstractSciMLOperator, λ::$T) = SciMLScaledOperator(inv(λ), L)
-    @eval Base.:/(λ::$T, L::AbstractSciMLOperator) = SciMLScaledOperator(λ, inv(L))
+    @eval Base.:*(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(λ, L)
+    @eval Base.:*(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(λ, L)
+    @eval Base.:\(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(inv(λ), L)
+    @eval Base.:\(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(λ, inv(L))
+    @eval Base.:/(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(inv(λ), L)
+    @eval Base.:/(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(λ, inv(L))
 end
 
-Base.:-(L::AbstractSciMLOperator) = SciMLScaledOperator(-true, L)
+Base.:-(L::AbstractSciMLOperator) = ScaledOperator(-true, L)
 Base.:+(L::AbstractSciMLOperator) = L
 
-Base.convert(::Type{AbstractMatrix}, L::SciMLScaledOperator) = L.λ.val * convert(AbstractMatrix, L.L)
-SparseArrays.sparse(L::SciMLScaledOperator) = L.λ * sparse(L.L)
+Base.convert(::Type{AbstractMatrix}, L::ScaledOperator) = L.λ.val * convert(AbstractMatrix, L.L)
+SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
-Base.size(L::SciMLScaledOperator) = size(L.L)
-Base.adjoint(L::SciMLScaledOperator) = SciMLScaledOperator(L.λ', L.op')
-LinearAlgebra.opnorm(L::SciMLScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
+Base.size(L::ScaledOperator) = size(L.L)
+Base.adjoint(L::ScaledOperator) = ScaledOperator(L.λ', L.op')
+LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
-getops(L::SciMLScaledOperator) = (L.λ, L.L)
-islinear(L::SciMLScaledOperator) = all(islinear, L.ops)
-isconstant(L::SciMLScaledOperator) = isconstant(L.L) & isconstant(L.λ)
-Base.iszero(L::SciMLScaledOperator) = iszero(L.L) | iszero(L.λ)
-has_adjoint(L::SciMLScaledOperator) = has_adjoint(L.L)
-has_mul!(L::SciMLScaledOperator) = has_mul!(L.L)
-has_ldiv(L::SciMLScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
-has_ldiv!(L::SciMLScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
+getops(L::ScaledOperator) = (L.λ, L.L)
+islinear(L::ScaledOperator) = all(islinear, L.ops)
+isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
+Base.iszero(L::ScaledOperator) = iszero(L.L) | iszero(L.λ)
+has_adjoint(L::ScaledOperator) = has_adjoint(L.L)
+has_mul!(L::ScaledOperator) = has_mul!(L.L)
+has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
+has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
 # getindex
-Base.getindex(L::SciMLScaledOperator, i::Int) = L.coeff * L.op[i]
-Base.getindex(L::SciMLScaledOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]
+Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.op[i]
+Base.getindex(L::ScaledOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]
 for fact in (
              :lu, :lu!,
              :qr, :qr!,
@@ -271,17 +271,17 @@ for fact in (
              :lq, :lq!,
              :svd, :svd!,
             )
-    @eval LinearAlgebra.$fact(L::SciMLScaledOperator, args...) = L.λ * fact(L.L, args...)
+    @eval LinearAlgebra.$fact(L::ScaledOperator, args...) = L.λ * fact(L.L, args...)
 end
 
 # operator application, inversion
 for op in (
            :*, :\,
           )
-    @eval Base.$op(L::SciMLScaledOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
+    @eval Base.$op(L::ScaledOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::SciMLScaledOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector)
     mul!(v, L.L, u)
     lmul!(L.λ, v)
 end
@@ -291,15 +291,15 @@ Lazy operator addition (A + B)
 
     (A1 + A2 + A3...)u = A1*u + A2*u + A3*u ....
 """
-struct SciMLAddedOperator{T,
-                          O<:Tuple{Vararg{AbstractSciMLOperator}},
-                          C,
-                         } <: AbstractSciMLOperator{T}
+struct AddedOperator{T,
+                     O<:Tuple{Vararg{AbstractSciMLOperator}},
+                     C,
+                    } <: AbstractSciMLOperator{T}
     ops::O
     cache::C
     isunset::Bool
 
-    function SciMLAddedOperator(ops...; cache = nothing)
+    function AddedOperator(ops...; cache = nothing)
         sz = size(first(ops))
         for op in ops[2:end]
             @assert size(op) == sz "Size mismatich in operators $ops"
@@ -312,75 +312,75 @@ struct SciMLAddedOperator{T,
 end
 
 # constructors
-Base.:+(ops::AbstractSciMLOperator...) = SciMLAddedOperator(ops...)
+Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
 
-Base.:-(L::SciMLAddedOperator) = SciMLAddedOperator(.-(A.ops)...)
-Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = SciMLAddedOperator(A, -B)
+Base.:-(L::AddedOperator) = AddedOperator(.-(A.ops)...)
+Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
 
 for op in (
            :+, :-,
           )
 
-    @eval Base.$op(A::SciMLAddedOperator, B::SciMLAddedOperator) = SciMLAddedOperator(A.ops..., $op(B).ops...)
-    @eval Base.$op(A::AbstractSciMLOperator, B::SciMLAddedOperator) = SciMLAddedOperator(A, $op(B).ops...)
-    @eval Base.$op(A::SciMLAddedOperator, B::AbstractSciMLOperator) = SciMLAddedOperator(A.ops..., $op(B))
+    @eval Base.$op(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., $op(B).ops...)
+    @eval Base.$op(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, $op(B).ops...)
+    @eval Base.$op(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., $op(B))
 
     for T in ScalingNumberTypes
         @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
             @assert issquare(L)
             N  = size(L, 1)
             Id = IdentityOperator{N}()
-            SciMLAddedOperator(L, $op(λ)*Id)
+            AddedOperator(L, $op(λ)*Id)
         end
 
         @eval function Base.$op(λ::$T, L::AbstractSciMLOperator)
             @assert issquare(L)
             N  = size(L, 1)
             Id = IdentityOperator{N}()
-            SciMLAddedOperator(λ*Id, $op(L))
+            AddedOperator(λ*Id, $op(L))
         end
     end
 
     @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
         @assert size(A) == size(L)
-        SciMLAddedOperator(MatrixOperator(A), $op(L))
+        AddedOperator(MatrixOperator(A), $op(L))
     end
 
     @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
         @assert size(A) == size(L)
-        SciMLAddedOperator(L, MatrixOperator($op(A)))
+        AddedOperator(L, MatrixOperator($op(A)))
     end
 end
 
-Base.convert(::Type{AbstractMatrix}, L::SciMLAddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)
-SparseArrays.sparse(L::SciMLAddedOperator) = sum(_sparse, L.ops)
+Base.convert(::Type{AbstractMatrix}, L::AddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)
+SparseArrays.sparse(L::AddedOperator) = sum(_sparse, L.ops)
 
 # traits
-Base.size(L::SciMLAddedOperator) = size(first(L.ops))
-function Base.adjoint(L::SciMLAddedOperator)
+Base.size(L::AddedOperator) = size(first(L.ops))
+function Base.adjoint(L::AddedOperator)
     if issquare(L) & !(L.isunset)
-        SciMLAddedOperator(adjoint.(L.ops)...,L.cache, L.isunset)
+        AddedOperator(adjoint.(L.ops)...,L.cache, L.isunset)
     else
-        SciMLAddedOperator(adjoint.(L.ops)...)
+        AddedOperator(adjoint.(L.ops)...)
     end
 end
 
-getops(L::SciMLAddedOperator) = L.ops
-Base.iszero(L::SciMLAddedOperator) = all(iszero, getops(L))
-has_adjoint(L::SciMLAddedOperator) = all(has_adjoint, L.ops)
+getops(L::AddedOperator) = L.ops
+Base.iszero(L::AddedOperator) = all(iszero, getops(L))
+has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
-getindex(L::SciMLAddedOperator, i::Int) = sum(op -> op[i], L.ops)
-getindex(L::SciMLAddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
+getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
+getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
-function init_cache(A::SciMLAddedOperator, u::AbstractVector)
+function init_cache(A::AddedOperator, u::AbstractVector)
     cache = A.B * u
 end
 
-function Base.:*(L::SciMLAddedOperator, u::AbstractVector)
+function Base.:*(L::AddedOperator, u::AbstractVector)
     sum(op -> iszero(op) ? similar(u, Bool) * false : op * u, L.ops)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::SciMLAddedOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector)
     mul!(v, first(L.ops), u)
     for op in L.ops[2:end]
         iszero(op) && continue
@@ -397,13 +397,13 @@ end
     ops = (A, B, C)
     cache = (B*C*u , C*u)
 """
-struct SciMLComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
+struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     """ Tuple of N operators to be applied in reverse"""
     ops::O
     """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
     cache::C
     isunset::Bool
-    function SciMLComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
+    function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
@@ -416,7 +416,7 @@ struct SciMLComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     end
 end
 
-function init_cache(L::SciMLComposedOperator, u::AbstractVector)
+function init_cache(L::ComposedOperator, u::AbstractVector)
     cache = ()
     vec = u
     for i in reverse(2:length(L.ops))
@@ -427,34 +427,34 @@ function init_cache(L::SciMLComposedOperator, u::AbstractVector)
 end
 
 # constructors
-Base.:∘(ops::AbstractSciMLOperator...) = SciMLComposedOperator(ops...)
-Base.:∘(A::SciMLComposedOperator, B::SciMLComposedOperator) = SciMLComposedOperator(A.ops..., B.ops...)
-Base.:∘(A::AbstractSciMLOperator, B::SciMLComposedOperator) = SciMLComposedOperator(A, B.ops...)
-Base.:∘(A::SciMLComposedOperator, B::AbstractSciMLOperator) = SciMLComposedOperator(A.ops..., B)
+Base.:∘(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
+Base.:∘(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
+Base.:∘(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
+Base.:∘(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
 
 # operator fusion falls back on composition
 Base.:*(ops::AbstractSciMLOperator...) = reduce(*, ops) # pairwise fusion
 Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
-Base.:*(A::SciMLComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
-Base.:*(A::AbstractSciMLOperator, B::SciMLComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
+Base.:*(A::ComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
+Base.:*(A::AbstractSciMLOperator, B::ComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
 
-Base.convert(::Type{AbstractMatrix}, L::SciMLComposedOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
-SparseArrays.sparse(L::SciMLComposedOperator) = prod(_sparse, L.ops)
+Base.convert(::Type{AbstractMatrix}, L::ComposedOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
+SparseArrays.sparse(L::ComposedOperator) = prod(_sparse, L.ops)
 
 # traits
-Base.size(L::SciMLComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
-Base.adjoint(L::SciMLComposedOperator) = SciMLComposedOperator(adjoint.(reverse(L.ops)))
-LinearAlgebra.opnorm(L::SciMLComposedOperator) = prod(opnorm, L.ops)
+Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
+Base.adjoint(L::ComposedOperator) = ComposedOperator(adjoint.(reverse(L.ops)))
+LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
-getops(L::SciMLComposedOperator) = L.ops
-islinear(L::SciMLComposedOperator) = all(islinear, L.ops)
-Base.iszero(L::SciMLComposedOperator) = all(iszero, getops(L))
-has_adjoint(L::SciMLComposedOperator) = all(has_adjoint, L.ops)
-has_mul!(L::SciMLComposedOperator) = all(has_mul!, L.ops)
-has_ldiv(L::SciMLComposedOperator) = all(has_ldiv, L.ops)
-has_ldiv!(L::SciMLComposedOperator) = all(has_mul!, L.ops)
+getops(L::ComposedOperator) = L.ops
+islinear(L::ComposedOperator) = all(islinear, L.ops)
+Base.iszero(L::ComposedOperator) = all(iszero, getops(L))
+has_adjoint(L::ComposedOperator) = all(has_adjoint, L.ops)
+has_mul!(L::ComposedOperator) = all(has_mul!, L.ops)
+has_ldiv(L::ComposedOperator) = all(has_ldiv, L.ops)
+has_ldiv!(L::ComposedOperator) = all(has_mul!, L.ops)
 
-factorize(L::SciMLComposedOperator) = prod(factorize, reverse(L.ops))
+factorize(L::ComposedOperator) = prod(factorize, reverse(L.ops))
 for fact in (
              :lu, :lu!,
              :qr, :qr!,
@@ -464,14 +464,14 @@ for fact in (
              :lq, :lq!,
              :svd, :svd!,
             )
-    @eval LinearAlgebra.$fact(L::SciMLComposedOperator, args...) = prod(op -> $fact(op, args...), reverse(L.ops))
+    @eval LinearAlgebra.$fact(L::ComposedOperator, args...) = prod(op -> $fact(op, args...), reverse(L.ops))
 end
 
 # operator application
-Base.:*(L::SciMLComposedOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
-Base.:\(L::SciMLComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+Base.:*(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
+Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function LinearAlgebra.mul!(v::AbstractVector, L::SciMLComposedOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
     @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
 
     vecs = (v, L.cache..., u)
@@ -481,7 +481,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::SciMLComposedOperator, u::Abst
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::SciMLComposedOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
     @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
 
     vecs = (u, reverse(L.cache)..., v)
@@ -491,7 +491,7 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::SciMLComposedOperator, u::Abs
     v
 end
 
-function LinearAlgebra.ldiv!(L::SciMLComposedOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVector)
     @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
 
     for i in 1:length(L.ops)
