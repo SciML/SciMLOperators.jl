@@ -180,13 +180,13 @@ LinearAlgebra.ldiv!(L::FactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
     L = MuladdOperator(A, b)
     L(u) = A*u + b
 """
-struct MuladdOperator{T,AType,bType}
+struct MuladdOperator{T,AType,bType} <: AbstractSciMLOperator{T}
     A::AType
     b::bType
 
-    function MuladdOperator()
+    function MuladdOperator(A::AbstractSciMLOperator, b::AbstractVector)
         T = promote_type(eltype.((A,b))...)
-        new{T,typeof(A),typeof(B)}(A, b)
+        new{T,typeof(A),typeof(b)}(A, b)
     end
 end
 
@@ -196,12 +196,12 @@ Base.size(L::MuladdOperator) = size(L.A)
 #Base.convert(AbstractMatrix, L) =
 
 Base.:*(L::MuladdOperator, u::AbstractVector) = L.A * u + L.b
-function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperato, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperator, u::AbstractVector)
     mul!(v, L.A, u)
     axpy!(true, L.b, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperato, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperator, u::AbstractVector, α::Number, β::Number)
     mul!(v, L.A, u, α, β)
     axpy!(true, L.b, v)
 end
