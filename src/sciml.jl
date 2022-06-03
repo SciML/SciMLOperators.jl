@@ -192,8 +192,14 @@ end
 
 getops(L::MuladdOperator) = (L.A, L.b)
 Base.size(L::MuladdOperator) = size(L.A)
-#Base.adjoint(L::MuladdOperator) = 
-#Base.convert(AbstractMatrix, L) =
+
+islinear(::MuladdOperator) = false
+Base.iszero(L::MuladdOperator) = all(iszero, getops(L))
+has_adjoint(L::MuladdOperator) = all(has_adjoint, L.ops)
+has_mul!(L::MuladdOperator) = has_mul!(L.A)
+has_ldiv(L::MuladdOperator) = has_ldiv(L.A)
+has_ldiv!(L::MuladdOperator) = has_ldiv!(L.A)
+
 
 Base.:*(L::MuladdOperator, u::AbstractVector) = L.A * u + L.b
 function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperator, u::AbstractVector)
@@ -204,6 +210,16 @@ end
 function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperator, u::AbstractVector, α::Number, β::Number)
     mul!(v, L.A, u, α, β)
     axpy!(true, L.b, v)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, L::MuladdOperator, u::AbstractVector)
+    copy!(v, u)
+    ldiv!(L, v)
+end
+
+function LinearAlgebra.ldiv!(L::MuladdOperator, u::AbstractVector)
+    axpy!(-true, L.b, u)
+    ldiv!(L.A, u)
 end
 
 """
