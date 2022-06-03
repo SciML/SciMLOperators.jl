@@ -243,8 +243,7 @@ end
 Base.:-(L::AbstractSciMLOperator) = SciMLScaledOperator(-true, L)
 Base.:+(L::AbstractSciMLOperator) = L
 
-Base.convert(::Type{AbstractMatrix}, L::SciMLScaledOperator) = λ * convert(AbstractMatrix, L.L)
-Base.Matrix(L::SciMLScaledOperator) = L.λ * Matrix(L.L)
+Base.convert(::Type{AbstractMatrix}, L::SciMLScaledOperator) = L.λ.val * convert(AbstractMatrix, L.L)
 
 # traits
 Base.size(L::SciMLScaledOperator) = size(L.L)
@@ -353,8 +352,7 @@ for op in (
     end
 end
 
-Base.convert(::Type{AbstractMatrix}, L::SciMLAddedOperator) = sum(convert.(AbstractMatrix, ops))
-Base.Matrix(L::SciMLAddedOperator) = sum(Matrix.(ops))
+Base.convert(::Type{AbstractMatrix}, L::SciMLAddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)
 SparseArrays.sparse(L::SciMLAddedOperator) = sum(_sparse, L.ops)
 
 # traits
@@ -440,10 +438,7 @@ Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
 Base.:*(A::SciMLComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
 Base.:*(A::AbstractSciMLOperator, B::SciMLComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
 
-
-Base.Matrix(L::SciMLComposedOperator) = prod(Matrix, L.ops)
 Base.convert(::Type{AbstractMatrix}, L::SciMLComposedOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
-
 SparseArrays.sparse(L::SciMLComposedOperator) = prod(_sparse, L.ops)
 
 # traits

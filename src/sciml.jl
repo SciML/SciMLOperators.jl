@@ -159,14 +159,6 @@ function Base.convert(::Type{AbstractMatrix}, L::SciMLFactorizedOperator)
     end
 end
 
-function Base.Matrix(L::SciMLFactorizedOperator)
-    if L.F isa Adjoint
-        Matrix(L.F')'
-    else
-        Matrix(L.F)
-    end
-end
-
 # traits
 Base.size(L::SciMLFactorizedOperator, args...) = size(L.F, args...)
 Base.adjoint(L::SciMLFactorizedOperator) = SciMLFactorizedOperator(L.F')
