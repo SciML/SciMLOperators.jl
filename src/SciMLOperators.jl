@@ -39,10 +39,10 @@ include("basic.jl")
 include("sciml.jl")
 
 export SciMLScalar,
-       SciMLMatrixOperator,
-       SciMLFactorizedOperator,
-       AffineSciMLOperator,
-       SciMLFunctionOperator
+       MatrixOperator,
+       FactorizedOperator,
+       AffineOperator,
+       FunctionOperator
 
 export update_coefficients!,
        update_coefficients,

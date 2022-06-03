@@ -4,7 +4,7 @@ using Random
 Random.seed!(0)
 N = 8
 
-@testset "SciMLMatrixOperator" begin
+@testset "MatrixOperator" begin
     u = rand(N)
     p = nothing
     t = 0
@@ -12,20 +12,20 @@ N = 8
     A  = rand(N,N)
     At = A'
 
-    AA  = SciMLMatrixOperator(A)
+    AA  = MatrixOperator(A)
     AAt = AA'
 
-    @test AA  isa SciMLMatrixOperator
-    @test AAt isa SciMLMatrixOperator
+    @test AA  isa MatrixOperator
+    @test AAt isa MatrixOperator
 
     FF  = factorize(AA)
     FFt = FF'
 
-    @test FF  isa SciMLFactorizedOperator
-    @test FFt isa SciMLFactorizedOperator
+    @test FF  isa FactorizedOperator
+    @test FFt isa FactorizedOperator
 
     @test eachindex(A)  === eachindex(AA)
-    @test eachindex(A') === eachindex(AAt) === eachindex(SciMLMatrixOperator(At))
+    @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
 
     @test A  ≈ convert(AbstractMatrix, AA ) ≈ convert(AbstractMatrix, FF )
     @test At ≈ convert(AbstractMatrix, AAt) ≈ convert(AbstractMatrix, FFt)
