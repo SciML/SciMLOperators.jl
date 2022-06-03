@@ -15,7 +15,8 @@ N = 8
 @testset "IdentityOperator" begin
     A  = rand(N, N) |> MatrixOperator
     u  = rand(N)
-    v  = rand(N)
+    α = rand()
+    β = rand()
     Id = IdentityOperator{N}()
 
     @test IdentityOperator(u) isa IdentityOperator{N}
@@ -31,8 +32,11 @@ N = 8
         @test op(Id, u) ≈ u
     end
 
-    v .= 0; @test mul!(v, Id, u) ≈ u
-    v .= 0; @test ldiv!(v, Id, u) ≈ u
+    v=rand(N); @test mul!(v, Id, u) ≈ u
+    v=rand(N); w=copy(v); @test mul!(v, Id, u, α, β) ≈ α*(I*u) + β*w
+
+    v=rand(N); @test ldiv!(v, Id, u) ≈ u
+    v=copy(u); @test ldiv!(Id, u) ≈ v
 
     # TODO fix after working on composition operator
     #for op in (
@@ -46,7 +50,8 @@ end
 @testset "NullOperator" begin
     A = rand(N, N) |> MatrixOperator
     u = rand(N)
-    v = rand(N)
+    α = rand()
+    β = rand()
     Z = NullOperator{N}()
 
     @test NullOperator(u) isa NullOperator{N}
@@ -56,9 +61,10 @@ end
     @test size(Z) == (N, N)
     @test Z' isa NullOperator{N}
 
-    @test *(Z, u) ≈ zero(u)
+    @test Z * u ≈ zero(u)
 
-    v = rand(N); @test mul!(v, Z, u) ≈ zero(u)
+    v=rand(N); @test mul!(v, Z, u) ≈ zero(u)
+    v=rand(N); w=copy(v); @test mul!(v, Z, u, α, β) ≈ α*(0*u) + β*w
 
     # TODO fix after working on composition operator
     #for op in (
@@ -71,6 +77,7 @@ end
 
 @testset "ScalarOperator" begin
     a = rand()
+    b = rand()
     x = rand()
     α = ScalarOperator(x)
     u = rand(N)
@@ -91,57 +98,45 @@ end
     v = copy(u); @test lmul!(α, u) == v * x
     v = copy(u); @test rmul!(u, α) == x * v
 
-    v .= 0; @test mul!(v, α, u) == u * x
+    v=rand(N); @test mul!(v, α, u) == u * x
+    v=rand(N); w=copy(v); @test mul!(v, α, u, a, b) ≈ a*(x*u) + b*w
 
-    v = rand(N)
-    w = copy(v)
-    @test axpy!(α, u, v) == u * x + w
+    v=rand(N); @test ldiv!(v, α, u) == u / x
+    w=copy(u); @test ldiv!(α, u) == w / x
+
+    v = rand(N); w = copy(v); @test axpy!(α, u, v) == u * x + w
 
     @test abs(ScalarOperator(-x)) == x
 end
 
 @testset "ScaledOperator" begin
-    # TODO change A to a differnt type of ScalarOperator
-    A = rand(N,N) |> MatrixOperator
+    A = rand(N,N)
+    D = Diagonal(rand(N))
+    u = rand(N)
+    α = rand()
+    β = rand()
+    a = rand()
+    b = rand()
 
-    for T in (
-              ScalarOperator,
-              Number,
-              UniformScaling
-             )
-        u = rand(N)
-        α = rand()
-        β = rand()
+    op = ScaledOperator(α, MatrixOperator(A))
 
-         αAu =     α * A * u
-        βαAu = β * α * A * u
+    @test op * u       ≈     α * A * u
+    @test (β * op) * u ≈ β * α * A * u
 
-        α = α |> T
-        β = β |> T
+    v=rand(N); @test mul!(v, op, u) ≈ α * A * u
+    v=rand(N); w=copy(v); @test mul!(v, op, u, a, b) ≈ a*(α*A*u) + b*w
 
-        op1 = α * A # not ScaledOperator
-        op2 = A * α # as * shortcircuits for ScalarOperator
-
-        op1 = ScaledOperator(α, A)
-        op2 = ScaledOperator(α, A)
-
-        @test op1 isa ScaledOperator
-        @test op2 isa ScaledOperator
-
-        @test op1 * u ≈ αAu
-        @test op2 * u ≈ αAu
-
-        @test (β * op1) * u ≈ βαAu
-        @test (β * op2) * u ≈ βαAu
-    end
+    op = ScaledOperator(α, MatrixOperator(D))
+    v=rand(N); @test ldiv!(v, op, u) ≈ (α * D) \ u
+    v=copy(u); @test ldiv!(op, u) ≈ (α * D) \ v
 end
 
 @testset "AddedOperator" begin
     A = rand(N,N) |> MatrixOperator
     B = rand(N,N) |> MatrixOperator
     C = rand(N,N) |> MatrixOperator
-    α = rand() |> ScalarOperator
-    β = rand() |> ScalarOperator
+    α = rand()
+    β = rand()
     u = rand(N)
 
     for op in (
@@ -162,6 +157,10 @@ end
         @test op3 * u ≈ op(  A*u, β*B*u)
         @test op4 * u ≈ op(α*A*u, β*B*u)
     end
+
+    op = AddedOperator(A, B)
+    v=rand(N); @test mul!(v, op, u) ≈ (A+B) * u
+    v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(A+B)*u + β*w
 end
 
 @testset "ComposedOperator" begin

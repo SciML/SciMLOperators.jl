@@ -211,7 +211,7 @@ end
 LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVector) = lmul!(α.val, u)
 LinearAlgebra.rmul!(u::AbstractVector, α::ScalarOperator) = rmul!(u, α.val)
 LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = mul!(v, α.val, u)
-LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, α::Number, β::Number) = mul!(v, α.val, u, α, β)
+LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a::Number, b::Number) = mul!(v, α.val, u, a, b)
 LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVector, y::AbstractVector) = axpy!(α.val, x, y)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
@@ -306,12 +306,11 @@ for op in (
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector)
-    mul!(v, L.L, u, L.λ, false)
+    mul!(v, L.L, u, L.λ.val, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α::Number, β::Number)
-#   mul!(L.cache, L.λ, α) # TODO - set L.cache as 
-    cache = L.λ * α
+    cache = L.λ.val * α # mul!(L.cache, L.λ.val, α) # TODO - set L.cache as 
     mul!(v, L.L, u, cache, β)
 end
 
@@ -321,8 +320,8 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::ScaledOperator, u::AbstractVe
 end
 
 function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVector)
-    ldiv!(L.L, v)
-    ldiv!(L.λ, v)
+    ldiv!(L.λ, u)
+    ldiv!(L.L, u)
 end
 
 """
@@ -411,14 +410,16 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVect
         iszero(op) && continue
         mul!(v, op, u, true, true)
     end
+    v
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α::Number, β::Number)
     lmul!(β, v)
     for op in L.ops
         iszero(op) && continue
-        mul!(v, op, u, α, false)
+        mul!(v, op, u, α, true)
     end
+    v
 end
 
 """
