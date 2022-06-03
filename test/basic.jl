@@ -13,7 +13,7 @@ Random.seed!(0)
 N = 8
 
 @testset "SciMLIdentity" begin
-    A  = rand(N, N) |> SciMLMatrixOperator
+    A  = rand(N, N) |> MatrixOperator
     u  = rand(N)
     v  = rand(N)
     Id = SciMLIdentity{N}()
@@ -44,7 +44,7 @@ N = 8
 end
 
 @testset "SciMLNullOperator" begin
-    A = rand(N, N) |> SciMLMatrixOperator
+    A = rand(N, N) |> MatrixOperator
     u = rand(N)
     v = rand(N)
     Z = SciMLNullOperator{N}()
@@ -102,7 +102,7 @@ end
 
 @testset "SciMLScaledOperator" begin
     # TODO change A to a differnt type of SciMLScalar
-    A = rand(N,N) |> SciMLMatrixOperator
+    A = rand(N,N) |> MatrixOperator
 
     for T in (
               SciMLScalar,
@@ -137,9 +137,9 @@ end
 end
 
 @testset "SciMLAddedOperator" begin
-    A = rand(N,N) |> SciMLMatrixOperator
-    B = rand(N,N) |> SciMLMatrixOperator
-    C = rand(N,N) |> SciMLMatrixOperator
+    A = rand(N,N) |> MatrixOperator
+    B = rand(N,N) |> MatrixOperator
+    C = rand(N,N) |> MatrixOperator
     α = rand() |> SciMLScalar
     β = rand() |> SciMLScalar
     u = rand(N)
@@ -165,9 +165,9 @@ end
 end
 
 @testset "SciMLComposedOperator" begin
-    A = rand(N,N) |> SciMLMatrixOperator
-    B = rand(N,N) |> SciMLMatrixOperator
-    C = rand(N,N) |> SciMLMatrixOperator
+    A = rand(N,N) |> MatrixOperator
+    B = rand(N,N) |> MatrixOperator
+    C = rand(N,N) |> MatrixOperator
 
     u = rand(N)
     ABCmulu = (A * B * C) * u
@@ -176,7 +176,7 @@ end
     op = ∘(A, B, C)
 
     @test op isa SciMLComposedOperator
-    @test *(op.ops...) isa SciMLMatrixOperator
+    @test *(op.ops...) isa MatrixOperator
 
     @test op * u ≈ ABCmulu
     @test op \ u ≈ ABCdivu

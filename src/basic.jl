@@ -343,12 +343,12 @@ for op in (
 
     @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
         @assert size(A) == size(L)
-        SciMLAddedOperator(SciMLMatrixOperator(A), $op(L))
+        SciMLAddedOperator(MatrixOperator(A), $op(L))
     end
 
     @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
         @assert size(A) == size(L)
-        SciMLAddedOperator(L, SciMLMatrixOperator($op(A)))
+        SciMLAddedOperator(L, MatrixOperator($op(A)))
     end
 end
 

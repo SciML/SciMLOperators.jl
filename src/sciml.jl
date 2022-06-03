@@ -1,5 +1,5 @@
 """
-    SciMLMatrixOperator(A[; update_func])
+    MatrixOperator(A[; update_func])
 
 Represents a time-dependent linear operator given by an AbstractMatrix. The
 update function is called by `update_coefficients!` and is assumed to have
@@ -7,62 +7,62 @@ the following signature:
 
     update_func(A::AbstractMatrix,u,p,t) -> [modifies A]
 """
-struct SciMLMatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLLinearOperator{T}
+struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLLinearOperator{T}
     A::AType
     update_func::F
-    SciMLMatrixOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
+    MatrixOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
         new{eltype(A),AType,typeof(update_func)}(A, update_func)
 end
 
 # constructors
-Base.similar(L::SciMLMatrixOperator, ::Type{T}, dims::Dims) where{T} = similar(L.A, T, dims)
+Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = similar(L.A, T, dims)
 
 # traits
-@forward SciMLMatrixOperator.A (
-                                issquare, has_ldiv, has_ldiv!
-                               )
-Base.size(L::SciMLMatrixOperator) = size(L.A)
-Base.adjoint(L::SciMLMatrixOperator) = SciMLMatrixOperator(L.A'; update_func=(A,u,p,t)->L.update_func(L.A,u,p,t)')
+@forward MatrixOperator.A (
+                           issquare, has_ldiv, has_ldiv!
+                          )
+Base.size(L::MatrixOperator) = size(L.A)
+Base.adjoint(L::MatrixOperator) = MatrixOperator(L.A'; update_func=(A,u,p,t)->L.update_func(L.A,u,p,t)')
 
-has_adjoint(A::SciMLMatrixOperator) = has_adjoint(A.A)
-update_coefficients!(L::SciMLMatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
+has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
+update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
 
-isconstant(L::SciMLMatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
-Base.iszero(L::SciMLMatrixOperator) = iszero(L.A)
+isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
+Base.iszero(L::MatrixOperator) = iszero(L.A)
 
-SparseArrays.sparse(L::SciMLMatrixOperator) = sparse(L.A)
+SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
 
 # propagate_inbounds here for the getindex fallback
-Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::SciMLMatrixOperator) = L.A
-Base.@propagate_inbounds Base.setindex!(L::SciMLMatrixOperator, v, i::Int) = (L.A[i] = v)
-Base.@propagate_inbounds Base.setindex!(L::SciMLMatrixOperator, v, I::Vararg{Int, N}) where{N} = (L.A[I...] = v)
+Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = L.A
+Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
+Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, I::Vararg{Int, N}) where{N} = (L.A[I...] = v)
 
-Base.eachcol(L::SciMLMatrixOperator) = eachcol(L.A)
-Base.eachrow(L::SciMLMatrixOperator) = eachrow(L.A)
-Base.length(L::SciMLMatrixOperator) = length(L.A)
-Base.iterate(L::SciMLMatrixOperator,args...) = iterate(L.A,args...)
-Base.axes(L::SciMLMatrixOperator) = axes(L.A)
-Base.eachindex(L::SciMLMatrixOperator) = eachindex(L.A)
-Base.IndexStyle(::Type{<:SciMLMatrixOperator{T,AType}}) where{T,AType} = Base.IndexStyle(AType)
-Base.copyto!(L::SciMLMatrixOperator, rhs) = (copyto!(L.A, rhs); L)
-Base.copyto!(L::SciMLMatrixOperator, rhs::Base.Broadcast.Broadcasted{<:StaticArrays.StaticArrayStyle}) = (copyto!(L.A, rhs); L)
-Base.Broadcast.broadcastable(L::SciMLMatrixOperator) = L
-Base.ndims(::Type{<:SciMLMatrixOperator{T,AType}}) where{T,AType} = ndims(AType)
-ArrayInterfaceCore.issingular(L::SciMLMatrixOperator) = ArrayInterfaceCore.issingular(L.A)
-Base.copy(L::SciMLMatrixOperator) = SciMLMatrixOperator(copy(L.A);update_func=L.update_func)
+Base.eachcol(L::MatrixOperator) = eachcol(L.A)
+Base.eachrow(L::MatrixOperator) = eachrow(L.A)
+Base.length(L::MatrixOperator) = length(L.A)
+Base.iterate(L::MatrixOperator,args...) = iterate(L.A,args...)
+Base.axes(L::MatrixOperator) = axes(L.A)
+Base.eachindex(L::MatrixOperator) = eachindex(L.A)
+Base.IndexStyle(::Type{<:MatrixOperator{T,AType}}) where{T,AType} = Base.IndexStyle(AType)
+Base.copyto!(L::MatrixOperator, rhs) = (copyto!(L.A, rhs); L)
+Base.copyto!(L::MatrixOperator, rhs::Base.Broadcast.Broadcasted{<:StaticArrays.StaticArrayStyle}) = (copyto!(L.A, rhs); L)
+Base.Broadcast.broadcastable(L::MatrixOperator) = L
+Base.ndims(::Type{<:MatrixOperator{T,AType}}) where{T,AType} = ndims(AType)
+ArrayInterfaceCore.issingular(L::MatrixOperator) = ArrayInterfaceCore.issingular(L.A)
+Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func)
 
-getops(L::SciMLMatrixOperator) = (L.A)
+getops(L::MatrixOperator) = (L.A)
 
 # operator application
-Base.:*(L::SciMLMatrixOperator, u::AbstractVector) = L.A * u
-Base.:\(L::SciMLMatrixOperator, u::AbstractVector) = L.A \ u
-LinearAlgebra.mul!(v::AbstractVector, L::SciMLMatrixOperator, u::AbstractVector) = mul!(v, L.A, u)
+Base.:*(L::MatrixOperator, u::AbstractVector) = L.A * u
+Base.:\(L::MatrixOperator, u::AbstractVector) = L.A \ u
+LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = mul!(v, L.A, u)
 
 # operator fusion, composition
-function Base.:*(A::SciMLMatrixOperator, B::SciMLMatrixOperator)
+function Base.:*(A::MatrixOperator, B::MatrixOperator)
     M = A.A * B.A
     update_func = (M,u,p,t) -> A.update_func(M,u,p,t) * B.update_func(M,u,p,t) #TODO
-    SciMLMatrixOperator(M; update_func=update_func)
+    MatrixOperator(M; update_func=update_func)
 end
 
 
@@ -71,26 +71,26 @@ for op in (
            :*, :/, :\,
           )
 
-    @eval function Base.$op(L::SciMLMatrixOperator, x::Number)
+    @eval function Base.$op(L::MatrixOperator, x::Number)
         A = $op(L.A, x)
         update_func = L.update_func #TODO
-        SciMLMatrixOperator(A; update_func=update_func)
+        MatrixOperator(A; update_func=update_func)
     end
-    @eval function Base.$op(x::Number, L::SciMLMatrixOperator)
+    @eval function Base.$op(x::Number, L::MatrixOperator)
         A = $op(x, L.A)
         update_func = L.update_func #TODO
-        SciMLMatrixOperator(A; update_func=update_func)
+        MatrixOperator(A; update_func=update_func)
     end
 
-    @eval function Base.$op(L::SciMLMatrixOperator, x::SciMLScalar)
+    @eval function Base.$op(L::MatrixOperator, x::SciMLScalar)
         A = $op(L.A, x.val)
         update_func = L.update_func #TODO
-        SciMLMatrixOperator(A; update_func=update_func)
+        MatrixOperator(A; update_func=update_func)
     end
-    @eval function Base.$op(x::SciMLScalar, L::SciMLMatrixOperator)
+    @eval function Base.$op(x::SciMLScalar, L::MatrixOperator)
         A = $op(x.val, L.A)
         update_func = L.update_func #TODO
-        SciMLMatrixOperator(A; update_func=update_func)
+        MatrixOperator(A; update_func=update_func)
     end
 end
 
@@ -103,39 +103,39 @@ for op in (
            :+, :-, :*,
           )
     for T in MatMulCompatibleTypes
-        @eval function Base.$op(L::SciMLMatrixOperator, M::$T)
+        @eval function Base.$op(L::MatrixOperator, M::$T)
             A = $op(L.A, M)
-            SciMLMatrixOperator(A)
+            MatrixOperator(A)
         end
 
-        @eval function Base.$op(M::$T, L::SciMLMatrixOperator)
+        @eval function Base.$op(M::$T, L::MatrixOperator)
             A = $op(M, L.A)
-            SciMLMatrixOperator(A)
+            MatrixOperator(A)
         end
     end
 end
 
 """
-    SciMLFactorizedOperator(F)
+    FactorizedOperator(F)
 
-Like SciMLMatrixOperator, but stores a Factorization instead.
+Like MatrixOperator, but stores a Factorization instead.
 
 Supports left division and `ldiv!` when applied to an array.
 """
-struct SciMLFactorizedOperator{T<:Number,FType<:Union{
-                                                      Factorization{T},
-                                                      Diagonal{T},
-                                                      Bidiagonal{T},
-                                                      Adjoint{T,<:Factorization{T}},
-                                                     }
-                                    } <: AbstractSciMLLinearOperator{T}
+struct FactorizedOperator{T<:Number,FType<:Union{
+                                                 Factorization{T},
+                                                 Diagonal{T},
+                                                 Bidiagonal{T},
+                                                 Adjoint{T,<:Factorization{T}},
+                                                }
+                         } <: AbstractSciMLLinearOperator{T}
     F::FType
 end
 
 # constructor
 function LinearAlgebra.factorize(L::AbstractSciMLLinearOperator)
     fact = factorize(convert(AbstractMatrix, L))
-    SciMLFactorizedOperator(fact)
+    FactorizedOperator(fact)
 end
 
 for fact in (
@@ -148,12 +148,12 @@ for fact in (
              :svd, :svd!,
             )
     @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator, args...) =
-        SciMLFactorizedOperator($fact(convert(AbstractMatrix, L), args...))
+        FactorizedOperator($fact(convert(AbstractMatrix, L), args...))
     @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator; kwargs...) =
-        SciMLFactorizedOperator($fact(convert(AbstractMatrix, L); kwargs...))
+        FactorizedOperator($fact(convert(AbstractMatrix, L); kwargs...))
 end
 
-function Base.convert(::Type{AbstractMatrix}, L::SciMLFactorizedOperator)
+function Base.convert(::Type{AbstractMatrix}, L::FactorizedOperator)
     if L.F isa Adjoint
         convert(AbstractMatrix,L.F')'
     else
@@ -162,26 +162,26 @@ function Base.convert(::Type{AbstractMatrix}, L::SciMLFactorizedOperator)
 end
 
 # traits
-Base.size(L::SciMLFactorizedOperator, args...) = size(L.F, args...)
-Base.adjoint(L::SciMLFactorizedOperator) = SciMLFactorizedOperator(L.F')
-LinearAlgebra.issuccess(L::SciMLFactorizedOperator) = issuccess(L.F)
+Base.size(L::FactorizedOperator, args...) = size(L.F, args...)
+Base.adjoint(L::FactorizedOperator) = FactorizedOperator(L.F')
+LinearAlgebra.issuccess(L::FactorizedOperator) = issuccess(L.F)
 
-getops(::SciMLFactorizedOperator) = ()
-isconstant(::SciMLFactorizedOperator) = true
-has_ldiv(::SciMLFactorizedOperator) = true
-has_ldiv!(::SciMLFactorizedOperator) = true
+getops(::FactorizedOperator) = ()
+isconstant(::FactorizedOperator) = true
+has_ldiv(::FactorizedOperator) = true
+has_ldiv!(::FactorizedOperator) = true
 
 # operator application (inversion)
-Base.:\(L::SciMLFactorizedOperator, x::AbstractVector) = L.F \ x
-LinearAlgebra.ldiv!(Y::AbstractVector, L::SciMLFactorizedOperator, B::AbstractVector) = ldiv!(Y, L.F, B)
-LinearAlgebra.ldiv!(L::SciMLFactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
+Base.:\(L::FactorizedOperator, x::AbstractVector) = L.F \ x
+LinearAlgebra.ldiv!(Y::AbstractVector, L::FactorizedOperator, B::AbstractVector) = ldiv!(Y, L.F, B)
+LinearAlgebra.ldiv!(L::FactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
 
 """
-AffineSciMLOperator{T} <: AbstractSciMLOperator{T}
+AffineOperator{T} <: AbstractSciMLOperator{T}
 
 `Ex: (A₁(t) + ... + Aₙ(t))*u + B₁(t) + ... + Bₘ(t)`
 
-AffineSciMLOperator{T}(As,Bs,du_cache=nothing)
+AffineOperator{T}(As,Bs,du_cache=nothing)
 
 Takes in two tuples for split Affine DiffEqs
 
@@ -198,22 +198,22 @@ Solvers will see this operator from integrator.f and can interpret it by
 checking the internals of As and Bs. For example, it can check isconstant(As[1])
 etc.
 """
-struct AffineSciMLOperator{T,T1,T2,U} <: AbstractSciMLOperator{T}
+struct AffineOperator{T,T1,T2,U} <: AbstractSciMLOperator{T}
     As::T1
     Bs::T2
     du_cache::U
-    function AffineSciMLOperator{T}(As,Bs,du_cache=nothing) where T
+    function AffineOperator{T}(As,Bs,du_cache=nothing) where T
         all([size(a) == size(As[1])
              for a in As]) || error("Operator sizes do not agree")
         new{T,typeof(As),typeof(Bs),typeof(du_cache)}(As,Bs,du_cache)
     end
 end
 
-Base.size(L::AffineSciMLOperator) = size(L.As[1])
+Base.size(L::AffineOperator) = size(L.As[1])
 
-getops(L::AffineSciMLOperator) = (L.As..., L.Bs...)
+getops(L::AffineOperator) = (L.As..., L.Bs...)
 
-function (L::AffineSciMLOperator)(u,p,t::Number)
+function (L::AffineOperator)(u,p,t::Number)
     update_coefficients!(L,u,p,t)
     du = sum(A*u for A in L.As)
     for B in L.Bs
@@ -226,9 +226,9 @@ function (L::AffineSciMLOperator)(u,p,t::Number)
     du
 end
 
-function (L::AffineSciMLOperator)(du,u,p,t::Number)
+function (L::AffineOperator)(du,u,p,t::Number)
     update_coefficients!(L,u,p,t)
-    L.du_cache === nothing && error("Can only use inplace AffineSciMLOperator if du_cache is given.")
+    L.du_cache === nothing && error("Can only use inplace AffineOperator if du_cache is given.")
     du_cache = L.du_cache
     fill!(du,zero(first(du)))
     # TODO: Make type-stable via recursion
@@ -246,7 +246,7 @@ function (L::AffineSciMLOperator)(du,u,p,t::Number)
     end
 end
 
-function update_coefficients!(L::AffineSciMLOperator,u,p,t)
+function update_coefficients!(L::AffineOperator,u,p,t)
     # TODO: Make type-stable via recursion
     for A in L.As; update_coefficients!(A,u,p,t); end
     for B in L.Bs; update_coefficients!(B,u,p,t); end
@@ -255,7 +255,7 @@ end
 """
     Matrix free operators (given by a function)
 """
-struct SciMLFunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T} # TODO
+struct FunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T} # TODO
     """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
     op::F
     """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
@@ -267,18 +267,18 @@ struct SciMLFunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T
     """ Parameters """
     p::P
 
-    function SciMLFunctionOperator(op;
-                                   isinplace=false,
-                                   op_adjoint=nothing,
-                                   op_inverse=nothing,
-                                   p=nothing,
+    function FunctionOperator(op;
+                              isinplace=false,
+                              op_adjoint=nothing,
+                              op_inverse=nothing,
+                              p=nothing,
 
-                                   # LinearAlgebra
-                                   opnorm=nothing,
-                                   isreal=true,
-                                   issymmetric=false,
-                                   ishermitian=false,
-                                  )
+                              # LinearAlgebra
+                              opnorm=nothing,
+                              isreal=true,
+                              issymmetric=false,
+                              ishermitian=false,
+                             )
         T = eltype(op)
 
         if LinearAlgebra.ishermitian(op) & (adjoint === nothing)
@@ -298,23 +298,23 @@ struct SciMLFunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T
     end
 end
 
-Base.size(L::SciMLFunctionOperator) = L.size
-Base.adjoint(L::SciMLFunctionOperator) = SciMLFunctionOperator(L.op_adjoint; op_inverse=L.op)
+Base.size(L::FunctionOperator) = L.size
+Base.adjoint(L::FunctionOperator) = FunctionOperator(L.op_adjoint; op_inverse=L.op)
 
-has_adjoint(L::SciMLFunctionOperator) = L.op_adjoint isa Nothing
-has_mul!(L::SciMLFunctionOperator{iip}) where{iip} = iip
-has_ldiv(L::SciMLFunctionOperator{iip}) where{iip} = L.op_inverse isa Nothing
-has_ldiv!(L::SciMLFunctionOperator{iip}) where{iip} = iip & has_ldiv(L)
+has_adjoint(L::FunctionOperator) = L.op_adjoint isa Nothing
+has_mul!(L::FunctionOperator{iip}) where{iip} = iip
+has_ldiv(L::FunctionOperator{iip}) where{iip} = L.op_inverse isa Nothing
+has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & has_ldiv(L)
 
-getops(L::SciMLFunctionOperator) = (L.p,)
+getops(L::FunctionOperator) = (L.p,)
 
 # operator application
-Base.:*(L::SciMLFunctionOperator, u::AbstractVector) = L.op(u, p, t)
-Base.:\(L::SciMLFunctionOperator, u::AbstractVector) = L.op_inverse(u, p, t)
-function LinearAlgebra.mul!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector)
+Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, p, t)
+Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, p, t)
+function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
     L.op(v, u, p, t)
 end
-function LinearAlgebra.ldiv!(v::AbstractVector, L::SciMLFunctionOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
     L.op_inverse(v, u, p, t)
 end
 #
