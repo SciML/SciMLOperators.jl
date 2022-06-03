@@ -191,8 +191,8 @@ Takes in two tuples for split Affine DiffEqs
    This will allow them to work directly in the nonlinear ODE solvers without
    modification.
 3. f(du, u, p, t) is only allowed if a du_cache is given
-4. B(t) can be Union{Number,AbstractArray}, in which case they are constants.
-   Otherwise they are interpreted they are functions v=B(t) and B(v,t)
+4. b(t) can be Union{Number,AbstractArray}, in which case they are constants.
+   Otherwise they are interpreted they are functions v=b(t) and b(v,t)
 
 Solvers will see this operator from integrator.f and can interpret it by
 checking the internals of As and bs. For example, it can check isconstant(As[1])
@@ -216,11 +216,11 @@ getops(L::AffineOperator) = (L.As..., L.bs...)
 function (L::AffineOperator)(u,p,t::Number)
     update_coefficients!(L,u,p,t)
     du = sum(A*u for A in L.As)
-    for B in L.bs
-        if typeof(B) <: Union{Number,AbstractArray}
-            du .+= B
+    for b in L.bs
+        if typeof(b) <: Union{Number,AbstractArray}
+            du .+= b
         else
-            du .+= B(t)
+            du .+= b(t)
         end
     end
     du
@@ -237,7 +237,7 @@ function (L::AffineOperator)(du,u,p,t::Number)
         du .+= du_cache
     end
     for b in L.bs
-        if typeof(B) <: Union{Number,AbstractArray}
+        if typeof(b) <: Union{Number,AbstractArray}
             du .+= b
         else
             b(du_cache,t)
@@ -249,8 +249,7 @@ end
 function update_coefficients!(L::AffineOperator,u,p,t)
     # TODO: Make type-stable via recursion
     for A in L.As; update_coefficients!(A,u,p,t); end
-    for b in L.bs; update_coefficients!(B,u,p,t); end
-    L
+    for b in L.bs; update_coefficients!(b,u,p,t); end
 end
 
 """
