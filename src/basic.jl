@@ -47,6 +47,11 @@ function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::Abstrac
     copy!(v, u)
 end
 
+function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+    @assert length(u) == N
+    mul!(v, I, u, α, β)
+end
+
 function LinearAlgebra.ldiv!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractArray) where{N}
     @assert length(u) == N
     copy!(v, u)
