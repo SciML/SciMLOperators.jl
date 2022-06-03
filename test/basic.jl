@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: SciMLIdentity,
+using SciMLOperators: SciMLIdentityOperator,
                       SciMLNullOperator,
                       SciMLScaledOperator,
                       SciMLAddedOperator,
@@ -12,18 +12,18 @@ using SciMLOperators: SciMLIdentity,
 Random.seed!(0)
 N = 8
 
-@testset "SciMLIdentity" begin
+@testset "SciMLIdentityOperator" begin
     A  = rand(N, N) |> MatrixOperator
     u  = rand(N)
     v  = rand(N)
-    Id = SciMLIdentity{N}()
+    Id = SciMLIdentityOperator{N}()
 
-    @test SciMLIdentity(u) isa SciMLIdentity{N}
-    @test one(A) isa SciMLIdentity{N}
+    @test SciMLIdentityOperator(u) isa SciMLIdentityOperator{N}
+    @test one(A) isa SciMLIdentityOperator{N}
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
 
     @test size(Id) == (N, N)
-    @test Id' isa SciMLIdentity{N}
+    @test Id' isa SciMLIdentityOperator{N}
 
     for op in (
                *, \,
