@@ -1,53 +1,53 @@
 """
 $(TYPEDEF)
 """
-struct SciMLIdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
+struct IdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-SciMLIdentityOperator(u::AbstractVector) = SciMLIdentityOperator{length(u)}()
+IdentityOperator(u::AbstractVector) = IdentityOperator{length(u)}()
 
 function Base.one(A::AbstractSciMLOperator)
     @assert issquare(A)
     N = size(A, 1)
-    SciMLIdentityOperator{N}()
+    IdentityOperator{N}()
 end
 
-Base.convert(::Type{AbstractMatrix}, ::SciMLIdentityOperator{N}) where{N} = Diagonal(ones(Bool, N))
+Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(ones(Bool, N))
 
 # traits
-Base.size(::SciMLIdentityOperator{N}) where{N} = (N, N)
-Base.adjoint(A::SciMLIdentityOperator) = A
-LinearAlgebra.opnorm(::SciMLIdentityOperator{N}, p::Real=2) where{N} = true
+Base.size(::IdentityOperator{N}) where{N} = (N, N)
+Base.adjoint(A::IdentityOperator) = A
+LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
              :isreal, :issymmetric, :ishermitian, :isposdef,
             )
-    @eval LinearAlgebra.$pred(::SciMLIdentityOperator) = true
+    @eval LinearAlgebra.$pred(::IdentityOperator) = true
 end
 
-getops(::SciMLIdentityOperator) = ()
-isconstant(::SciMLIdentityOperator) = true
-islinear(L::SciMLIdentityOperator) = true
-has_adjoint(::SciMLIdentityOperator) = true
-has_mul!(::SciMLIdentityOperator) = true
-has_ldiv(::SciMLIdentityOperator) = true
-has_ldiv!(::SciMLIdentityOperator) = true
+getops(::IdentityOperator) = ()
+isconstant(::IdentityOperator) = true
+islinear(L::IdentityOperator) = true
+has_adjoint(::IdentityOperator) = true
+has_mul!(::IdentityOperator) = true
+has_ldiv(::IdentityOperator) = true
+has_ldiv!(::IdentityOperator) = true
 
 # opeator application
 for op in (
            :*, :\,
           )
-    @eval function Base.$op(::SciMLIdentityOperator{N}, x::AbstractVector) where{N}
+    @eval function Base.$op(::IdentityOperator{N}, x::AbstractVector) where{N}
         @assert length(x) == N
         copy(x)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::SciMLIdentityOperator{N}, u::AbstractVector) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector) where{N}
     @assert length(u) == N
     copy!(v, u)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, ::SciMLIdentityOperator{N}, u::AbstractArray) where{N}
+function LinearAlgebra.ldiv!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractArray) where{N}
     @assert length(u) == N
     copy!(v, u)
 end
@@ -56,77 +56,77 @@ end
 for op in (
            :*, :∘, :/, :\,
           )
-    @eval function Base.$op(::SciMLIdentityOperator{N}, A::AbstractSciMLOperator) where{N}
+    @eval function Base.$op(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
-        SciMLIdentityOperator{N}()
+        IdentityOperator{N}()
     end
 
-    @eval function Base.$op(A::AbstractSciMLOperator, ::SciMLIdentityOperator{N}) where{N}
+    @eval function Base.$op(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
         @assert size(A, 2) == N
-        SciMLIdentityOperator{N}()
+        IdentityOperator{N}()
     end
 end
 
 """
 $(TYPEDEF)
 """
-struct SciMLNullOperator{N} <: AbstractSciMLLinearOperator{Bool} end
+struct NullOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-SciMLNullOperator(u::AbstractVector) = SciMLNullOperator{length(u)}()
+NullOperator(u::AbstractVector) = NullOperator{length(u)}()
 
 function Base.zero(A::AbstractSciMLOperator)
     @assert issquare(A)
     N = size(A, 1)
-    SciMLNullOperator{N}()
+    NullOperator{N}()
 end
 
-Base.convert(::Type{AbstractMatrix}, ::SciMLNullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
+Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
 
 # traits
-Base.size(::SciMLNullOperator{N}) where{N} = (N, N)
-Base.adjoint(A::SciMLNullOperator) = A
-LinearAlgebra.opnorm(::SciMLNullOperator{N}, p::Real=2) where{N} = false
+Base.size(::NullOperator{N}) where{N} = (N, N)
+Base.adjoint(A::NullOperator) = A
+LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
 for pred in (
              :isreal, :issymmetric, :ishermitian,
             )
-    @eval LinearAlgebra.$pred(::SciMLNullOperator) = true
+    @eval LinearAlgebra.$pred(::NullOperator) = true
 end
-LinearAlgebra.isposdef(::SciMLNullOperator) = false
+LinearAlgebra.isposdef(::NullOperator) = false
 
-getops(::SciMLNullOperator) = ()
-isconstant(::SciMLNullOperator) = true
-islinear(L::SciMLNullOperator) = true
-Base.iszero(::SciMLNullOperator) = true
-has_adjoint(::SciMLNullOperator) = true
-has_mul!(::SciMLNullOperator) = true
+getops(::NullOperator) = ()
+isconstant(::NullOperator) = true
+islinear(L::NullOperator) = true
+Base.iszero(::NullOperator) = true
+has_adjoint(::NullOperator) = true
+has_mul!(::NullOperator) = true
 
 # opeator application
-Base.:*(::SciMLNullOperator{N}, x::AbstractVector) where{N} = (@assert length(x) == N; zero(x))
-Base.:*(x::AbstractVector, ::SciMLNullOperator{N}) where{N} = (@assert length(x) == N; zero(x))
+Base.:*(::NullOperator{N}, x::AbstractVector) where{N} = (@assert length(x) == N; zero(x))
+Base.:*(x::AbstractVector, ::NullOperator{N}) where{N} = (@assert length(x) == N; zero(x))
 
-function LinearAlgebra.mul!(v::AbstractVector, ::SciMLNullOperator{N}, u::AbstractVector) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector) where{N}
     @assert length(u) == length(v) == N
     lmul!(false, v)
 end
 
 # operator fusion, composition
 for op in (:*, :∘)
-    @eval function Base.$op(::SciMLNullOperator{N}, A::AbstractSciMLOperator) where{N}
+    @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
-        SciMLNullOperator{N}()
+        NullOperator{N}()
     end
 
-    @eval function Base.$op(A::AbstractSciMLOperator, ::SciMLNullOperator{N}) where{N}
+    @eval function Base.$op(A::AbstractSciMLOperator, ::NullOperator{N}) where{N}
         @assert size(A, 2) == N
-        SciMLNullOperator{N}()
+        NullOperator{N}()
     end
 end
 
 """
-    SciMLScalar(val[; update_func])
+    ScalarOperator(val[; update_func])
 
-    (α::SciMLScalar)(a::Number) = α * a
+    (α::ScalarOperator)(a::Number) = α * a
 
 Represents a time-dependent scalar/scaling operator. The update function
 is called by `update_coefficients!` and is assumed to have the following
@@ -134,35 +134,35 @@ signature:
 
     update_func(oldval,u,p,t) -> newval
 """
-struct SciMLScalar{T<:Number,F} <: AbstractSciMLLinearOperator{T}
+struct ScalarOperator{T<:Number,F} <: AbstractSciMLLinearOperator{T}
     val::T
     update_func::F
-    SciMLScalar(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
+    ScalarOperator(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
         new{T,typeof(update_func)}(val, update_func)
 end
 
 # constructors
-Base.convert(::Type{Number}, α::SciMLScalar) = α.val
-Base.convert(::Type{SciMLScalar}, α::Number) = SciMLScalar(α)
+Base.convert(::Type{Number}, α::ScalarOperator) = α.val
+Base.convert(::Type{ScalarOperator}, α::Number) = ScalarOperator(α)
 
-SciMLScalar(α::SciMLScalar) = α
-SciMLScalar(λ::UniformScaling) = SciMLScalar(λ.λ)
+ScalarOperator(α::ScalarOperator) = α
+ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
-Base.size(α::SciMLScalar) = ()
-function Base.adjoint(α::SciMLScalar) # TODO - test
+Base.size(α::ScalarOperator) = ()
+function Base.adjoint(α::ScalarOperator) # TODO - test
     val = α.val'
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
-    SciMLScalar(val; update_func=update_func)
+    ScalarOperator(val; update_func=update_func)
 end
 
-getops(α::SciMLScalar) = (α.val)
-islinear(L::SciMLScalar) = true
-isconstant(α::SciMLScalar) = α.update_func == DEFAULT_UPDATE_FUNC
-Base.iszero(α::SciMLScalar) = iszero(α.val)
-has_adjoint(::SciMLScalar) = true
-has_mul(::SciMLScalar) = true
-has_ldiv(α::SciMLScalar) = iszero(α.val)
+getops(α::ScalarOperator) = (α.val)
+islinear(L::ScalarOperator) = true
+isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
+Base.iszero(α::ScalarOperator) = iszero(α.val)
+has_adjoint(::ScalarOperator) = true
+has_mul(::ScalarOperator) = true
+has_ldiv(α::ScalarOperator) = iszero(α.val)
 
 for op in (
            :*, :/, :\,
@@ -171,30 +171,30 @@ for op in (
               :Number,
               :AbstractVector,
              )
-        @eval Base.$op(α::SciMLScalar, x::$T) = $op(α.val, x)
-        @eval Base.$op(x::$T, α::SciMLScalar) = $op(x, α.val)
+        @eval Base.$op(α::ScalarOperator, x::$T) = $op(α.val, x)
+        @eval Base.$op(x::$T, α::ScalarOperator) = $op(x, α.val)
     end
-    # TODO should result be Number or SciMLScalar
-    @eval Base.$op(x::SciMLScalar, y::SciMLScalar) = $op(x.val, y.val)
-    #@eval function Base.$op(x::SciMLScalar, y::SciMLScalar) # TODO - test
+    # TODO should result be Number or ScalarOperator
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
+    #@eval function Base.$op(x::ScalarOperator, y::ScalarOperator) # TODO - test
     #    val = $op(x.val, y.val)
     #    update_func = (oldval,u,p,t) -> x.update_func(oldval,u,p,t) * y.update_func(oldval,u,p,t)
-    #    SciMLScalar(val; update_func=update_func)
+    #    ScalarOperator(val; update_func=update_func)
     #end
 end
 
 for op in (:-, :+)
-    @eval Base.$op(α::SciMLScalar, x::Number) = $op(α.val, x)
-    @eval Base.$op(x::Number, α::SciMLScalar) = $op(x, α.val)
-    # TODO - should result be Number or SciMLScalar?
-    @eval Base.$op(x::SciMLScalar, y::SciMLScalar) = $op(x.val, y.val)
+    @eval Base.$op(α::ScalarOperator, x::Number) = $op(α.val, x)
+    @eval Base.$op(x::Number, α::ScalarOperator) = $op(x, α.val)
+    # TODO - should result be Number or ScalarOperator?
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
 end
 
-LinearAlgebra.lmul!(α::SciMLScalar, B::AbstractVector) = lmul!(α.val, B)
-LinearAlgebra.rmul!(B::AbstractVector, α::SciMLScalar) = rmul!(B, α.val)
-LinearAlgebra.mul!(Y::AbstractVector, α::SciMLScalar, B::AbstractVector) = mul!(Y, α.val, B)
-LinearAlgebra.axpy!(α::SciMLScalar, X::AbstractVector, Y::AbstractVector) = axpy!(α.val, X, Y)
-Base.abs(α::SciMLScalar) = abs(α.val)
+LinearAlgebra.lmul!(α::ScalarOperator, B::AbstractVector) = lmul!(α.val, B)
+LinearAlgebra.rmul!(B::AbstractVector, α::ScalarOperator) = rmul!(B, α.val)
+LinearAlgebra.mul!(Y::AbstractVector, α::ScalarOperator, B::AbstractVector) = mul!(Y, α.val, B)
+LinearAlgebra.axpy!(α::ScalarOperator, X::AbstractVector, Y::AbstractVector) = axpy!(α.val, X, Y)
+Base.abs(α::ScalarOperator) = abs(α.val)
 
 """
     SciMLScaledOperator
@@ -202,32 +202,32 @@ Base.abs(α::SciMLScalar) = abs(α.val)
     (λ L)*(u) = λ * L(u)
 """
 struct SciMLScaledOperator{T,
-                            λType<:SciMLScalar,
+                            λType<:ScalarOperator,
                             LType<:AbstractSciMLOperator,
                            } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
 
-    function SciMLScaledOperator(λ::SciMLScalar, L::AbstractSciMLOperator)
+    function SciMLScaledOperator(λ::ScalarOperator, L::AbstractSciMLOperator)
         T = promote_type(eltype.((λ, L))...)
         new{T,typeof(λ),typeof(L)}(λ, L)
     end
 end
 
 ScalingNumberTypes = (
-                      :SciMLScalar,
+                      :ScalarOperator,
                       :Number,
                       :UniformScaling,
                      )
 
 # constructors
 for T in ScalingNumberTypes[2:end]
-    @eval SciMLScaledOperator(λ::$T, L::AbstractSciMLOperator) = SciMLScaledOperator(SciMLScalar(λ), L)
+    @eval SciMLScaledOperator(λ::$T, L::AbstractSciMLOperator) = SciMLScaledOperator(ScalarOperator(λ), L)
 end
 
 for T in ScalingNumberTypes
     @eval function SciMLScaledOperator(λ::$T, L::SciMLScaledOperator)
-        λ = SciMLScalar(λ) * L.λ
+        λ = ScalarOperator(λ) * L.λ
         SciMLScaledOperator(λ, L.L)
     end
     
@@ -329,14 +329,14 @@ for op in (
         @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
             @assert issquare(L)
             N  = size(L, 1)
-            Id = SciMLIdentityOperator{N}()
+            Id = IdentityOperator{N}()
             SciMLAddedOperator(L, $op(λ)*Id)
         end
 
         @eval function Base.$op(λ::$T, L::AbstractSciMLOperator)
             @assert issquare(L)
             N  = size(L, 1)
-            Id = SciMLIdentityOperator{N}()
+            Id = IdentityOperator{N}()
             SciMLAddedOperator(λ*Id, $op(L))
         end
     end
