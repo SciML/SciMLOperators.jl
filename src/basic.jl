@@ -253,7 +253,7 @@ LinearAlgebra.opnorm(L::SciMLScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L
 getops(L::SciMLScaledOperator) = (L.λ, L.L)
 islinear(L::SciMLScaledOperator) = all(islinear, L.ops)
 isconstant(L::SciMLScaledOperator) = isconstant(L.L) & isconstant(L.λ)
-Base.iszero(L::SciMLScaledOperator) = iszero(L.L) & iszero(L.λ)
+Base.iszero(L::SciMLScaledOperator) = iszero(L.L) | iszero(L.λ)
 has_adjoint(L::SciMLScaledOperator) = has_adjoint(L.L)
 has_mul!(L::SciMLScaledOperator) = has_mul!(L.L)
 has_ldiv(L::SciMLScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
