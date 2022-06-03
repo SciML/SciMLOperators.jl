@@ -179,9 +179,9 @@ LinearAlgebra.ldiv!(L::FactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
 """
 AffineOperator{T} <: AbstractSciMLOperator{T}
 
-`Ex: (A₁(t) + ... + Aₙ(t))*u + B₁(t) + ... + Bₘ(t)`
+`Ex: (A₁(t) + ... + Aₙ(t))*u + b₁(t) + ... + bₘ(t)`
 
-AffineOperator{T}(As,Bs,du_cache=nothing)
+AffineOperator{T}(As,bs,du_cache=nothing)
 
 Takes in two tuples for split Affine DiffEqs
 
@@ -195,28 +195,28 @@ Takes in two tuples for split Affine DiffEqs
    Otherwise they are interpreted they are functions v=B(t) and B(v,t)
 
 Solvers will see this operator from integrator.f and can interpret it by
-checking the internals of As and Bs. For example, it can check isconstant(As[1])
+checking the internals of As and bs. For example, it can check isconstant(As[1])
 etc.
 """
 struct AffineOperator{T,T1,T2,U} <: AbstractSciMLOperator{T}
     As::T1
-    Bs::T2
+    bs::T2
     du_cache::U
-    function AffineOperator{T}(As,Bs,du_cache=nothing) where T
+    function AffineOperator{T}(As,bs,du_cache=nothing) where T
         all([size(a) == size(As[1])
              for a in As]) || error("Operator sizes do not agree")
-        new{T,typeof(As),typeof(Bs),typeof(du_cache)}(As,Bs,du_cache)
+        new{T,typeof(As),typeof(bs),typeof(du_cache)}(As,bs,du_cache)
     end
 end
 
 Base.size(L::AffineOperator) = size(L.As[1])
 
-getops(L::AffineOperator) = (L.As..., L.Bs...)
+getops(L::AffineOperator) = (L.As..., L.bs...)
 
 function (L::AffineOperator)(u,p,t::Number)
     update_coefficients!(L,u,p,t)
     du = sum(A*u for A in L.As)
-    for B in L.Bs
+    for B in L.bs
         if typeof(B) <: Union{Number,AbstractArray}
             du .+= B
         else
@@ -236,11 +236,11 @@ function (L::AffineOperator)(du,u,p,t::Number)
         mul!(du_cache,A,u)
         du .+= du_cache
     end
-    for B in L.Bs
+    for b in L.bs
         if typeof(B) <: Union{Number,AbstractArray}
-            du .+= B
+            du .+= b
         else
-            B(du_cache,t)
+            b(du_cache,t)
             du .+= du_cache
         end
     end
@@ -249,7 +249,8 @@ end
 function update_coefficients!(L::AffineOperator,u,p,t)
     # TODO: Make type-stable via recursion
     for A in L.As; update_coefficients!(A,u,p,t); end
-    for B in L.Bs; update_coefficients!(B,u,p,t); end
+    for b in L.bs; update_coefficients!(B,u,p,t); end
+    L
 end
 
 """
