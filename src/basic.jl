@@ -509,6 +509,16 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
     v
 end
 
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
+    @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
+
+    copy!(cache, v)
+
+    mul!(v, L, u)
+    lmul!(α, v)
+    axpy!(β, cache, v)
+end
+
 function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
     @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
 
