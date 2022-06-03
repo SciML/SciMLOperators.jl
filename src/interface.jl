@@ -19,6 +19,8 @@ update_coefficients(L,u,p,t) = L
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
 
+isconstant(::AbstractSciMLLinearOperator) = true
+
 islinear(::AbstractSciMLOperator) = false
 Base.iszero(::AbstractSciMLOperator) = false
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)

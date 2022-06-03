@@ -170,7 +170,7 @@ for op in (
           )
     for T in (
               :Number,
-              :AbstractArray,
+              :AbstractVector,
              )
         @eval Base.$op(α::SciMLScalar, x::$T) = $op(α.val, x)
         @eval Base.$op(x::$T, α::SciMLScalar) = $op(x, α.val)

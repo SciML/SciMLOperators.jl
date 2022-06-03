@@ -3,7 +3,6 @@
 ###
 
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A # no-op used by the basic operators
-# isconstant(::AbstractSciMLLinearOperator) = true # already defined in SciMLBase
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
     for op in getops(L)
         update_coefficients!(op, u, p, t)
@@ -12,13 +11,11 @@ function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
 end
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
-#@deprecate is_constant(L::AbstractSciMLOperator) isconstant(L)
 
 ###
 # fallback traits
 ###
 
-Base.convert(::Type{AbstractArray}, L::AbstractSciMLLinearOperator) = convert(AbstractMatrix, L)
 LinearAlgebra.opnorm(L::AbstractSciMLLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 Base.@propagate_inbounds Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N} = convert(AbstractMatrix,L)[I...]
 Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Int, N}) where {N} = convert(AbstractMatrix,L)[I...]
@@ -26,20 +23,19 @@ Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Int, N}) where {N} = con
 for pred in (
              :isreal, :issymmetric, :ishermitian, :isposdef
             )
-    @eval LinearAlgebra.$pred(L::AbstractSciMLLinearOperator) = $pred(convert(AbstractArray, L))
+    @eval LinearAlgebra.$pred(L::AbstractSciMLLinearOperator) = $pred(convert(AbstractMatrix, L))
 end
 for op in (
            :sum,:prod
           )
-  @eval LinearAlgebra.$op(L::AbstractSciMLLinearOperator; kwargs...) = $op(convert(AbstractArray, L); kwargs...)
+  @eval LinearAlgebra.$op(L::AbstractSciMLLinearOperator; kwargs...) = $op(convert(AbstractMatrix, L); kwargs...)
 end
 
 # fallback operator application
 for op in (
-           :*, :/, :\
+           :*, :\,
           )
-    @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractArray) = $op(convert(AbstractMatrix,L), x)
-    @eval Base.$op(x::AbstractArray, L::AbstractSciMLLinearOperator) = $op(x, convert(AbstractMatrix,L))
+    @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVector) = $op(convert(AbstractMatrix,L), x)
 end
 
 LinearAlgebra.mul!(Y::AbstractVector, L::AbstractSciMLLinearOperator, B::AbstractVector) = mul!(Y, convert(AbstractMatrix,L), B)
