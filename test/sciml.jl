@@ -44,11 +44,18 @@ end
     u = rand(N)
     A = rand(N,N)
     b = rand(N)
+    α = rand()
+    β = rand()
 
     L = AffineOperator(MatrixOperator(A), b)
 
     @test L * u ≈ A * u + b
-    v=zero(u); @test mul!(v, L, u) ≈ A * u + b
+    v=rand(N); @test mul!(v, L, u) ≈ A * u + b
+    v=rand(N); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*v
+
+    @test L \ u ≈ A \ (u - b)
+#   v=rand(N); @test ldiv!(v, L, u) ≈ A \ (u-b)
+#   v=rand(N); @test ldiv!(L, u) ≈ A \ (u-b)
 end
 
 @testset "SciMLFunctionOperator" begin

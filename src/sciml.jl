@@ -202,6 +202,8 @@ has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 
 Base.:*(L::AffineOperator, u::AbstractVector) = L.A * u + L.b
+Base.:\(L::AffineOperator, u::AbstractVector) = L.A \ (u - L.b)
+
 function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
     mul!(v, L.A, u)
     axpy!(true, L.b, v)
@@ -209,7 +211,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector, α::Number, β::Number)
     mul!(v, L.A, u, α, β)
-    axpy!(true, L.b, v)
+    axpy!(α, L.b, v)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
