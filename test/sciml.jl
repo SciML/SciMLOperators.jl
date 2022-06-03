@@ -4,7 +4,7 @@ using Random
 Random.seed!(0)
 N = 8
 
-@testset "DiffEqArrayOperator" begin
+@testset "MatrixOperator" begin
     u = rand(N)
     p = nothing
     t = 0
@@ -12,20 +12,20 @@ N = 8
     A  = rand(N,N)
     At = A'
 
-    AA  = DiffEqArrayOperator(A)
+    AA  = MatrixOperator(A)
     AAt = AA'
 
-    @test AA  isa DiffEqArrayOperator
-    @test AAt isa DiffEqArrayOperator
+    @test AA  isa MatrixOperator
+    @test AAt isa MatrixOperator
 
     FF  = factorize(AA)
     FFt = FF'
 
-    @test FF  isa FactorizedDiffEqArrayOperator
-    @test FFt isa FactorizedDiffEqArrayOperator
+    @test FF  isa FactorizedOperator
+    @test FFt isa FactorizedOperator
 
     @test eachindex(A)  === eachindex(AA)
-    @test eachindex(A') === eachindex(AAt) === eachindex(DiffEqArrayOperator(At))
+    @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
 
     @test A  ≈ convert(AbstractMatrix, AA ) ≈ convert(AbstractMatrix, FF )
     @test At ≈ convert(AbstractMatrix, AAt) ≈ convert(AbstractMatrix, FFt)
@@ -40,7 +40,7 @@ N = 8
     @test At \ u ≈ AAt \ u ≈ FFt \ u
 end
 
-@testset "DiffEqFunctionOperator" begin
+@testset "SciMLFunctionOperator" begin
 end
 
 @testset "Operator Algebra" begin

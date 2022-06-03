@@ -7,16 +7,16 @@ const is_TRAVIS = haskey(ENV, "TRAVIS")
 @time begin
     if GROUP == "All" || GROUP == "OperatorInterface"
         @time @safetestset "Basic Operators" begin
-            include("operators/basic_operators.jl")
+            include("basic.jl")
         end
         @time @safetestset "DiffEq Operators" begin
-            include("operators/diffeqoperators.jl")
+            include("sciml.jl")
         end
 #       @time @safetestset "Matrix-Free Operators" begin
-#           include("operators/matrixfree.jl")
+#           include("matrixfree.jl")
 #       end
 #       @time @safetestset "Composite Operators Interface" begin
-#           include("operators/composite_operators_interface.jl")
+#           include("composite_operators_interface.jl")
 #       end
     end
 end

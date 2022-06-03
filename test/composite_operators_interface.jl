@@ -4,20 +4,7 @@ using DiffEqBase: isconstant
 using DiffEqOperators: DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOperatorComposition
 
 @testset "Operator Composition" begin
-  Random.seed!(0)
-  A1 = rand(2,3)
-  A2 = rand(3,2)
-  b = rand()
-  B = rand(2,2)
-  L = DiffEqArrayOperator(A1) * DiffEqArrayOperator(A2) + DiffEqScalar(b) * DiffEqArrayOperator(B)
-
   # Structure
-  @test isa(L, DiffEqOperatorCombination)
-  L1, L2 = getops(L)
-  @test isa(L1, DiffEqOperatorComposition)
-  @test isa(L2, DiffEqScaledOperator)
-
-  # Operations
   Lfull = Matrix(L)
   @test opnorm(L) ≈ opnorm(Lfull)
   @test size(L) == size(Lfull)
@@ -30,16 +17,6 @@ using DiffEqOperators: DiffEqScaledOperator, DiffEqOperatorCombination, DiffEqOp
   Lf = factorize(L)
   ldiv!(du, Lf, u); @test Lfull * du ≈ u
   @test exp(L) ≈ exp(Lfull)
-end
-
-@testset "Operator combinations" begin
-  Random.seed!(0)
-  A = rand(2,2)
-  L1 = DiffEqArrayOperator(A)
-  @testset "" for op in (+,-), L2 in (L1,A,I)
-    @test isa(op(L1, L2), DiffEqOperatorCombination)
-    @test isa(op(L2, L1), DiffEqOperatorCombination)
-  end
 end
 
 @testset "Mutable Composite Operators" begin

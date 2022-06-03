@@ -1,28 +1,29 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: DiffEqIdentity,
-                      DiffEqNullOperator,
-                      ScaledDiffEqOperator,
-                      AddedDiffEqOperator,
-                      ComposedDiffEqOperator,
-                      DiffEqFunctionOperator
+using SciMLOperators: IdentityOperator,
+                      NullOperator,
+                      ScaledOperator,
+                      AddedOperator,
+                      ComposedOperator,
+
+                      getops
 
 Random.seed!(0)
 N = 8
 
-@testset "DiffEqIdentity" begin
-    A  = rand(N, N) |> DiffEqArrayOperator
+@testset "IdentityOperator" begin
+    A  = rand(N, N) |> MatrixOperator
     u  = rand(N)
     v  = rand(N)
-    Id = DiffEqIdentity{N}()
+    Id = IdentityOperator{N}()
 
-    @test DiffEqIdentity(u) isa DiffEqIdentity{N}
-    @test one(A) isa DiffEqIdentity{N}
+    @test IdentityOperator(u) isa IdentityOperator{N}
+    @test one(A) isa IdentityOperator{N}
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
 
     @test size(Id) == (N, N)
-    @test Id' isa DiffEqIdentity{N}
+    @test Id' isa IdentityOperator{N}
 
     for op in (
                *, \,
@@ -42,18 +43,18 @@ N = 8
     #end
 end
 
-@testset "DiffEqNullOperator" begin
-    A = rand(N, N) |> DiffEqArrayOperator
+@testset "NullOperator" begin
+    A = rand(N, N) |> MatrixOperator
     u = rand(N)
     v = rand(N)
-    Z = DiffEqNullOperator{N}()
+    Z = NullOperator{N}()
 
-    @test DiffEqNullOperator(u) isa DiffEqNullOperator{N}
-    @test zero(A) isa DiffEqNullOperator{N}
+    @test NullOperator(u) isa NullOperator{N}
+    @test zero(A) isa NullOperator{N}
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 
     @test size(Z) == (N, N)
-    @test Z' isa DiffEqNullOperator{N}
+    @test Z' isa NullOperator{N}
 
     @test *(Z, u) ≈ zero(u)
 
@@ -68,15 +69,15 @@ end
     #end
 end
 
-@testset "DiffEqScalar" begin
+@testset "ScalarOperator" begin
     a = rand()
     x = rand()
-    α = DiffEqScalar(x)
+    α = ScalarOperator(x)
     u = rand(N)
 
-    @test α isa DiffEqScalar
+    @test α isa ScalarOperator
     @test convert(Number, α) isa Number
-    @test convert(DiffEqScalar, a) isa DiffEqScalar
+    @test convert(ScalarOperator, a) isa ScalarOperator
 
     @test size(α) == ()
 
@@ -96,15 +97,15 @@ end
     w = copy(v)
     @test axpy!(α, u, v) == u * x + w
 
-    @test abs(DiffEqScalar(-x)) == x
+    @test abs(ScalarOperator(-x)) == x
 end
 
-@testset "ScaledDiffEqOperator" begin
-    # TODO change A to a differnt type of diffeqoperator
-    A = rand(N,N) |> DiffEqArrayOperator
+@testset "ScaledOperator" begin
+    # TODO change A to a differnt type of ScalarOperator
+    A = rand(N,N) |> MatrixOperator
 
     for T in (
-              DiffEqScalar,
+              ScalarOperator,
               Number,
               UniformScaling
              )
@@ -118,14 +119,14 @@ end
         α = α |> T
         β = β |> T
 
-        op1 = α * A # not ScaledDiffEqOperator
-        op2 = A * α # as * shortcircuits for DiffEqArrayOp
+        op1 = α * A # not ScaledOperator
+        op2 = A * α # as * shortcircuits for ScalarOperator
 
-        op1 = ScaledDiffEqOperator(α, A)
-        op2 = ScaledDiffEqOperator(α, A)
+        op1 = ScaledOperator(α, A)
+        op2 = ScaledOperator(α, A)
 
-        @test op1 isa ScaledDiffEqOperator
-        @test op2 isa ScaledDiffEqOperator
+        @test op1 isa ScaledOperator
+        @test op2 isa ScaledOperator
 
         @test op1 * u ≈ αAu
         @test op2 * u ≈ αAu
@@ -135,12 +136,12 @@ end
     end
 end
 
-@testset "AddedDiffEqOperator" begin
-    A = rand(N,N) |> DiffEqArrayOperator
-    B = rand(N,N) |> DiffEqArrayOperator
-    C = rand(N,N) |> DiffEqArrayOperator
-    α = rand() |> DiffEqScalar
-    β = rand() |> DiffEqScalar
+@testset "AddedOperator" begin
+    A = rand(N,N) |> MatrixOperator
+    B = rand(N,N) |> MatrixOperator
+    C = rand(N,N) |> MatrixOperator
+    α = rand() |> ScalarOperator
+    β = rand() |> ScalarOperator
     u = rand(N)
 
     for op in (
@@ -151,10 +152,10 @@ end
         op3 = op(A  , β*B)
         op4 = op(α*A, β*B)
 
-        @test op1 isa AddedDiffEqOperator
-        @test op2 isa AddedDiffEqOperator
-        @test op3 isa AddedDiffEqOperator
-        @test op4 isa AddedDiffEqOperator
+        @test op1 isa AddedOperator
+        @test op2 isa AddedOperator
+        @test op3 isa AddedOperator
+        @test op4 isa AddedOperator
 
         @test op1 * u ≈ op(  A*u,   B*u)
         @test op2 * u ≈ op(α*A*u,   B*u)
@@ -163,10 +164,10 @@ end
     end
 end
 
-@testset "ComposedDiffEqOperator" begin
-    A = rand(N,N) |> DiffEqArrayOperator
-    B = rand(N,N) |> DiffEqArrayOperator
-    C = rand(N,N) |> DiffEqArrayOperator
+@testset "ComposedOperator" begin
+    A = rand(N,N) |> MatrixOperator
+    B = rand(N,N) |> MatrixOperator
+    C = rand(N,N) |> MatrixOperator
 
     u = rand(N)
     ABCmulu = (A * B * C) * u
@@ -174,8 +175,8 @@ end
 
     op = ∘(A, B, C)
 
-    @test op isa ComposedDiffEqOperator
-    @test *(op.ops...) isa DiffEqArrayOperator
+    @test op isa ComposedOperator
+    @test *(op.ops...) isa MatrixOperator
 
     @test op * u ≈ ABCmulu
     @test op \ u ≈ ABCdivu
