@@ -359,6 +359,10 @@ function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
 end
 
 LinearAlgebra.opnorm(L::FunctionOperator) = L.traits.opnorm
+LinearAlgebra.isreal = L.traits.isreal
+LinearAlgebra.issymmetric = L.traits.issymmetric
+LinearAlgebra.ishermitian = L.traits.ishermitian
+LinearAlgebra.isposdef = L.traits.isposdef
 
 has_adjoint(L::FunctionOperator) = L.op_adjoint isa Nothing
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
