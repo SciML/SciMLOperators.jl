@@ -275,10 +275,12 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOpera
 
     function FunctionOperator(op, traits=nothing;
 
+                              # necessary
                               isinplace=nothing,
                               T=nothing,
                               size=nothing,
 
+                              # optional
                               op_adjoint=nothing,
                               op_inverse=nothing,
                               op_adjoint_inverse=nothing,
@@ -331,7 +333,7 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOpera
             typeof(p),
             typeof(t),
            }(
-             op, op_adjoint, op_inverse, size, traits, p, t,
+             op, op_adjoint, op_inverse, op_adjoint_inverse, size, traits, p, t,
             )
     end
 end
@@ -344,9 +346,8 @@ end
 
 Base.size(L::FunctionOperator) = L.size
 function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
-    op = L.op_adjoint
 
-    args   = (op, traits=L.traits)
+    args   = (L.op_adjoint, traits=L.traits)
     kwargs = (;
               isinplace = iip,
               T = T,
