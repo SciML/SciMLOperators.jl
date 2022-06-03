@@ -1,53 +1,53 @@
 """
 $(TYPEDEF)
 """
-struct SciMLIdentity{N} <: AbstractSciMLLinearOperator{Bool} end
+struct SciMLIdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-SciMLIdentity(u::AbstractVector) = SciMLIdentity{length(u)}()
+SciMLIdentityOperator(u::AbstractVector) = SciMLIdentityOperator{length(u)}()
 
 function Base.one(A::AbstractSciMLOperator)
     @assert issquare(A)
     N = size(A, 1)
-    SciMLIdentity{N}()
+    SciMLIdentityOperator{N}()
 end
 
-Base.convert(::Type{AbstractMatrix}, ::SciMLIdentity{N}) where{N} = Diagonal(ones(Bool, N))
+Base.convert(::Type{AbstractMatrix}, ::SciMLIdentityOperator{N}) where{N} = Diagonal(ones(Bool, N))
 
 # traits
-Base.size(::SciMLIdentity{N}) where{N} = (N, N)
-Base.adjoint(A::SciMLIdentity) = A
-LinearAlgebra.opnorm(::SciMLIdentity{N}, p::Real=2) where{N} = true
+Base.size(::SciMLIdentityOperator{N}) where{N} = (N, N)
+Base.adjoint(A::SciMLIdentityOperator) = A
+LinearAlgebra.opnorm(::SciMLIdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
              :isreal, :issymmetric, :ishermitian, :isposdef,
             )
-    @eval LinearAlgebra.$pred(::SciMLIdentity) = true
+    @eval LinearAlgebra.$pred(::SciMLIdentityOperator) = true
 end
 
-getops(::SciMLIdentity) = ()
-isconstant(::SciMLIdentity) = true
-islinear(L::SciMLIdentity) = true
-has_adjoint(::SciMLIdentity) = true
-has_mul!(::SciMLIdentity) = true
-has_ldiv(::SciMLIdentity) = true
-has_ldiv!(::SciMLIdentity) = true
+getops(::SciMLIdentityOperator) = ()
+isconstant(::SciMLIdentityOperator) = true
+islinear(L::SciMLIdentityOperator) = true
+has_adjoint(::SciMLIdentityOperator) = true
+has_mul!(::SciMLIdentityOperator) = true
+has_ldiv(::SciMLIdentityOperator) = true
+has_ldiv!(::SciMLIdentityOperator) = true
 
 # opeator application
 for op in (
            :*, :\,
           )
-    @eval function Base.$op(::SciMLIdentity{N}, x::AbstractVector) where{N}
+    @eval function Base.$op(::SciMLIdentityOperator{N}, x::AbstractVector) where{N}
         @assert length(x) == N
         copy(x)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::SciMLIdentity{N}, u::AbstractVector) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::SciMLIdentityOperator{N}, u::AbstractVector) where{N}
     @assert length(u) == N
     copy!(v, u)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, ::SciMLIdentity{N}, u::AbstractArray) where{N}
+function LinearAlgebra.ldiv!(v::AbstractVector, ::SciMLIdentityOperator{N}, u::AbstractArray) where{N}
     @assert length(u) == N
     copy!(v, u)
 end
@@ -56,14 +56,14 @@ end
 for op in (
            :*, :∘, :/, :\,
           )
-    @eval function Base.$op(::SciMLIdentity{N}, A::AbstractSciMLOperator) where{N}
+    @eval function Base.$op(::SciMLIdentityOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
-        SciMLIdentity{N}()
+        SciMLIdentityOperator{N}()
     end
 
-    @eval function Base.$op(A::AbstractSciMLOperator, ::SciMLIdentity{N}) where{N}
+    @eval function Base.$op(A::AbstractSciMLOperator, ::SciMLIdentityOperator{N}) where{N}
         @assert size(A, 2) == N
-        SciMLIdentity{N}()
+        SciMLIdentityOperator{N}()
     end
 end
 
@@ -329,14 +329,14 @@ for op in (
         @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
             @assert issquare(L)
             N  = size(L, 1)
-            Id = SciMLIdentity{N}()
+            Id = SciMLIdentityOperator{N}()
             SciMLAddedOperator(L, $op(λ)*Id)
         end
 
         @eval function Base.$op(λ::$T, L::AbstractSciMLOperator)
             @assert issquare(L)
             N  = size(L, 1)
-            Id = SciMLIdentity{N}()
+            Id = SciMLIdentityOperator{N}()
             SciMLAddedOperator(λ*Id, $op(L))
         end
     end
