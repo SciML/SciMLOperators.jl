@@ -177,47 +177,47 @@ LinearAlgebra.ldiv!(Y::AbstractVector, L::FactorizedOperator, B::AbstractVector)
 LinearAlgebra.ldiv!(L::FactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
 
 """
-    L = MuladdOperator(A, b)
+    L = AffineOperator(A, b)
     L(u) = A*u + b
 """
-struct MuladdOperator{T,AType,bType} <: AbstractSciMLOperator{T}
+struct AffineOperator{T,AType,bType} <: AbstractSciMLOperator{T}
     A::AType
     b::bType
 
-    function MuladdOperator(A::AbstractSciMLOperator, b::AbstractVector)
+    function AffineOperator(A::AbstractSciMLOperator, b::AbstractVector)
         T = promote_type(eltype.((A,b))...)
         new{T,typeof(A),typeof(b)}(A, b)
     end
 end
 
-getops(L::MuladdOperator) = (L.A, L.b)
-Base.size(L::MuladdOperator) = size(L.A)
+getops(L::AffineOperator) = (L.A, L.b)
+Base.size(L::AffineOperator) = size(L.A)
 
-islinear(::MuladdOperator) = false
-Base.iszero(L::MuladdOperator) = all(iszero, getops(L))
-has_adjoint(L::MuladdOperator) = all(has_adjoint, L.ops)
-has_mul!(L::MuladdOperator) = has_mul!(L.A)
-has_ldiv(L::MuladdOperator) = has_ldiv(L.A)
-has_ldiv!(L::MuladdOperator) = has_ldiv!(L.A)
+islinear(::AffineOperator) = false
+Base.iszero(L::AffineOperator) = all(iszero, getops(L))
+has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
+has_mul!(L::AffineOperator) = has_mul!(L.A)
+has_ldiv(L::AffineOperator) = has_ldiv(L.A)
+has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 
-Base.:*(L::MuladdOperator, u::AbstractVector) = L.A * u + L.b
-function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperator, u::AbstractVector)
+Base.:*(L::AffineOperator, u::AbstractVector) = L.A * u + L.b
+function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
     mul!(v, L.A, u)
     axpy!(true, L.b, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::MuladdOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector, α::Number, β::Number)
     mul!(v, L.A, u, α, β)
     axpy!(true, L.b, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::MuladdOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
     copy!(v, u)
     ldiv!(L, v)
 end
 
-function LinearAlgebra.ldiv!(L::MuladdOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVector)
     axpy!(-true, L.b, u)
     ldiv!(L.A, u)
 end

@@ -40,12 +40,12 @@ N = 8
     @test At \ u ≈ AAt \ u ≈ FFt \ u
 end
 
-@testset "MuladdOperator" begin
+@testset "AffineOperator" begin
     u = rand(N)
     A = rand(N,N)
     b = rand(N)
 
-    L = MuladdOperator(MatrixOperator(A), b)
+    L = AffineOperator(MatrixOperator(A), b)
 
     @test L * u ≈ A * u + b
     v=zero(u); @test mul!(v, L, u) ≈ A * u + b

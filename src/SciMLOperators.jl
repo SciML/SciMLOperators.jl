@@ -41,7 +41,7 @@ include("sciml.jl")
 export ScalarOperator,
        MatrixOperator,
        FactorizedOperator,
-       MuladdOperator,
+       AffineOperator,
        FunctionOperator
 
 export update_coefficients!,
