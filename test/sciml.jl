@@ -87,6 +87,20 @@ end
                            isposdef=true,
                           )
 
+    @test size(op1) == (N,N)
+    @test has_adjoint(op1)
+    @test has_mul(op1)
+    @test !has_mul!(op1)
+    @test has_ldiv(op1)
+    @test !has_ldiv!(op1)
+
+    @test size(op2) == (N,N)
+    @test has_adjoint(op2)
+    @test !has_mul(op2)
+    @test has_mul!(op2)
+    @test !has_ldiv(op2)
+    @test has_ldiv!(op2)
+
     v = zero(u); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
     v = zero(u); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
 

@@ -402,10 +402,11 @@ LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
-has_adjoint(L::FunctionOperator) = L.op_adjoint isa Nothing
+has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
+has_mul(L::FunctionOperator{iip}) where{iip} = !iip
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
-has_ldiv(L::FunctionOperator{iip}) where{iip} = L.op_inverse isa Nothing
-has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & has_ldiv(L)
+has_ldiv(L::FunctionOperator{iip}) where{iip} = !iip & !(L.op_inverse isa Nothing)
+has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 # operator application
 Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
