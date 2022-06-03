@@ -365,27 +365,18 @@ end
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
 
+    op = L.op_adjoint
+    op_adjoint = L.op
+
+    op_inverse = L.op_adjoint_inverse
+    op_adjoint_inverse = L.op_inverse
+
     traits = (L.traits[1:end-1]..., size=reverse(size(L)))
 
-    args   = (
-              L.op_adjoint,
-              traits,
-             )
+    p = L.p
+    t = L.t
 
-    kwargs = (;
-              isinplace = iip,
-              T = T,
-              size = reverse(L.size),
-
-              op_adjoint = L.op,
-              op_inverse = L.op_adjoint_inverse,
-              op_adjoint_inverse = L.op_inverse,
-
-              p = L.p,
-              t = L.t,
-             )
-
-    FunctionOperator(args...; kwargs...)
+    FuncitonOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t)
 end
 
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
