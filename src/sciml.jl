@@ -255,7 +255,7 @@ end
 """
     Matrix free operators (given by a function)
 """
-struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOperator{T}
+struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -264,8 +264,6 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOpera
     op_inverse::Fi
     """ Adjoint inverse operator"""
     op_adjoint_inverse::Fai
-    """ Size """
-    size::S
     """ Traits """
     traits::Tr
     """ Parameters """
@@ -273,69 +271,89 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,S,Tr,P,Tt} <: AbstractSciMLOpera
     """ Time """
     t::Tt
 
-    function FunctionOperator(op, traits=nothing;
+    function FunctionOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t)
+        iip = traits.isinplace
+        T   = traits.T
 
-                              # necessary
-                              isinplace=nothing,
-                              T=nothing,
-                              size=nothing,
-
-                              # optional
-                              op_adjoint=nothing,
-                              op_inverse=nothing,
-                              op_adjoint_inverse=nothing,
-
-                              p=nothing,
-                              t=nothing,
-
-                              # traits
-                              opnorm=nothing,
-                              isreal=true,
-                              issymmetric=false,
-                              ishermitian=false,
-                              isposdef=false,
-                             )
-        isinplace isa Nothing  && @error "Please provide a funciton signature
-        by specifying `isinplace` as either `true`, or `false`.
-        If `isinplace = false`, the signature is `op(u, p, t)`,
-        and if `isinplace = true`, the signature is `op(du, u, p, t)`.
-        Further, it is assumed that the function call would be nonallocating
-        when called in-place"
-        T isa Nothing  && @error "Please provide a Number type for the Operator"
-        size isa Nothing  && @error "Please provide a size (m, n)"
-
-        adjointable = ishermitian | (isreal & issymmetric)
-        invertible  = !(op_inverse isa Nothing)
-
-        if adjointable & (op_adjoint isa Nothing) 
-            op_adjoint = op
-        end
-
-        if invertible & (op_adjoint_inverse isa Nothing)
-            op_adjoint_inverse = op_inverse
-        end
-
-        traits = !(traits isa Nothing) ? traits : (;
-                                                   opnorm = opnorm,
-                                                   isreal = isreal,
-                                                   issymmetric = issymmetric,
-                                                   ishermitian = ishermitian,
-                                                   isposdef = isposdef,
-                                                  )
-        new{isinplace,
+        new{iip,
             T,
             typeof(op),
             typeof(op_adjoint),
             typeof(op_inverse),
             typeof(op_adjoint_inverse),
-            typeof(size),
             typeof(traits),
             typeof(p),
             typeof(t),
            }(
-             op, op_adjoint, op_inverse, op_adjoint_inverse, size, traits, p, t,
+             op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t,
             )
     end
+
+end
+
+function FunctionOperator(op, traits=nothing;
+
+                          # necessary
+                          isinplace=nothing,
+                          T=nothing,
+                          size=nothing,
+
+                          # optional
+                          op_adjoint=nothing,
+                          op_inverse=nothing,
+                          op_adjoint_inverse=nothing,
+
+                          p=nothing,
+                          t=nothing,
+
+                          # traits
+                          opnorm=nothing,
+                          isreal=true,
+                          issymmetric=false,
+                          ishermitian=false,
+                          isposdef=false,
+                         )
+
+    isinplace isa Nothing  && @error "Please provide a funciton signature
+    by specifying `isinplace` as either `true`, or `false`.
+    If `isinplace = false`, the signature is `op(u, p, t)`,
+    and if `isinplace = true`, the signature is `op(du, u, p, t)`.
+    Further, it is assumed that the function call would be nonallocating
+    when called in-place"
+    T isa Nothing  && @error "Please provide a Number type for the Operator"
+    size isa Nothing  && @error "Please provide a size (m, n)"
+
+    adjointable = ishermitian | (isreal & issymmetric)
+    invertible  = !(op_inverse isa Nothing)
+
+    if adjointable & (op_adjoint isa Nothing) 
+        op_adjoint = op
+    end
+
+    if invertible & (op_adjoint_inverse isa Nothing)
+        op_adjoint_inverse = op_inverse
+    end
+
+    traits = !(traits isa Nothing) ? traits : (;
+                                               opnorm = opnorm,
+                                               isreal = isreal,
+                                               issymmetric = issymmetric,
+                                               ishermitian = ishermitian,
+                                               isposdef = isposdef,
+
+                                               isinplace = isinplace,
+                                               T = T,
+                                               size = size,
+                                              )
+    FunctionOperator(
+                     op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     traits,
+                     p,
+                     t,
+                    )
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t)
@@ -344,10 +362,16 @@ function update_coefficients!(L::FunctionOperator, u, p, t)
     L
 end
 
-Base.size(L::FunctionOperator) = L.size
+Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
 
-    args   = (L.op_adjoint, traits=L.traits)
+    traits = (L.traits[1:end-1]..., size=reverse(size(L)))
+
+    args   = (
+              L.op_adjoint,
+              traits,
+             )
+
     kwargs = (;
               isinplace = iip,
               T = T,
