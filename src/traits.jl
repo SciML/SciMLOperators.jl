@@ -7,7 +7,6 @@ Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 Base.eltype(::Type{AbstractSciMLOperator{T}}) where T = T
 Base.eltype(::AbstractSciMLOperator{T}) where T = T
 
-isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
 
 Base.iszero(::AbstractSciMLOperator) = false
@@ -43,7 +42,8 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
 # Extra standard assumptions
 isconstant(L) = true
-isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
+isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
+#isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 
 islinear(::Union{
                  # LinearAlgebra
