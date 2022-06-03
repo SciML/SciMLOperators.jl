@@ -7,7 +7,8 @@ using SciMLOperators: IdentityOperator,
                       AddedOperator,
                       ComposedOperator,
 
-                      getops
+                      getops,
+                      cache_operator
 
 Random.seed!(0)
 N = 8
@@ -167,8 +168,10 @@ end
     A = rand(N,N) |> MatrixOperator
     B = rand(N,N) |> MatrixOperator
     C = rand(N,N) |> MatrixOperator
-
     u = rand(N)
+    α = rand()
+    β = rand()
+
     ABCmulu = (A * B * C) * u
     ABCdivu = (A * B * C) \ u
 
@@ -179,5 +182,18 @@ end
 
     @test op * u ≈ ABCmulu
     @test op \ u ≈ ABCdivu
+
+    op = cache_operator(op, u)
+    v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
+    v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
+
+    A = rand(N) |> Diagonal |> MatrixOperator
+    B = rand(N) |> Diagonal |> MatrixOperator
+    C = rand(N) |> Diagonal |> MatrixOperator
+
+    op = ∘(A, B, C)
+    op = cache_operator(op, u)
+    v=rand(N); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
+    v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
 end
 #

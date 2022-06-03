@@ -433,10 +433,12 @@ end
 struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     """ Tuple of N operators to be applied in reverse"""
     ops::O
-    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    """ cache for 3 and 5 argument mul! """
     cache::C
+    """ is cache set """
     isunset::Bool
-    function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
+
+    function ComposedOperator(ops, cache, isunset::Bool)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
@@ -449,18 +451,9 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     end
 end
 
-function init_cache(L::ComposedOperator, u::AbstractVector)
-    # for 3 arg mul!
-    cache = ()
-    vec = u
-    for i in reverse(2:length(L.ops))
-        vec = op[i] * vec
-        cache = push(cache, vec)
-    end
-    cache
-
-    # for 5 arg mul!
-    cache = similar(u)
+function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
+    isunset = cache === nothing
+    ComposedOperator(ops, cache, isunset)
 end
 
 # constructors
@@ -508,10 +501,31 @@ end
 Base.:*(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
+function cache_operator(L::ComposedOperator, u::AbstractVector)
+    # for 3 arg mul!
+    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    vec = u
+    c3 = ()
+    for i in reverse(2:length(L.ops))
+        vec = L.ops[i] * vec
+        c3 = (c3..., vec)
+    end
 
-    vecs = (v, L.cache..., u)
+    # for 5 arg mul!
+    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    c5 = similar(u)
+
+    cache = (;c3=c3, c5=c5)
+
+    @set! L.cache = cache
+    L
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
+    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
+
+    cache = L.cache.c3
+    vecs = (v, cache..., u)
     for i in reverse(1:length(L.ops))
         mul!(vecs[i], L.ops[i], vecs[i+1])
     end
@@ -519,31 +533,32 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
 
-    copy!(L.cache, v) # TODO have separate cache for 5 arg mul!
+    cache = L.cache.c5
+    copy!(cache, v)
 
     mul!(v, L, u)
     lmul!(α, v)
-    axpy!(β, L.cache, v)
+    axpy!(β, cache, v)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
+    @assert !(L.isunset) "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
 
-    vecs = (u, reverse(L.cache)..., v)
+    cache = L.cache.c3
+    vecs = (u, reverse(cache)..., v)
     for i in 1:length(L.ops)
-        ldiv!(vecs[i], L.ops[i], vecs[i+1])
+        ldiv!(vecs[i+1], L.ops[i], vecs[i])
     end
     v
 end
 
 function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVector)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
 
     for i in 1:length(L.ops)
-        ldiv!(L.ops[i], vecs[i])
+        ldiv!(L.ops[i], u)
     end
-    v
+    u
 end
 #
