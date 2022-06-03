@@ -1,8 +1,8 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: SciMLIdentityOperator,
-                      SciMLNullOperator,
+using SciMLOperators: IdentityOperator,
+                      NullOperator,
                       SciMLScaledOperator,
                       SciMLAddedOperator,
                       SciMLComposedOperator,
@@ -12,18 +12,18 @@ using SciMLOperators: SciMLIdentityOperator,
 Random.seed!(0)
 N = 8
 
-@testset "SciMLIdentityOperator" begin
+@testset "IdentityOperator" begin
     A  = rand(N, N) |> MatrixOperator
     u  = rand(N)
     v  = rand(N)
-    Id = SciMLIdentityOperator{N}()
+    Id = IdentityOperator{N}()
 
-    @test SciMLIdentityOperator(u) isa SciMLIdentityOperator{N}
-    @test one(A) isa SciMLIdentityOperator{N}
+    @test IdentityOperator(u) isa IdentityOperator{N}
+    @test one(A) isa IdentityOperator{N}
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
 
     @test size(Id) == (N, N)
-    @test Id' isa SciMLIdentityOperator{N}
+    @test Id' isa IdentityOperator{N}
 
     for op in (
                *, \,
@@ -43,18 +43,18 @@ N = 8
     #end
 end
 
-@testset "SciMLNullOperator" begin
+@testset "NullOperator" begin
     A = rand(N, N) |> MatrixOperator
     u = rand(N)
     v = rand(N)
-    Z = SciMLNullOperator{N}()
+    Z = NullOperator{N}()
 
-    @test SciMLNullOperator(u) isa SciMLNullOperator{N}
-    @test zero(A) isa SciMLNullOperator{N}
+    @test NullOperator(u) isa NullOperator{N}
+    @test zero(A) isa NullOperator{N}
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 
     @test size(Z) == (N, N)
-    @test Z' isa SciMLNullOperator{N}
+    @test Z' isa NullOperator{N}
 
     @test *(Z, u) ≈ zero(u)
 
@@ -69,15 +69,15 @@ end
     #end
 end
 
-@testset "SciMLScalar" begin
+@testset "ScalarOperator" begin
     a = rand()
     x = rand()
-    α = SciMLScalar(x)
+    α = ScalarOperator(x)
     u = rand(N)
 
-    @test α isa SciMLScalar
+    @test α isa ScalarOperator
     @test convert(Number, α) isa Number
-    @test convert(SciMLScalar, a) isa SciMLScalar
+    @test convert(ScalarOperator, a) isa ScalarOperator
 
     @test size(α) == ()
 
@@ -97,15 +97,15 @@ end
     w = copy(v)
     @test axpy!(α, u, v) == u * x + w
 
-    @test abs(SciMLScalar(-x)) == x
+    @test abs(ScalarOperator(-x)) == x
 end
 
 @testset "SciMLScaledOperator" begin
-    # TODO change A to a differnt type of SciMLScalar
+    # TODO change A to a differnt type of ScalarOperator
     A = rand(N,N) |> MatrixOperator
 
     for T in (
-              SciMLScalar,
+              ScalarOperator,
               Number,
               UniformScaling
              )
@@ -120,7 +120,7 @@ end
         β = β |> T
 
         op1 = α * A # not SciMLScaledOperator
-        op2 = A * α # as * shortcircuits for SciMLScalar
+        op2 = A * α # as * shortcircuits for ScalarOperator
 
         op1 = SciMLScaledOperator(α, A)
         op2 = SciMLScaledOperator(α, A)
@@ -140,8 +140,8 @@ end
     A = rand(N,N) |> MatrixOperator
     B = rand(N,N) |> MatrixOperator
     C = rand(N,N) |> MatrixOperator
-    α = rand() |> SciMLScalar
-    β = rand() |> SciMLScalar
+    α = rand() |> ScalarOperator
+    β = rand() |> ScalarOperator
     u = rand(N)
 
     for op in (

@@ -38,7 +38,7 @@ include("interface.jl")
 include("basic.jl")
 include("sciml.jl")
 
-export SciMLScalar,
+export ScalarOperator,
        MatrixOperator,
        FactorizedOperator,
        AffineOperator,

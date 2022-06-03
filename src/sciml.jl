@@ -82,12 +82,12 @@ for op in (
         MatrixOperator(A; update_func=update_func)
     end
 
-    @eval function Base.$op(L::MatrixOperator, x::SciMLScalar)
+    @eval function Base.$op(L::MatrixOperator, x::ScalarOperator)
         A = $op(L.A, x.val)
         update_func = L.update_func #TODO
         MatrixOperator(A; update_func=update_func)
     end
-    @eval function Base.$op(x::SciMLScalar, L::MatrixOperator)
+    @eval function Base.$op(x::ScalarOperator, L::MatrixOperator)
         A = $op(x.val, L.A)
         update_func = L.update_func #TODO
         MatrixOperator(A; update_func=update_func)
