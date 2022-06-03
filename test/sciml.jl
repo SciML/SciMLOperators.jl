@@ -56,8 +56,8 @@ end
 
     L = AffineOperator(MatrixOperator(D), b)
     @test L \ u ≈ D \ (u - b)
-v=rand(N); @test ldiv!(v, L, u) ≈ D \ (u-b)
-v=rand(N); @test ldiv!(L, u) ≈ D \ (u-b)
+    v=rand(N); @test ldiv!(v, L, u) ≈ D \ (u-b)
+    v=rand(N); @test ldiv!(L, u) ≈ D \ (u-b)
 end
 
 @testset "SciMLFunctionOperator" begin
