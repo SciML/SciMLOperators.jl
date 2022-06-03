@@ -8,6 +8,8 @@ N = 8
     u = rand(N)
     p = nothing
     t = 0
+    α = rand()
+    β = rand()
 
     A  = rand(N,N)
     At = A'
@@ -38,6 +40,10 @@ N = 8
 
     @test A  \ u ≈ AA  \ u ≈ FF  \ u
     @test At \ u ≈ AAt \ u ≈ FFt \ u
+
+
+    v=rand(N); @test mul!(v, AA, u) ≈ A * u
+    v=rand(N); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
 @testset "SciMLFunctionOperator" begin
