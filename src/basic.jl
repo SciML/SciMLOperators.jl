@@ -653,5 +653,72 @@ for (op, LType, VType) in (
         u
     end
 end
-#
+
+"""
+    Lazy Operator Inverse
+"""
+struct InvertedOperator{T, LType} <: AbstractSciMLOperator{T}
+    L::LType
+    cache::C
+    isunset::Bool
+
+    function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
+        isunset = cache === nothing
+        new{T,typeof(L),typeof(cache)}(L,cache, isunset)
+    end
+end
+
+Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
+Base.convert(AbstractMatrix, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
+
+Base.size(L::InvertedOperator) = size(L.L) |> reverse
+Base.adjoint(L::InvertedOperator) = InvertedOperator(L.L')
+
+getops(L::InvertedOperator) = (L.L,)
+
+has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
+has_ldiv(L::InvertedOperator) = has_mul(L.L)
+has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
+
+@forward InvertedOperator.L (
+                             # LinearAlgebra
+                             LinearAlgebra.isreal,
+                             LinearAlgebra.issymmetric,
+                             LinearAlgebra.ishermitian,
+                             LinearAlgebra.isposdef,
+                             LinearAlgebra.opnorm,
+
+                             # SciML
+                             isconstant,
+                             has_adjoint,
+                            )
+
+Base.:*(L::InvertedOperator, u::AbstractVector) = L.L \ u
+Base.:/(L::InvertedOperator, u::AbstractVector) = L.L * u
+
+function cache_operator(L::InvertedOperator, u::AbstractVector)
+    cache = similar(u)
+    @set! L.cache = cache
+    L
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector)
+    ldiv!(v, L.L, u)
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector, α::Number, β::Number)
+    copy!(L.cache, v)
+    ldiv!(v, L.L, u)
+    lmul!(α, v)
+    axpy!(β, L.cache, v)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, L::InvertedOperator, u)
+    mul!(v, L.L, u)
+end
+
+function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVector)
+    copy!(L.cache, u)
+    mul!(u, L.L, L.cache)
+end
 #
