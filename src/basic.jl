@@ -138,6 +138,18 @@ for op in (:*, :∘)
     end
 end
 
+for op in (:+, :-)
+    @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
+        @assert size(A) == (N, N)
+        A
+    end
+
+    @eval function Base.$op(A::AbstractSciMLOperator, ::NullOperator{N}) where{N}
+        @assert size(A) == (N, N)
+        A
+    end
+end
+
 """
     ScalarOperator(val[; update_func])
 
@@ -347,8 +359,6 @@ end
 
 # constructors
 Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
-
-Base.:-(L::AddedOperator) = AddedOperator(.-(A.ops)...)
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
 
 for op in (
