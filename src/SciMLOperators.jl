@@ -47,6 +47,8 @@ export ScalarOperator,
 export update_coefficients!,
        update_coefficients,
 
+       cache_operator,
+
        has_adjoint,
        has_expmv,
        has_expmv!,

@@ -47,9 +47,19 @@ function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::Abstrac
     copy!(v, u)
 end
 
+function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+    @assert length(u) == N
+    mul!(v, I, u, α, β)
+end
+
 function LinearAlgebra.ldiv!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractArray) where{N}
     @assert length(u) == N
     copy!(v, u)
+end
+
+function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractArray) where{N}
+    @assert length(u) == N
+    u
 end
 
 # operator fusion, composition
@@ -110,6 +120,11 @@ function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVec
     lmul!(false, v)
 end
 
+function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+    @assert length(u) == length(v) == N
+    lmul!(β, v)
+end
+
 # operator fusion, composition
 for op in (:*, :∘)
     @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
@@ -158,11 +173,14 @@ end
 
 getops(α::ScalarOperator) = (α.val)
 islinear(L::ScalarOperator) = true
+issquare(L::ScalarOperator) = true
 isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(α::ScalarOperator) = iszero(α.val)
 has_adjoint(::ScalarOperator) = true
 has_mul(::ScalarOperator) = true
+has_mul!(::ScalarOperator) = true
 has_ldiv(α::ScalarOperator) = iszero(α.val)
+has_ldiv!(α::ScalarOperator) = iszero(α.val)
 
 for op in (
            :*, :/, :\,
@@ -190,11 +208,15 @@ for op in (:-, :+)
     @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
 end
 
-LinearAlgebra.lmul!(α::ScalarOperator, B::AbstractVector) = lmul!(α.val, B)
-LinearAlgebra.rmul!(B::AbstractVector, α::ScalarOperator) = rmul!(B, α.val)
-LinearAlgebra.mul!(Y::AbstractVector, α::ScalarOperator, B::AbstractVector) = mul!(Y, α.val, B)
-LinearAlgebra.axpy!(α::ScalarOperator, X::AbstractVector, Y::AbstractVector) = axpy!(α.val, X, Y)
+LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVector) = lmul!(α.val, u)
+LinearAlgebra.rmul!(u::AbstractVector, α::ScalarOperator) = rmul!(u, α.val)
+LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = mul!(v, α.val, u)
+LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a::Number, b::Number) = mul!(v, α.val, u, a, b)
+LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVector, y::AbstractVector) = axpy!(α.val, x, y)
 Base.abs(α::ScalarOperator) = abs(α.val)
+
+LinearAlgebra.ldiv!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = ldiv!(v, α.val, u)
+LinearAlgebra.ldiv!(α::ScalarOperator, u::AbstractVector) = ldiv!(α.val, u)
 
 """
     ScaledOperator
@@ -207,10 +229,12 @@ struct ScaledOperator{T,
                      } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
+    cache::T
 
     function ScaledOperator(λ::ScalarOperator, L::AbstractSciMLOperator)
         T = promote_type(eltype.((λ, L))...)
-        new{T,typeof(λ),typeof(L)}(λ, L)
+        cache = zero(T)
+        new{T,typeof(λ),typeof(L)}(λ, L, cache)
     end
 end
 
@@ -282,8 +306,22 @@ for op in (
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector)
-    mul!(v, L.L, u)
-    lmul!(L.λ, v)
+    mul!(v, L.L, u, L.λ.val, false)
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α::Number, β::Number)
+    cache = L.λ.val * α # mul!(L.cache, L.λ.val, α) # TODO - set L.cache as 
+    mul!(v, L.L, u, cache, β)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, L::ScaledOperator, u::AbstractVector)
+    ldiv!(v, L.L, u)
+    ldiv!(L.λ, v)
+end
+
+function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVector)
+    ldiv!(L.λ, u)
+    ldiv!(L.L, u)
 end
 
 """
@@ -293,21 +331,17 @@ Lazy operator addition (A + B)
 """
 struct AddedOperator{T,
                      O<:Tuple{Vararg{AbstractSciMLOperator}},
-                     C,
                     } <: AbstractSciMLOperator{T}
     ops::O
-    cache::C
-    isunset::Bool
 
-    function AddedOperator(ops...; cache = nothing)
+    function AddedOperator(ops...)
         sz = size(first(ops))
         for op in ops[2:end]
             @assert size(op) == sz "Size mismatich in operators $ops"
         end
 
         T = promote_type(eltype.(ops)...)
-        isunset = cache === nothing
-        new{T,typeof(ops),typeof(cache)}(ops, cache, isunset)
+        new{T,typeof(ops)}(ops)
     end
 end
 
@@ -357,13 +391,7 @@ SparseArrays.sparse(L::AddedOperator) = sum(_sparse, L.ops)
 
 # traits
 Base.size(L::AddedOperator) = size(first(L.ops))
-function Base.adjoint(L::AddedOperator)
-    if issquare(L) & !(L.isunset)
-        AddedOperator(adjoint.(L.ops)...,L.cache, L.isunset)
-    else
-        AddedOperator(adjoint.(L.ops)...)
-    end
-end
+Base.adjoint(L::AddedOperator) = AddedOperator(adjoint.(L.ops)...)
 
 getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -371,10 +399,6 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
 getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
-
-function init_cache(A::AddedOperator, u::AbstractVector)
-    cache = A.B * u
-end
 
 function Base.:*(L::AddedOperator, u::AbstractVector)
     sum(op -> iszero(op) ? similar(u, Bool) * false : op * u, L.ops)
@@ -384,9 +408,18 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVect
     mul!(v, first(L.ops), u)
     for op in L.ops[2:end]
         iszero(op) && continue
-        mul!(L.cache, op, u)
-        axpy!(true, L.cache, v)
+        mul!(v, op, u, true, true)
     end
+    v
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α::Number, β::Number)
+    lmul!(β, v)
+    for op in L.ops
+        iszero(op) && continue
+        mul!(v, op, u, α, true)
+    end
+    v
 end
 
 """
@@ -400,10 +433,12 @@ end
 struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     """ Tuple of N operators to be applied in reverse"""
     ops::O
-    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    """ cache for 3 and 5 argument mul! """
     cache::C
+    """ is cache set """
     isunset::Bool
-    function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
+
+    function ComposedOperator(ops, cache, isunset::Bool)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
@@ -416,14 +451,9 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     end
 end
 
-function init_cache(L::ComposedOperator, u::AbstractVector)
-    cache = ()
-    vec = u
-    for i in reverse(2:length(L.ops))
-        vec = op[i] * vec
-        cache = push(cache, vec)
-    end
-    cache
+function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
+    isunset = cache === nothing
+    ComposedOperator(ops, cache, isunset)
 end
 
 # constructors
@@ -471,32 +501,64 @@ end
 Base.:*(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.mul!"
+function cache_operator(L::ComposedOperator, u::AbstractVector)
+    # for 3 arg mul!
+    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    vec = u
+    c3 = ()
+    for i in reverse(2:length(L.ops))
+        vec = L.ops[i] * vec
+        c3 = (c3..., vec)
+    end
 
-    vecs = (v, L.cache..., u)
+    # for 5 arg mul!
+    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    c5 = similar(u)
+
+    cache = (;c3=c3, c5=c5)
+
+    @set! L.cache = cache
+    L
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
+    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
+
+    cache = L.cache.c3
+    vecs = (v, cache..., u)
     for i in reverse(1:length(L.ops))
         mul!(vecs[i], L.ops[i], vecs[i+1])
     end
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
+    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
 
-    vecs = (u, reverse(L.cache)..., v)
+    cache = L.cache.c5
+    copy!(cache, v)
+
+    mul!(v, L, u)
+    lmul!(α, v)
+    axpy!(β, cache, v)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
+    @assert !(L.isunset) "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
+
+    cache = L.cache.c3
+    vecs = (u, reverse(cache)..., v)
     for i in 1:length(L.ops)
-        ldiv!(vecs[i], L.ops[i], vecs[i+1])
+        ldiv!(vecs[i+1], L.ops[i], vecs[i])
     end
     v
 end
 
 function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVector)
-    @assert L.isunset "cache needs to be set up to use LinearAlgebra.ldiv!"
 
     for i in 1:length(L.ops)
-        ldiv!(L.ops[i], vecs[i])
+        ldiv!(L.ops[i], u)
     end
-    v
+    u
 end
 #
