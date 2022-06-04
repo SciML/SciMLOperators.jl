@@ -349,6 +349,10 @@ function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
         return L
     end
 
+    if !(has_adjoint(L))
+        return AdjointedOperator(L)
+    end
+
     op = L.op_adjoint
     op_adjoint = L.op
 
