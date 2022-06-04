@@ -228,7 +228,9 @@ end
         @test op(u) isa VType
 
         @test op(u) * AAt ≈ op(A * u)
-#       @test op(u) / AAt ≈ op(A \ u)
+        @test op(u) / AAt ≈ op(A \ u)
+
+        v=rand(N); @test mul!(op(v), op(u), AAt) ≈ op(A * u)
 
     end
 end
