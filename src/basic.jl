@@ -68,12 +68,12 @@ for op in (
           )
     @eval function Base.$op(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
-        IdentityOperator{N}()
+        A
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
         @assert size(A, 2) == N
-        IdentityOperator{N}()
+        A
     end
 end
 
@@ -135,6 +135,18 @@ for op in (:*, :∘)
     @eval function Base.$op(A::AbstractSciMLOperator, ::NullOperator{N}) where{N}
         @assert size(A, 2) == N
         NullOperator{N}()
+    end
+end
+
+for op in (:+, :-)
+    @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
+        @assert size(A) == (N, N)
+        A
+    end
+
+    @eval function Base.$op(A::AbstractSciMLOperator, ::NullOperator{N}) where{N}
+        @assert size(A) == (N, N)
+        A
     end
 end
 
@@ -347,8 +359,6 @@ end
 
 # constructors
 Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
-
-Base.:-(L::AddedOperator) = AddedOperator(.-(A.ops)...)
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
 
 for op in (
@@ -503,7 +513,7 @@ Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L
 
 function cache_operator(L::ComposedOperator, u::AbstractVector)
     # for 3 arg mul!
-    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    # Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on
     vec = u
     c3 = ()
     for i in reverse(2:length(L.ops))
@@ -512,7 +522,6 @@ function cache_operator(L::ComposedOperator, u::AbstractVector)
     end
 
     # for 5 arg mul!
-    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
     c5 = similar(u)
 
     cache = (;c3=c3, c5=c5)
@@ -561,4 +570,88 @@ function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVector)
     end
     u
 end
+
+struct AdjointedOperator{T,LType} <: AbstractSciMLOperator{T}
+    L::LType
+
+    function AdjointedOperator(L::AbstractSciMLOperator{T}) where{T}
+        new{T,typeof(L)}(L)
+    end
+end
+
+struct TransposedOperator{T,LType} <: AbstractSciMLOperator{T}
+    L::LType
+
+    function TransposedOperator(L::AbstractSciMLOperator{T}) where{T}
+        new{T,typeof(L)}(L)
+    end
+end
+
+AbstractAdjointedVector  = Adjoint{  <:Number, <:AbstractVector}
+AbstractTransposedVector = Transpose{<:Number, <:AbstractVector}
+
+for (op, LType, VType) in (
+                           (:adjoint,   :AdjointedOperator,  :AbstractAdjointedVector ),
+                           (:transpose, :TransposedOperator, :AbstractTransposedVector),
+                          )
+    # constructor
+    @eval Base.$op(L::AbstractSciMLOperator) = $LType(L)
+
+    @eval Base.convert(AbstractMatrix, L::$LType) = $op(convert(AbstractMatrix, L.L))
+
+    # traits
+    @eval Base.size(L::$LType) = size(L.L) |> reverse
+    @eval Base.$op(L::$LType) = L.L
+
+    @eval has_adjoint(L::$LType) = true
+    @eval getops(L::$LType) = (L.L,)
+
+    @eval @forward $LType.L (
+                             # LinearAlgebra
+                             LinearAlgebra.isreal,
+                             LinearAlgebra.issymmetric,
+                             LinearAlgebra.ishermitian,
+                             LinearAlgebra.isposdef,
+                             LinearAlgebra.opnorm,
+
+                             # SciML
+                             isconstant,
+                             has_mul!,
+                             has_ldiv,
+                             has_ldiv!,
+                            )
+
+    # oeprator application
+    @eval Base.:*(u::$VType, L::$LType) = $op(L.L * u.parent)
+    @eval Base.:/(u::$VType, L::$LType) = $op(L.L \ u.parent)
+
+    # v' ← u' * A'
+    # v  ← A  * u
+    @eval function LinearAlgebra.mul!(v::$VType, u::$VType, L::$LType)
+        mul!(v.parent, L.L, u.parent)
+        v
+    end
+
+    # v' ← α * (u' * A') + β * v'
+    # v  ← α * (A  * u ) + β * v
+    @eval function LinearAlgebra.mul!(v::$VType, u::$VType, L::$LType, α::Number, β::Number)
+        mul!(v.parent, L.L, u.parent, α, β)
+        v
+    end
+
+    # v' ← u' / A'
+    # v  ← A  \ u
+    @eval function LinearAlgebra.ldiv!(v::$VType, u::$VType, L::$LType)
+        ldiv!(v.parent, L.L, u.parent)
+        v
+    end
+    
+    # u' ← u' / A'
+    # u  ← A  \ u
+    @eval function LinearAlgebra.ldiv!(u::$VType, L::$LType)
+        ldiv!(L.L, u.parent)
+        u
+    end
+end
+#
 #

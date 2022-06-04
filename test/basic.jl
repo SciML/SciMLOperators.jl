@@ -6,6 +6,10 @@ using SciMLOperators: IdentityOperator,
                       ScaledOperator,
                       AddedOperator,
                       ComposedOperator,
+                      AdjointedOperator,
+                      TransposedOperator,
+                      AbstractAdjointedVector,
+                      AbstractTransposedVector,
 
                       getops,
                       cache_operator
@@ -195,5 +199,42 @@ end
     op = cache_operator(op, u)
     v=rand(N); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
+end
+
+@testset "Adjoint, Transpose" begin
+
+    for (op, LType, VType) in (
+                               (adjoint,   AdjointedOperator,  AbstractAdjointedVector ),
+                               (transpose, TransposedOperator, AbstractTransposedVector),
+                              )
+        A = rand(N,N)
+        D = Bidiagonal(rand(N,N), :L)
+        u = rand(N)
+        α = rand()
+        β = rand()
+        a = rand()
+        b = rand()
+
+        At = op(A)
+        Dt = op(A)
+
+        AA = MatrixOperator(A)
+        DD = MatrixOperator(D)
+
+        AAt = LType(AA)
+        DDt = LType(DD)
+
+        @test AAt.L === AA
+        @test op(u) isa VType
+
+        @test op(u) * AAt ≈ op(A * u)
+        @test op(u) / AAt ≈ op(A \ u)
+
+        v=rand(N); @test mul!(op(v), op(u), AAt) ≈ op(A * u)
+        v=rand(N); w=copy(v); @test mul!(op(v), op(u), AAt, α, β) ≈ α*op(A * u) + β*op(w)
+
+        v=rand(N); @test ldiv!(op(v), op(u), DDt) ≈ op(D \ u)
+        v=copy(u); @test ldiv!(op(u), DDt) ≈ op(D \ v)
+    end
 end
 #

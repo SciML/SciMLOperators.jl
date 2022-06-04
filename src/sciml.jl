@@ -15,7 +15,7 @@ struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLLinearOperat
 end
 
 # constructors
-Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = similar(L.A, T, dims)
+Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator(similar(L.A, T, dims))
 
 # traits
 @forward MatrixOperator.A (
@@ -117,6 +117,10 @@ for op in (
         end
     end
 end
+
+""" Diagonal Operator """
+DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
+LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
 """
     FactorizedOperator(F)
@@ -266,7 +270,7 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperato
 
 end
 
-function FunctionOperator(op, traits=nothing;
+function FunctionOperator(op;
 
                           # necessary
                           isinplace=nothing,
@@ -309,17 +313,18 @@ function FunctionOperator(op, traits=nothing;
         op_adjoint_inverse = op_inverse
     end
 
-    traits = !(traits isa Nothing) ? traits : (;
-                                               opnorm = opnorm,
-                                               isreal = isreal,
-                                               issymmetric = issymmetric,
-                                               ishermitian = ishermitian,
-                                               isposdef = isposdef,
+    traits = (;
+              opnorm = opnorm,
+              isreal = isreal,
+              issymmetric = issymmetric,
+              ishermitian = ishermitian,
+              isposdef = isposdef,
 
-                                               isinplace = isinplace,
-                                               T = T,
-                                               size = size,
-                                              )
+              isinplace = isinplace,
+              T = T,
+              size = size,
+             )
+
     FunctionOperator(
                      op,
                      op_adjoint,
@@ -342,6 +347,10 @@ function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
 
     if ishermitian(L) | (isreal(L) & issymmetric(L))
         return L
+    end
+
+    if !(has_adjoint(L))
+        return AdjointedOperator(L)
     end
 
     op = L.op_adjoint

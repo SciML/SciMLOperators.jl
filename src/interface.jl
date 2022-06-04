@@ -27,6 +27,10 @@ end
 (L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 
+function cache_operator(L::AbstractSciMLOperator, args...)
+    @warn "caching behaviour not defined for operator of type $(typeof(L))"
+end
+
 ###
 # AbstractSciMLOperator Traits
 ###
@@ -128,6 +132,9 @@ issquare(A...) = @. (&)(issquare(A)...)
 ###
 # default linear operator traits
 ###
+
+Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator) =
+    convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
 
 LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
 has_exp(L::AbstractSciMLLinearOperator) = true
