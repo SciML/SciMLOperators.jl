@@ -77,6 +77,7 @@ isconstant(L) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 #isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 
+islinear(L) = false
 islinear(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
@@ -92,11 +93,13 @@ islinear(::Union{
         ) = true
 
 has_mul(L) = true
-has_mul!(L) = false
+has_mul!(L) = true
 
+has_ldiv(L) = false
 has_ldiv(::Union{
                  AbstractMatrix,
                  Factorization,
+                 Number,
                 }
         ) = true
 
@@ -108,6 +111,7 @@ has_ldiv!(::Union{
                  }
          ) = true
 
+has_adjoint(L) = false
 has_adjoint(::Union{
                     # LinearAlgebra
                     AbstractMatrix,
@@ -125,6 +129,7 @@ has_adjoint(::Union{
 issquare(A) = size(A,1) === size(A,2)
 issquare(::Union{
                  UniformScaling,
+                 Number,
                 }
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)

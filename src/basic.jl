@@ -12,6 +12,7 @@ function Base.one(A::AbstractSciMLOperator)
     IdentityOperator{N}()
 end
 
+# TODO - sparse diagonal
 Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(ones(Bool, N))
 
 # traits
@@ -91,6 +92,7 @@ function Base.zero(A::AbstractSciMLOperator)
     NullOperator{N}()
 end
 
+# TODO sparse diagonal
 Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
 
 # traits
@@ -597,7 +599,7 @@ for (op, LType, VType) in (
     # constructor
     @eval Base.$op(L::AbstractSciMLOperator) = $LType(L)
 
-    @eval Base.convert(AbstractMatrix, L::$LType) = $op(convert(AbstractMatrix, L.L))
+    @eval Base.convert(::Type{AbstractMatrix}, L::$LType) = $op(convert(AbstractMatrix, L.L))
 
     # traits
     @eval Base.size(L::$LType) = size(L.L) |> reverse
@@ -669,7 +671,7 @@ struct InvertedOperator{T, LType, C} <: AbstractSciMLOperator{T}
 end
 
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
-Base.convert(AbstractMatrix, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
+Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
 
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
 Base.adjoint(L::InvertedOperator) = InvertedOperator(L.L')

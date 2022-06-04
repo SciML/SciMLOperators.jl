@@ -123,26 +123,34 @@ DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
 """
-    FactorizedOperator(F)
+    InvertibleOperator(F)
 
 Like MatrixOperator, but stores a Factorization instead.
 
 Supports left division and `ldiv!` when applied to an array.
 """
-struct FactorizedOperator{T<:Number,FType<:Union{
-                                                 Factorization{T},
-                                                 Diagonal{T},
-                                                 Bidiagonal{T},
-                                                 Adjoint{T,<:Factorization{T}},
-                                                }
-                         } <: AbstractSciMLLinearOperator{T}
+# diagonal, bidiagonal, adjoint(factorization)
+struct InvertibleOperator{T,FType} <: AbstractSciMLLinearOperator{T}
     F::FType
+
+    function InvertibleOperator(F)
+        @assert has_ldiv(F) | has_ldiv!(F) "$F is not invertible"
+        new{eltype(F),typeof(F)}(F)
+    end
 end
+
+@forward InvertibleOperator.F (
+                               has_mul,
+                               has_mul!,
+                               has_ldiv,
+                               has_ldiv!,
+                               isconstant,
+                              )
 
 # constructor
 function LinearAlgebra.factorize(L::AbstractSciMLLinearOperator)
     fact = factorize(convert(AbstractMatrix, L))
-    FactorizedOperator(fact)
+    InvertibleOperator(fact)
 end
 
 for fact in (
@@ -154,13 +162,14 @@ for fact in (
              :lq, :lq!,
              :svd, :svd!,
             )
+
     @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator, args...) =
-        FactorizedOperator($fact(convert(AbstractMatrix, L), args...))
+        InvertibleOperator($fact(convert(AbstractMatrix, L), args...))
     @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator; kwargs...) =
-        FactorizedOperator($fact(convert(AbstractMatrix, L); kwargs...))
+        InvertibleOperator($fact(convert(AbstractMatrix, L); kwargs...))
 end
 
-function Base.convert(::Type{AbstractMatrix}, L::FactorizedOperator)
+function Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator)
     if L.F isa Adjoint
         convert(AbstractMatrix,L.F')'
     else
@@ -169,19 +178,19 @@ function Base.convert(::Type{AbstractMatrix}, L::FactorizedOperator)
 end
 
 # traits
-Base.size(L::FactorizedOperator, args...) = size(L.F, args...)
-Base.adjoint(L::FactorizedOperator) = FactorizedOperator(L.F')
-LinearAlgebra.issuccess(L::FactorizedOperator) = issuccess(L.F)
+Base.size(L::InvertibleOperator) = size(L.F)
+Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
+LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
-getops(::FactorizedOperator) = ()
-isconstant(::FactorizedOperator) = true
-has_ldiv(::FactorizedOperator) = true
-has_ldiv!(::FactorizedOperator) = true
+getops(::InvertibleOperator) = (L.F,)
 
 # operator application (inversion)
-Base.:\(L::FactorizedOperator, x::AbstractVector) = L.F \ x
-LinearAlgebra.ldiv!(Y::AbstractVector, L::FactorizedOperator, B::AbstractVector) = ldiv!(Y, L.F, B)
-LinearAlgebra.ldiv!(L::FactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
+Base.:*(L::InvertibleOperator, x::AbstractVector) = L.F * x
+Base.:\(L::InvertibleOperator, x::AbstractVector) = L.F \ x
+LinearAlgebra.mul!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector) = mul!(v, L.F, u)
+LinearAlgebra.mul!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector,α, β) = mul!(v, L.F, u, α, β)
+LinearAlgebra.ldiv!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector) = ldiv!(v, L.F, u)
+LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVector) = ldiv!(L.F, u)
 
 """
     L = AffineOperator(A, b)

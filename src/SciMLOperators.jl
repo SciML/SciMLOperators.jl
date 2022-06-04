@@ -41,7 +41,6 @@ include("sciml.jl")
 export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
-       FactorizedOperator,
        AffineOperator,
        FunctionOperator
 
