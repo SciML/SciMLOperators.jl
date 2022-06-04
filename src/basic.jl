@@ -657,14 +657,14 @@ end
 """
     Lazy Operator Inverse
 """
-struct InvertedOperator{T, LType} <: AbstractSciMLOperator{T}
+struct InvertedOperator{T, LType, C} <: AbstractSciMLOperator{T}
     L::LType
     cache::C
     isunset::Bool
 
     function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
         isunset = cache === nothing
-        new{T,typeof(L),typeof(cache)}(L,cache, isunset)
+        new{T,typeof(L),typeof(cache)}(L, cache, isunset)
     end
 end
 
