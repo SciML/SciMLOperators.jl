@@ -55,7 +55,7 @@ for (op, LType, VType) in (
 
     @eval function LinearAlgebra.mul!(v::$VType, L::$LType, u::$VType)
         mul!(v.parent, L.L, u.parent)
-        $op(v)
+        v
     end
 
     @eval function LinearAlgebra.mul!(v::$VType, L::$LType, u::$VType, α::Number, β::Number)
