@@ -503,7 +503,7 @@ Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L
 
 function cache_operator(L::ComposedOperator, u::AbstractVector)
     # for 3 arg mul!
-    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
+    # Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on
     vec = u
     c3 = ()
     for i in reverse(2:length(L.ops))
@@ -512,7 +512,6 @@ function cache_operator(L::ComposedOperator, u::AbstractVector)
     end
 
     # for 5 arg mul!
-    """ Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on """
     c5 = similar(u)
 
     cache = (;c3=c3, c5=c5)
