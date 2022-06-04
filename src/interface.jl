@@ -28,7 +28,7 @@ end
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 
 function cache_operator(L::AbstractSciMLOperator, args...)
-    @warn "caching behaviour not defined for operator of type $(typeof(L))"
+    L
 end
 
 ###
