@@ -266,7 +266,7 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperato
 
 end
 
-function FunctionOperator(op, traits=nothing;
+function FunctionOperator(op;
 
                           # necessary
                           isinplace=nothing,
@@ -309,17 +309,18 @@ function FunctionOperator(op, traits=nothing;
         op_adjoint_inverse = op_inverse
     end
 
-    traits = !(traits isa Nothing) ? traits : (;
-                                               opnorm = opnorm,
-                                               isreal = isreal,
-                                               issymmetric = issymmetric,
-                                               ishermitian = ishermitian,
-                                               isposdef = isposdef,
+    traits = (;
+              opnorm = opnorm,
+              isreal = isreal,
+              issymmetric = issymmetric,
+              ishermitian = ishermitian,
+              isposdef = isposdef,
 
-                                               isinplace = isinplace,
-                                               T = T,
-                                               size = size,
-                                              )
+              isinplace = isinplace,
+              T = T,
+              size = size,
+             )
+
     FunctionOperator(
                      op,
                      op_adjoint,
