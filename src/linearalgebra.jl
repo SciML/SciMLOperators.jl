@@ -25,7 +25,7 @@ for (op, LType, VType) in (
     # constructor
     @eval Base.$op(L::AbstractSciMLOperator) = $LType(L)
 
-    @eval Base.convert(AbstractMatrix, L::$LType) = $op(convert(AbstractMatrix, L))'
+    @eval Base.convert(AbstractMatrix, L::$LType) = $op(convert(AbstractMatrix, L))
 
     # traits
     @eval Base.size(L::$LType) = size(L.L) |> reverse
