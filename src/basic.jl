@@ -701,7 +701,7 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
                             )
 
 Base.:*(L::InvertedOperator, u::AbstractVector) = L.L \ u
-Base.:/(L::InvertedOperator, u::AbstractVector) = L.L * u
+Base.:\(L::InvertedOperator, u::AbstractVector) = L.L * u
 
 function cache_operator(L::InvertedOperator, u::AbstractVector)
     cache = similar(u)
