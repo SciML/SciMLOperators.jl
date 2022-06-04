@@ -32,6 +32,7 @@ for (op, LType, VType) in (
     @eval Base.$op(L::$LType) = L.L
 
     @eval has_adjoint(L::$LType) = true
+    @eval getops(L::$LType) = (L.L,)
 
     @eval @forward $LType.L (
                              # LinearAlgebra
@@ -42,8 +43,6 @@ for (op, LType, VType) in (
                              LinearAlgebra.opnorm,
     
                              # SciML
-                             getops,
-    
                              isconstant,
                              has_mul!,
                              has_ldiv,
