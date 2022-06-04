@@ -231,7 +231,10 @@ end
         @test op(u) / AAt ≈ op(A \ u)
 
         v=rand(N); @test mul!(op(v), op(u), AAt) ≈ op(A * u)
+        v=rand(N); w=copy(v); @test mul!(op(v), op(u), AAt, α, β) ≈ α*op(A * u) + β*op(w)
 
+        v=rand(N); @test ldiv!(op(v), op(u), DDt) ≈ op(D \ u)
+        v=copy(u); @test ldiv!(op(u), DDt) ≈ op(D \ v)
     end
 end
 #
