@@ -193,7 +193,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u
     mul!(v, convert(AbstractMatrix,L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
 end
 #

@@ -48,7 +48,7 @@ function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::Abstrac
     copy!(v, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α, β) where{N}
     @assert length(u) == N
     mul!(v, I, u, α, β)
 end
@@ -122,7 +122,7 @@ function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVec
     lmul!(false, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector, α, β) where{N}
     @assert length(u) == length(v) == N
     lmul!(β, v)
 end
@@ -225,7 +225,7 @@ end
 LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVector) = lmul!(α.val, u)
 LinearAlgebra.rmul!(u::AbstractVector, α::ScalarOperator) = rmul!(u, α.val)
 LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = mul!(v, α.val, u)
-LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a::Number, b::Number) = mul!(v, α.val, u, a, b)
+LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a, b) = mul!(v, α.val, u, a, b)
 LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVector, y::AbstractVector) = axpy!(α.val, x, y)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
@@ -323,7 +323,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVec
     mul!(v, L.L, u, L.λ.val, false)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α, β)
     cache = L.λ.val * α # mul!(L.cache, L.λ.val, α) # TODO - set L.cache as 
     mul!(v, L.L, u, cache, β)
 end
@@ -425,7 +425,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVect
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α, β)
     lmul!(β, v)
     for op in L.ops
         iszero(op) && continue
@@ -543,7 +543,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α, β)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     cache = L.cache.c5
@@ -636,7 +636,7 @@ for (op, LType, VType) in (
 
     # v' ← α * (u' * A') + β * v'
     # v  ← α * (A  * u ) + β * v
-    @eval function LinearAlgebra.mul!(v::$VType, u::$VType, L::$LType, α::Number, β::Number)
+    @eval function LinearAlgebra.mul!(v::$VType, u::$VType, L::$LType, α, β)
         mul!(v.parent, L.L, u.parent, α, β)
         v
     end
@@ -713,7 +713,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractV
     ldiv!(v, L.L, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector, α, β)
     @assert L.isset "cache needs to be set up to use 5 arg LinearAlgebra.ldiv!"
     copy!(L.cache, v)
     ldiv!(v, L.L, u)

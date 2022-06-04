@@ -57,7 +57,7 @@ getops(L::MatrixOperator) = (L.A)
 Base.:*(L::MatrixOperator, u::AbstractVector) = L.A * u
 Base.:\(L::MatrixOperator, u::AbstractVector) = L.A \ u
 LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = mul!(v, L.A, u)
-LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector, α::Number, β::Number) = mul!(v, L.A, u, α, β)
+LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector, α, β) = mul!(v, L.A, u, α, β)
 LinearAlgebra.ldiv!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = ldiv!(v, L.A, u)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVector) = ldiv!(L.A, u)
 
@@ -234,7 +234,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVec
     axpy!(true, L.b, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector, α, β)
     mul!(v, L.A, u, α, β)
     axpy!(α, L.b, v)
 end
