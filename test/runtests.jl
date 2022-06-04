@@ -9,14 +9,8 @@ const is_TRAVIS = haskey(ENV, "TRAVIS")
         @time @safetestset "Basic Operators" begin
             include("basic.jl")
         end
-        @time @safetestset "DiffEq Operators" begin
+        @time @safetestset "SciML Operators" begin
             include("sciml.jl")
         end
-#       @time @safetestset "Matrix-Free Operators" begin
-#           include("matrixfree.jl")
-#       end
-#       @time @safetestset "Composite Operators Interface" begin
-#           include("composite_operators_interface.jl")
-#       end
     end
 end
