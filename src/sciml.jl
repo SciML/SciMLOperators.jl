@@ -180,79 +180,51 @@ LinearAlgebra.ldiv!(Y::AbstractVector, L::FactorizedOperator, B::AbstractVector)
 LinearAlgebra.ldiv!(L::FactorizedOperator, B::AbstractVector) = ldiv!(L.F, B)
 
 """
-AffineOperator{T} <: AbstractSciMLOperator{T}
-
-`Ex: (A₁(t) + ... + Aₙ(t))*u + B₁(t) + ... + Bₘ(t)`
-
-AffineOperator{T}(As,Bs,du_cache=nothing)
-
-Takes in two tuples for split Affine DiffEqs
-
-1. update_coefficients! works by updating the coefficients of the component
-   operators.
-2. Function calls L(u, p, t) and L(du, u, p, t) are fallbacks interpretted in this form.
-   This will allow them to work directly in the nonlinear ODE solvers without
-   modification.
-3. f(du, u, p, t) is only allowed if a du_cache is given
-4. B(t) can be Union{Number,AbstractArray}, in which case they are constants.
-   Otherwise they are interpreted they are functions v=B(t) and B(v,t)
-
-Solvers will see this operator from integrator.f and can interpret it by
-checking the internals of As and Bs. For example, it can check isconstant(As[1])
-etc.
+    L = AffineOperator(A, b)
+    L(u) = A*u + b
 """
-struct AffineOperator{T,T1,T2,U} <: AbstractSciMLOperator{T}
-    As::T1
-    Bs::T2
-    du_cache::U
-    function AffineOperator{T}(As,Bs,du_cache=nothing) where T
-        all([size(a) == size(As[1])
-             for a in As]) || error("Operator sizes do not agree")
-        new{T,typeof(As),typeof(Bs),typeof(du_cache)}(As,Bs,du_cache)
+struct AffineOperator{T,AType,bType} <: AbstractSciMLOperator{T}
+    A::AType
+    b::bType
+
+    function AffineOperator(A::AbstractSciMLOperator, b::AbstractVector)
+        T = promote_type(eltype.((A,b))...)
+        new{T,typeof(A),typeof(b)}(A, b)
     end
 end
 
-Base.size(L::AffineOperator) = size(L.As[1])
+getops(L::AffineOperator) = (L.A, L.b)
+Base.size(L::AffineOperator) = size(L.A)
 
-getops(L::AffineOperator) = (L.As..., L.Bs...)
+islinear(::AffineOperator) = false
+Base.iszero(L::AffineOperator) = all(iszero, getops(L))
+has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
+has_mul!(L::AffineOperator) = has_mul!(L.A)
+has_ldiv(L::AffineOperator) = has_ldiv(L.A)
+has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
-function (L::AffineOperator)(u,p,t::Number)
-    update_coefficients!(L,u,p,t)
-    du = sum(A*u for A in L.As)
-    for B in L.Bs
-        if typeof(B) <: Union{Number,AbstractArray}
-            du .+= B
-        else
-            du .+= B(t)
-        end
-    end
-    du
+
+Base.:*(L::AffineOperator, u::AbstractVector) = L.A * u + L.b
+Base.:\(L::AffineOperator, u::AbstractVector) = L.A \ (u - L.b)
+
+function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
+    mul!(v, L.A, u)
+    axpy!(true, L.b, v)
 end
 
-function (L::AffineOperator)(du,u,p,t::Number)
-    update_coefficients!(L,u,p,t)
-    L.du_cache === nothing && error("Can only use inplace AffineOperator if du_cache is given.")
-    du_cache = L.du_cache
-    fill!(du,zero(first(du)))
-    # TODO: Make type-stable via recursion
-    for A in L.As
-        mul!(du_cache,A,u)
-        du .+= du_cache
-    end
-    for B in L.Bs
-        if typeof(B) <: Union{Number,AbstractArray}
-            du .+= B
-        else
-            B(du_cache,t)
-            du .+= du_cache
-        end
-    end
+function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector, α::Number, β::Number)
+    mul!(v, L.A, u, α, β)
+    axpy!(α, L.b, v)
 end
 
-function update_coefficients!(L::AffineOperator,u,p,t)
-    # TODO: Make type-stable via recursion
-    for A in L.As; update_coefficients!(A,u,p,t); end
-    for B in L.Bs; update_coefficients!(B,u,p,t); end
+function LinearAlgebra.ldiv!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
+    copy!(v, u)
+    ldiv!(L, v)
+end
+
+function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVector)
+    axpy!(-true, L.b, u)
+    ldiv!(L.A, u)
 end
 
 """

@@ -46,6 +46,26 @@ N = 8
     v=rand(N); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
+@testset "AffineOperator" begin
+    u = rand(N)
+    A = rand(N,N)
+    D = Diagonal(A)
+    b = rand(N)
+    α = rand()
+    β = rand()
+
+    L = AffineOperator(MatrixOperator(A), b)
+
+    @test L * u ≈ A * u + b
+    v=rand(N); @test mul!(v, L, u) ≈ A * u + b
+    v=rand(N); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*w
+
+    L = AffineOperator(MatrixOperator(D), b)
+    @test L \ u ≈ D \ (u - b)
+    v=rand(N); @test ldiv!(v, L, u) ≈ D \ (u-b)
+    v=rand(N); @test ldiv!(L, u) ≈ D \ (u-b)
+end
+
 @testset "FunctionOperator" begin
 
     u = rand(N)
