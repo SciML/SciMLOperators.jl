@@ -603,7 +603,7 @@ for (op, LType, VType) in (
                              LinearAlgebra.ishermitian,
                              LinearAlgebra.isposdef,
                              LinearAlgebra.opnorm,
-    
+
                              # SciML
                              isconstant,
                              has_mul!,
