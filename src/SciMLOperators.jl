@@ -11,7 +11,7 @@ import Setfield: @set!
 
 # overload
 import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, iszero, ==
-import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp
+import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp, Diagonal
 import SparseArrays: sparse
 
 """
@@ -40,6 +40,7 @@ include("sciml.jl")
 
 export ScalarOperator,
        MatrixOperator,
+       DiagonalOperator,
        FactorizedOperator,
        AffineOperator,
        FunctionOperator

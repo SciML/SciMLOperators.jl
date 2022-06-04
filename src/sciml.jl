@@ -15,7 +15,7 @@ struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLLinearOperat
 end
 
 # constructors
-Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = similar(L.A, T, dims)
+Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator(similar(L.A, T, dims))
 
 # traits
 @forward MatrixOperator.A (
@@ -117,6 +117,10 @@ for op in (
         end
     end
 end
+
+""" Diagonal Operator """
+DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
+LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
 """
     FactorizedOperator(F)
