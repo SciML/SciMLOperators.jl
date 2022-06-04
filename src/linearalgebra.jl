@@ -65,6 +65,7 @@ for (op, LType, VType) in (
 
     @eval function LinearAlgebra.ldiv!(v::$VType, L::$LType, u::$VType)
         ldiv!(v.parent, L.L, u.parent)
+        v
     end
     
     @eval function LinearAlgebra.ldiv!(L::$LType, u::$VType)
