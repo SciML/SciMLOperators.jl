@@ -36,7 +36,6 @@ abstract type AbstractMatrixFreeOperator{T} <: AbstractSciMLOperator{T} end
 
 include("interface.jl")
 include("basic.jl")
-include("linearalgebra.jl")
 include("sciml.jl")
 
 export ScalarOperator,
