@@ -8,8 +8,8 @@ struct AdjointedOperator{T,LType} <: AbstractSciMLOperator{T}
 end
 
 Base.adjoint(L::AbstractSciMLOperator) = AdjointedOperator(L)
-Base.adjoint(L::AdjointedSciMLOperator) = L.L
+Base.adjoint(L::AdjointedOperator) = L.L
 
-has_adjoint(L::AdjointedSciMLOperator) = true
-isconstant(L::AdjointedSciMLOperator) = isconstant(L.L)
+has_adjoint(L::AdjointedOperator) = true
+isconstant(L::AdjointedOperator) = isconstant(L.L)
 
