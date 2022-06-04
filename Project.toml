@@ -14,4 +14,6 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
+ArrayInterfaceCore = "0.1"
+Lazy = "0.15"
 Setfield = "1"
