@@ -448,9 +448,9 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     """ cache for 3 and 5 argument mul! """
     cache::C
     """ is cache set """
-    isunset::Bool
+    isset::Bool
 
-    function ComposedOperator(ops, cache, isunset::Bool)
+    function ComposedOperator(ops, cache, isset::Bool)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
@@ -458,14 +458,14 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
         end
 
         T = promote_type(eltype.(ops)...)
-        isunset = cache === nothing
-        new{T,typeof(ops),typeof(cache)}(ops, cache, isunset)
+        isset = cache !== nothing
+        new{T,typeof(ops),typeof(cache)}(ops, cache, isset)
     end
 end
 
 function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
-    isunset = cache === nothing
-    ComposedOperator(ops, cache, isunset)
+    isset = cache !== nothing
+    ComposedOperator(ops, cache, isset)
 end
 
 # constructors
@@ -533,7 +533,7 @@ function cache_operator(L::ComposedOperator, u::AbstractVector)
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     cache = L.cache.c3
     vecs = (v, cache..., u)
@@ -544,7 +544,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
-    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     cache = L.cache.c5
     copy!(cache, v)
@@ -555,7 +555,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert !(L.isunset) "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
+    @assert L.isset "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
 
     cache = L.cache.c3
     vecs = (u, reverse(cache)..., v)
@@ -662,12 +662,17 @@ end
 struct InvertedOperator{T, LType, C} <: AbstractSciMLOperator{T}
     L::LType
     cache::C
-    isunset::Bool
+    isset::Bool
 
-    function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
-        isunset = cache === nothing
-        new{T,typeof(L),typeof(cache)}(L, cache, isunset)
+    function InvertedOperator(L::AbstractSciMLOperator{T}, cache, isset) where{T}
+        isset = cache !== nothing
+        new{T,typeof(L),typeof(cache)}(L, cache, isset)
     end
+end
+
+function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
+    isset = cache !== nothing
+    InvertedOperator(L, cache, isset)
 end
 
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
@@ -709,6 +714,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector, α::Number, β::Number)
+    @assert L.isset "cache needs to be set up to use 5 arg LinearAlgebra.ldiv!"
     copy!(L.cache, v)
     ldiv!(v, L.L, u)
     lmul!(α, v)
@@ -720,6 +726,7 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::InvertedOperator, u)
 end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVector)
+    @assert L.isset "cache needs to be set up to use 2 arg LinearAlgebra.ldiv!"
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
 end

@@ -182,7 +182,7 @@ Base.size(L::InvertibleOperator) = size(L.F)
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
-getops(::InvertibleOperator) = (L.F,)
+getops(L::InvertibleOperator) = (L.F,)
 
 # operator application (inversion)
 Base.:*(L::InvertibleOperator, x::AbstractVector) = L.F * x

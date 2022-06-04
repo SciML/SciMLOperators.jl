@@ -8,6 +8,7 @@ using SciMLOperators: IdentityOperator,
                       ComposedOperator,
                       AdjointedOperator,
                       TransposedOperator,
+
                       AbstractAdjointedVector,
                       AbstractTransposedVector,
 

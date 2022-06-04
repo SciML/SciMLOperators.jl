@@ -1,10 +1,12 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
+using SciMLOperators: InvertibleOperator
+
 Random.seed!(0)
 N = 8
 
-@testset "MatrixOperator, FactorizedOperator" begin
+@testset "MatrixOperator, InvertibleOperator" begin
     u = rand(N)
     p = nothing
     t = 0
@@ -23,8 +25,8 @@ N = 8
     FF  = factorize(AA)
     FFt = FF'
 
-    @test FF  isa FactorizedOperator
-    @test FFt isa FactorizedOperator
+    @test FF  isa InvertibleOperator
+    @test FFt isa InvertibleOperator
 
     @test eachindex(A)  === eachindex(AA)
     @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
@@ -35,12 +37,11 @@ N = 8
     @test A  ≈ Matrix(AA ) ≈ Matrix(FF )
     @test At ≈ Matrix(AAt) ≈ Matrix(FFt)
 
-    @test A  * u ≈ AA(u,p,t)  ≈ FF(u,p,t)
-    @test At * u ≈ AAt(u,p,t) ≈ FFt(u,p,t)
+    @test A  * u ≈ AA(u,p,t)
+    @test At * u ≈ AAt(u,p,t)
 
     @test A  \ u ≈ AA  \ u ≈ FF  \ u
     @test At \ u ≈ AAt \ u ≈ FFt \ u
-
 
     v=rand(N); @test mul!(v, AA, u) ≈ A * u
     v=rand(N); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
