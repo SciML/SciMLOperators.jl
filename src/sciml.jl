@@ -139,14 +139,6 @@ struct InvertibleOperator{T,FType} <: AbstractSciMLLinearOperator{T}
     end
 end
 
-@forward InvertibleOperator.F (
-                               has_mul,
-                               has_mul!,
-                               has_ldiv,
-                               has_ldiv!,
-                               isconstant,
-                              )
-
 # constructor
 function LinearAlgebra.factorize(L::AbstractSciMLLinearOperator)
     fact = factorize(convert(AbstractMatrix, L))
@@ -180,11 +172,28 @@ end
 # traits
 Base.size(L::InvertibleOperator) = size(L.F)
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
+LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 getops(L::InvertibleOperator) = (L.F,)
 
-# operator application (inversion)
+@forward InvertibleOperator.F (
+                               # LinearAlgebra
+                               LinearAlgebra.isreal,
+                               LinearAlgebra.issymmetric,
+                               LinearAlgebra.ishermitian,
+                               LinearAlgebra.isposdef,
+
+                               # SciML
+                               isconstant,
+                               has_adjoint,
+                               has_mul,
+                               has_mul!,
+                               has_ldiv,
+                               has_ldiv!,
+                              )
+
+# operator application
 Base.:*(L::InvertibleOperator, x::AbstractVector) = L.F * x
 Base.:\(L::InvertibleOperator, x::AbstractVector) = L.F \ x
 LinearAlgebra.mul!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector) = mul!(v, L.F, u)
