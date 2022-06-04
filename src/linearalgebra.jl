@@ -10,6 +10,27 @@ end
 Base.adjoint(L::AbstractSciMLOperator) = AdjointedOperator(L)
 Base.adjoint(L::AdjointedOperator) = L.L
 
-has_adjoint(L::AdjointedOperator) = true
-isconstant(L::AdjointedOperator) = isconstant(L.L)
+Base.size(L::AdjointedOperator) = size(L.L) |> reverse
 
+has_adjoint(L::AdjointedOperator) = true
+
+@forward AdjointedOperator.L (
+                              # Base
+                              convert,
+
+                              # LinearAlgebra
+                              LinearAlgebra.isreal,
+                              LinearAlgebra.issymmetric,
+                              LinearAlgebra.ishermitian,
+                              LinearAlgebra.isposdef,
+                              LinearAlgebra.opnorm,
+
+                              # SciML
+                              isconstant,
+                              has_mul!,
+                              has_ldiv,
+                              has_ldiv!,
+                             )
+
+
+getops(L::AdjointedOperator) = (L.L,)
