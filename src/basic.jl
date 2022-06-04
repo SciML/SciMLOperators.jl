@@ -68,12 +68,12 @@ for op in (
           )
     @eval function Base.$op(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
-        IdentityOperator{N}()
+        A
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
         @assert size(A, 2) == N
-        IdentityOperator{N}()
+        A
     end
 end
 
