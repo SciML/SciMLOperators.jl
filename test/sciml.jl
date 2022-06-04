@@ -63,7 +63,7 @@ end
     L = AffineOperator(MatrixOperator(D), b)
     @test L \ u ≈ D \ (u - b)
     v=rand(N); @test ldiv!(v, L, u) ≈ D \ (u-b)
-    v=rand(N); @test ldiv!(L, u) ≈ D \ (u-b)
+    v=copy(u); @test ldiv!(L, u) ≈ D \ (v-b)
 end
 
 @testset "FunctionOperator" begin
