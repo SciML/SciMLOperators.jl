@@ -53,24 +53,24 @@ for (op, LType, VType) in (
     @eval Base.:*(u::$VType, L::$LType) = $op(L.L * u.parent)
     @eval Base.:/(u::$VType, L::$LType) = $op(L.L \ u.parent)
 
-    @eval function LinearAlgebra.mul!(v::$VType, L::$LType, u::$VType)
-        mul!(v.parent, L.L, u.parent)
-        v
-    end
+#   @eval function LinearAlgebra.mul!(v::$VType, L::$LType, u::$VType)
+#       mul!(v.parent, L.L, u.parent)
+#       v
+#   end
 
-    @eval function LinearAlgebra.mul!(v::$VType, L::$LType, u::$VType, α::Number, β::Number)
-        mul!(v.parent, L.L, u.parent, α, β)
-        v
-    end
+#   @eval function LinearAlgebra.mul!(v::$VType, L::$LType, u::$VType, α::Number, β::Number)
+#       mul!(v.parent, L.L, u.parent, α, β)
+#       v
+#   end
 
-    @eval function LinearAlgebra.ldiv!(v::$VType, L::$LType, u::$VType)
-        ldiv!(v.parent, L.L, u.parent)
-        v
-    end
-    
-    @eval function LinearAlgebra.ldiv!(L::$LType, u::$VType)
-        ldiv!(L.L, u.parent)
-        u
-    end
+#   @eval function LinearAlgebra.ldiv!(v::$VType, L::$LType, u::$VType)
+#       ldiv!(v.parent, L.L, u.parent)
+#       v
+#   end
+#   
+#   @eval function LinearAlgebra.ldiv!(L::$LType, u::$VType)
+#       ldiv!(L.L, u.parent)
+#       u
+#   end
 end
 #
