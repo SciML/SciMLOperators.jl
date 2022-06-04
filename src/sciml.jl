@@ -258,66 +258,163 @@ end
 """
     Matrix free operators (given by a function)
 """
-struct FunctionOperator{isinplace,T,F,Fa,Fi,P,S} <: AbstractSciMLOperator{T} # TODO
-    """ Function with signature op(u, p, t) and (optionally) op(du, u, p, t) """
+struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperator{T}
+    """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
-    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    """ Adjoint operator"""
     op_adjoint::Fa
-    """ Adjoint function operator signature op(u, p, t) and (optionally) op(du, u, p, t) """
+    """ Inverse operator"""
     op_inverse::Fi
-    """ Size """
-    size::S
+    """ Adjoint inverse operator"""
+    op_adjoint_inverse::Fai
+    """ Traits """
+    traits::Tr
     """ Parameters """
     p::P
+    """ Time """
+    t::Tt
 
-    function FunctionOperator(op;
-                              isinplace=false,
-                              op_adjoint=nothing,
-                              op_inverse=nothing,
-                              p=nothing,
+    function FunctionOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t)
+        iip = traits.isinplace
+        T   = traits.T
 
-                              # LinearAlgebra
-                              opnorm=nothing,
-                              isreal=true,
-                              issymmetric=false,
-                              ishermitian=false,
-                             )
-        T = eltype(op)
-
-        if LinearAlgebra.ishermitian(op) & (adjoint === nothing)
-            adjoint = op
-        end
-
-        new{isinplace,
+        new{iip,
             T,
             typeof(op),
             typeof(op_adjoint),
             typeof(op_inverse),
-            typeof(size),
+            typeof(op_adjoint_inverse),
+            typeof(traits),
             typeof(p),
+            typeof(t),
            }(
-             op, op_adjoint, op_inverse, size, p,
+             op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t,
             )
     end
+
 end
 
-Base.size(L::FunctionOperator) = L.size
-Base.adjoint(L::FunctionOperator) = FunctionOperator(L.op_adjoint; op_inverse=L.op)
+function FunctionOperator(op, traits=nothing;
 
-has_adjoint(L::FunctionOperator) = L.op_adjoint isa Nothing
+                          # necessary
+                          isinplace=nothing,
+                          T=nothing,
+                          size=nothing,
+
+                          # optional
+                          op_adjoint=nothing,
+                          op_inverse=nothing,
+                          op_adjoint_inverse=nothing,
+
+                          p=nothing,
+                          t=nothing,
+
+                          # traits
+                          opnorm=nothing,
+                          isreal=true,
+                          issymmetric=false,
+                          ishermitian=false,
+                          isposdef=false,
+                         )
+
+    isinplace isa Nothing  && @error "Please provide a funciton signature
+    by specifying `isinplace` as either `true`, or `false`.
+    If `isinplace = false`, the signature is `op(u, p, t)`,
+    and if `isinplace = true`, the signature is `op(du, u, p, t)`.
+    Further, it is assumed that the function call would be nonallocating
+    when called in-place"
+    T isa Nothing  && @error "Please provide a Number type for the Operator"
+    size isa Nothing  && @error "Please provide a size (m, n)"
+
+    adjointable = ishermitian | (isreal & issymmetric)
+    invertible  = !(op_inverse isa Nothing)
+
+    if adjointable & (op_adjoint isa Nothing) 
+        op_adjoint = op
+    end
+
+    if invertible & (op_adjoint_inverse isa Nothing)
+        op_adjoint_inverse = op_inverse
+    end
+
+    traits = !(traits isa Nothing) ? traits : (;
+                                               opnorm = opnorm,
+                                               isreal = isreal,
+                                               issymmetric = issymmetric,
+                                               ishermitian = ishermitian,
+                                               isposdef = isposdef,
+
+                                               isinplace = isinplace,
+                                               T = T,
+                                               size = size,
+                                              )
+    FunctionOperator(
+                     op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     traits,
+                     p,
+                     t,
+                    )
+end
+
+function update_coefficients!(L::FunctionOperator, u, p, t)
+    @set! L.p = p
+    @set! L.t = t
+    L
+end
+
+Base.size(L::FunctionOperator) = L.traits.size
+function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
+
+    if ishermitian(L) | (isreal(L) & issymmetric(L))
+        return L
+    end
+
+    op = L.op_adjoint
+    op_adjoint = L.op
+
+    op_inverse = L.op_adjoint_inverse
+    op_adjoint_inverse = L.op_inverse
+
+    traits = (L.traits[1:end-1]..., size=reverse(size(L)))
+
+    p = L.p
+    t = L.t
+
+    FuncitonOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t)
+end
+
+function LinearAlgebra.opnorm(L::FunctionOperator, p)
+  L.traits.opnorm === nothing && error("""
+    M.opnorm is nothing, please define opnorm as a function that takes one
+    argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
+    defined")`
+  """)
+  opn = L.opnorm
+  return opn isa Number ? opn : M.opnorm(p)
+end
+LinearAlgebra.isreal(L::FunctionOperator) = L.traits.isreal
+LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
+LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
+LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
+
+has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
+has_mul(L::FunctionOperator{iip}) where{iip} = !iip
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
-has_ldiv(L::FunctionOperator{iip}) where{iip} = L.op_inverse isa Nothing
-has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & has_ldiv(L)
-
-getops(L::FunctionOperator) = (L.p,)
+has_ldiv(L::FunctionOperator{iip}) where{iip} = !iip & !(L.op_inverse isa Nothing)
+has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 # operator application
-Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, p, t)
-Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, p, t)
+Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
+Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, L.p, L.t)
+
 function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
-    L.op(v, u, p, t)
+    L.op(v, u, L.p, L.t)
 end
+
 function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
-    L.op_inverse(v, u, p, t)
+    L.op_inverse(v, u, L.p, L.t)
 end
 #

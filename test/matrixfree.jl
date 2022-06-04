@@ -2,14 +2,6 @@ using Test, LinearAlgebra
 using DiffEqBase: isconstant
 using DiffEqOperators, OrdinaryDiffEq
 
-@testset "Matrix Free Operator constructors" begin
-  iden_op = MatrixFreeOperator(identity)
-  @test iden_op == MatrixFreeOperator(identity, (nothing,), size = nothing, opnorm = true, ishermitian = false)
-  @test_throws AssertionError MatrixFreeOperator(identity, ())
-  @test_throws AssertionError MatrixFreeOperator(identity, (0,0,0))
-  @test_throws AssertionError MatrixFreeOperator(identity, [1])
-end
-
 @testset "Matrix Free Operator methods" begin
   iden_op = MatrixFreeOperator(identity)
   iden_op1 = MatrixFreeOperator(identity, (2,2), size = (2,2),
@@ -29,26 +21,13 @@ end
   C = MatrixFreeOperator(g, (p,t), size=(5,5), opnorm=5)
 
   # Base
-  @test size(iden_op1) == (2,2)
-  @test size(iden_op1, 2) == 2
-  @test size(iden_op1, 3) == 1
-  @test_throws ErrorException size(iden_op1, 0)
-  @test_throws ErrorException size(iden_op1, -1)
-  @test_throws ErrorException size(iden_op)
-  @test_throws ErrorException size(iden_op, 5)
-
   # Linear Algebra
   @test ishermitian(iden_op) == false
   @test opnorm(iden_op) == true
   @test opnorm(A, 5) == 5
   @test opnorm(iden_op1, Inf) == Inf
 
-  # DiffEqBase
-  DiffEqBase.numargs(iden_op) == 4
-
   # Interface
-  @test DiffEqOperators.isconstant(iden_op) == true
-  @test DiffEqOperators.isconstant(iden_op1) == false
   @test update_coefficients!(iden_op, 0, 0, 0) == MatrixFreeOperator(identity)
   update_coefficients!(B, 0, 1., 1.)
   @test B.args == (1., 1.)

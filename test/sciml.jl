@@ -4,7 +4,7 @@ using Random
 Random.seed!(0)
 N = 8
 
-@testset "MatrixOperator" begin
+@testset "MatrixOperator, FactorizedOperator" begin
     u = rand(N)
     p = nothing
     t = 0
@@ -46,7 +46,74 @@ N = 8
     v=rand(N); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
-@testset "SciMLFunctionOperator" begin
+@testset "FunctionOperator" begin
+
+    u = rand(N)
+    p = nothing
+    t = 0.0
+
+    A = rand(N,N) |> Symmetric
+    F = lu(A)
+
+    f1(u, p, t)  = A * u
+    f1i(u, p, t) = A \ u
+
+    f2(du, u, p, t)  = mul!(du, A, u)
+    f2i(du, u, p, t) = ldiv!(du, F, u)
+
+    # nonallocating
+    op1 = FunctionOperator(
+                           f1;
+
+                           isinplace=false,
+                           T=Float64,
+                           size=(N,N),
+
+                           op_inverse=f1i,
+
+                           opnorm=true,
+                           isreal=true,
+                           issymmetric=true,
+                           ishermitian=true,
+                           isposdef=true,
+                          )
+
+    op2 = FunctionOperator(
+                           f2;
+
+                           isinplace=true,
+                           T=Float64,
+                           size=(N,N),
+
+                           op_inverse=f2i,
+
+                           opnorm=true,
+                           isreal=true,
+                           issymmetric=true,
+                           ishermitian=true,
+                           isposdef=true,
+                          )
+
+    @test op1' === op1
+
+    @test size(op1) == (N,N)
+    @test has_adjoint(op1)
+    @test has_mul(op1)
+    @test !has_mul!(op1)
+    @test has_ldiv(op1)
+    @test !has_ldiv!(op1)
+
+    @test size(op2) == (N,N)
+    @test has_adjoint(op2)
+    @test !has_mul(op2)
+    @test has_mul!(op2)
+    @test !has_ldiv(op2)
+    @test has_ldiv!(op2)
+
+    v = zero(u); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
+    v = zero(u); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
+
+    v = zero(u); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
 end
 
 @testset "Operator Algebra" begin
