@@ -546,8 +546,12 @@ for op in (
            :adjoint,
            :transpose,
           )
-function Base.adjoint(L::TensorProduct2DOperator)
-    TensorProduct2DOperator(L.A', L.B'; cache = issquare(A) ? L.cache : nothing)
+    @eval function Base.$op(L::TensorProduct2DOperator)
+        TensorProduct2DOperator($op(L.A),
+                                $op(L.B);
+                                cache = issquare(A) ? L.cache : nothing
+                               )
+    end
 end
 
 function Base.:*(L::TensorProduct2DOperator, u::AbstractVector)

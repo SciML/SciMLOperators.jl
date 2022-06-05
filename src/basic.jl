@@ -18,6 +18,7 @@ Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(
 # traits
 Base.size(::IdentityOperator{N}) where{N} = (N, N)
 Base.adjoint(A::IdentityOperator) = A
+Base.transpose(A::IdentityOperator) = A
 LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
              :isreal, :issymmetric, :ishermitian, :isposdef,
