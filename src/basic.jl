@@ -99,6 +99,7 @@ Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zero
 # traits
 Base.size(::NullOperator{N}) where{N} = (N, N)
 Base.adjoint(A::NullOperator) = A
+Base.transpose(A::NullOperator) = A
 LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
 for pred in (
              :isreal, :issymmetric, :ishermitian,
@@ -185,6 +186,7 @@ function Base.adjoint(α::ScalarOperator) # TODO - test
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
     ScalarOperator(val; update_func=update_func)
 end
+Base.transpose(α::ScalarOperator) = α
 
 getops(α::ScalarOperator) = (α.val)
 islinear(L::ScalarOperator) = true
@@ -287,7 +289,12 @@ SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
 Base.size(L::ScaledOperator) = size(L.L)
-Base.adjoint(L::ScaledOperator) = ScaledOperator(L.λ', L.op')
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.op))
+end
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledOperator) = (L.λ, L.L)
@@ -405,7 +412,12 @@ SparseArrays.sparse(L::AddedOperator) = sum(_sparse, L.ops)
 
 # traits
 Base.size(L::AddedOperator) = size(first(L.ops))
-Base.adjoint(L::AddedOperator) = AddedOperator(adjoint.(L.ops)...)
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
+end
 
 getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -487,7 +499,12 @@ SparseArrays.sparse(L::ComposedOperator) = prod(_sparse, L.ops)
 
 # traits
 Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
-Base.adjoint(L::ComposedOperator) = ComposedOperator(adjoint.(reverse(L.ops)))
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...)
+end
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 getops(L::ComposedOperator) = L.ops
