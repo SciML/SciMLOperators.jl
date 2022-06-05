@@ -125,6 +125,13 @@ for op in (
     end
 end
 
+for op in (
+           :*, :∘
+          )
+    @eval Base.$op(A::AbstractMatrix, B::AbstractSciMLOperator) = $op(MatrixOperator(A), B)
+    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractMatrix) = $op(A, MatrixOperator(B))
+end
+
 """ Diagonal Operator """
 DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
