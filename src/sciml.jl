@@ -501,6 +501,38 @@ function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
     ldiv!(u, L, L.cache)
 end
 
+#struct TensorOperator{T,M,C} <: AbstractSciMLOperator{T}
+#    mats::M
+#    cache::C
+#    isset::Bool
+#
+#    function TensorOperator(mats, cache, isset)
+#        T = promote_type(eltype.(mats)...)
+#        isset = cache !== nothing
+#        new{T,
+#            typeof(mats),
+#            typeof(cache)
+#           }(
+#             mats, cache, isset
+#            )
+#    end
+#end
+#
+#function Base.:*(L::TensorOperator, u::AbstractVector)
+#    sz = size.(L.mats, 2)
+#    U = _reshape(u, sz)
+#
+#    V = L.mats[1] * u
+#    for i in 2:length(L.mats)-1
+#        # views, or,
+#        # permute dims or something
+#        V = L.A * V
+#    end
+#    V = V * transpose(L.mats[end])
+#
+#    _vec(V)
+#end
+
 """
     Lazy Tensor Product Operator
 
@@ -509,47 +541,14 @@ end
     where U is a lazy representation of the vector u as
     a matrix with the appropriate size.
 """
-
-struct TensorOperator{T,M,C} <: AbstractSciMLOperator{T}
-    mats::M
-    cache::C
-    isset::Bool
-
-    function TensorOperator(mats, cache, isset)
-        T = promote_type(eltype.(mats)...)
-        isset = cache !== nothing
-        new{T,
-            typeof(mats),
-            typeof(cache)
-           }(
-             mats, cache, isset
-            )
-    end
-end
-
-function Base.:*(L::TensorOperator, u::AbstractVector)
-    sz = size.(L.mats, 2)
-    U = _reshape(u, sz)
-
-    V = L.mats[1] * u
-    for i in 2:length(L.mats)-1
-        # views, or,
-        # permute dims or something
-        V = L.A * V
-    end
-    V = V * transpose(L.mats[end])
-
-    _vec(V)
-end
-
-struct Tensor2DOperator{T,A,B,C} <: AbstractSciMLOperator{T}
+struct TensorProductOperator{T,A,B,C} <: AbstractSciMLOperator{T}
     A::A
     B::B
 
     cache::C
     isset::Bool
 
-    function Tensor2DOperator(A, B, cache, isset)
+    function TensorProductOperator(A, B, cache, isset)
         T = promote_type(eltype.((A, B))...)
         isset = cache !== nothing
         new{T,
@@ -563,37 +562,37 @@ struct Tensor2DOperator{T,A,B,C} <: AbstractSciMLOperator{T}
 end
 
 # pairwise fusion
-#TensorOperator(ops::AbstractMatrix...) = reduce(Tensor2DOperator, ops)
+TensorProductOperator(ops::AbstractMatrix...) = reduce(TensorProductOperator, ops)
 
-function Tensor2DOperator(A::AbstractMatrix, B::AbstractMatrix; cache = nothing)
+function TensorProductOperator(A::AbstractMatrix, B::AbstractMatrix; cache = nothing)
     isset = cache !== nothing
-    Tensor2DOperator(A, B, cache, isset)
+    TensorProductOperator(A, B, cache, isset)
 end
 
-Base.size(L::Tensor2DOperator) = size(L.A) .* size(L.B)
+Base.size(L::TensorProductOperator) = size(L.A) .* size(L.B)
 
 for op in (
            :adjoint,
            :transpose,
           )
-    @eval function Base.$op(L::Tensor2DOperator)
-        Tensor2DOperator(
-                         $op(L.A),
-                         $op(L.B);
-                         cache = issquare(A) ? L.cache : nothing
-                        )
+    @eval function Base.$op(L::TensorProductOperator)
+        TensorProductOperator(
+                              $op(L.A),
+                              $op(L.B);
+                              cache = issquare(A) ? L.cache : nothing
+                             )
     end
 end
 
 # operator application
-function Base.:*(L::Tensor2DOperator, u::AbstractVector)
+function Base.:*(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.A, 2), size(L.B, 2))
     U = _reshape(u, sz)
     V = L.A * U * transpose(L.B)
     _vec(V)
 end
 
-function cache_operator(L::Tensor2DOperator, u::AbstractVector)
+function cache_operator(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.A, 2), size(L.B, 2))
     U = _reshape(u, sz)
     cache = A * U
@@ -602,7 +601,7 @@ function cache_operator(L::Tensor2DOperator, u::AbstractVector)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     szU = (size(L.A, 2), size(L.B, 2)) # in
@@ -620,7 +619,7 @@ function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractV
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector, α, β)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     szU = (size(L.A, 2), size(L.B, 2)) # in
@@ -638,7 +637,7 @@ function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractV
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, A::Tensor2DOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     szU = (size(L.A, 2), size(L.B, 2)) # in
@@ -656,8 +655,7 @@ function LinearAlgebra.ldiv!(v::AbstractVector, A::Tensor2DOperator, u::Abstract
     v
 end
 
-
-function LinearAlgebra.ldiv!(A::Tensor2DOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(A::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     sz = (size(L.A, 2), size(L.B, 2))
@@ -672,5 +670,4 @@ function LinearAlgebra.ldiv!(A::Tensor2DOperator, u::AbstractVector)
 
     u
 end
-
 #

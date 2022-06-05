@@ -46,8 +46,7 @@ export ScalarOperator,
        DiagonalOperator,
        AffineOperator,
        FunctionOperator,
-       TensorOperator,
-       Tensor2DOperator #TODO rm when done with general case
+       TensorProductOperator
 
 export update_coefficients!,
        update_coefficients,
