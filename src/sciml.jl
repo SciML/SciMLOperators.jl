@@ -637,4 +637,23 @@ function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractV
 
     v
 end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, A::Tensor2DOperator, u::AbstractVector)
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+
+    szU = (size(L.A, 2), size(L.B, 2)) # in
+    szV = (size(L.A, 1), size(L.B, 1)) # out
+
+    U = _reshape(u, szU)
+    V = _reshape(v, szV)
+
+    """ V .= A * U * B' """
+    # C .= A \ U
+    ldiv!(L.cache, L.A, U)
+    # V .= U / B' <===> V' .= B \ U'
+    ldiv!(transpose(V), L.B, transpose(L.cache))
+
+    v
+end
+
 #
