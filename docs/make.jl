@@ -1,5 +1,7 @@
 using Documenter, SciMLOperators
 
+include("pages.jl")
+
 makedocs(
     sitename="SciMLOperators.jl",
     authors="Chris Rackauckas, Alex Jones",
@@ -8,11 +10,7 @@ makedocs(
     format = Documenter.HTML(analytics = "UA-90474609-3",
                              assets = ["assets/favicon.ico"],
                              canonical="https://scimlbase.sciml.ai/stable/"),
-    pages=[
-        "Home" => "index.md",
-        "Operators" => Any[
-            "operators/matrix_free_operators.md",
-        ]
+    pages=pages
     ]
 )
 
