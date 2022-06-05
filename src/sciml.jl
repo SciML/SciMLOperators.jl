@@ -536,47 +536,49 @@ end
 """
     Lazy Tensor Product Operator
 
-    (A ⊗ B)(u) = vec(A * U * transpose(B))
+    TensorProductOperator(A, B) = A ⊗ B
+
+    (A ⊗ B)(u) = vec(B * U * transpose(A))
 
     where U is a lazy representation of the vector u as
     a matrix with the appropriate size.
 """
-struct TensorProductOperator{T,A,B,C} <: AbstractSciMLOperator{T}
-    A::A
-    B::B
+struct TensorProductOperator{T,O,I,C} <: AbstractSciMLOperator{T}
+    outer::O
+    inner::I
 
     cache::C
     isset::Bool
 
-    function TensorProductOperator(A, B, cache, isset)
-        T = promote_type(eltype.((A, B))...)
+    function TensorProductOperator(out, in, cache, isset)
+        T = promote_type(eltype.((out, in))...)
         isset = cache !== nothing
         new{T,
-            typeof(A),
-            typeof(B),
+            typeof(out),
+            typeof(in),
             typeof(cache)
            }(
-             A, B, cache, isset
+             out, in, cache, isset
             )
     end
 end
 
-function TensorProductOperator(A, B; cache = nothing)
+function TensorProductOperator(out, in; cache = nothing)
     isset = cache !== nothing
     TensorProductOperator(A, B, cache, isset)
 end
 
 TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
-    convert(AbstractMatrix, L.A) ⊗ convert(AbstractMatrix, L.B)
+    convert(AbstractMatrix, L.outer) ⊗ convert(AbstractMatrix, L.inner)
 end
 function SparseArrays.sparse(L::TensorProductOperator)
-    sparse(L.A) ⊗ sparse(L.B)
+    sparse(L.outer) ⊗ sparse(L.inner)
 end
 
-LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
+#LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
 
-Base.size(L::TensorProductOperator) = size(L.A) .* size(L.B)
+Base.size(L::TensorProductOperator) = size(L.inner) .* size(L.outer)
 
 for op in (
            :adjoint,
@@ -584,43 +586,43 @@ for op in (
           )
     @eval function Base.$op(L::TensorProductOperator)
         TensorProductOperator(
-                              $op(L.A),
-                              $op(L.B);
-                              cache = issquare(A) ? L.cache : nothing
+                              $op(L.outer),
+                              $op(L.inner);
+                              cache = issquare(L.inner) ? L.cache : nothing
                              )
     end
 end
 
-getops(L::TensorProductOperator) = (L.A, L.B)
-islinear(L::TensorProductOperator) = islinear(L.A) & islinear(L.B)
-Base.iszero(L::TensorProductOperator) = iszero(L.A) | iszero(L.B)
-has_adjoint(L::TensorProductOperator) = has_adjoint(L.A) & has_adjoint(L.B)
-has_mul!(L::TensorProductOperator) = has_mul!(L.A) & has_mul!(L.B)
-has_ldiv(L::TensorProductOperator) = has_ldiv(L.A) & has_ldiv(L.B)
-has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.A) & has_ldiv!(L.B)
+getops(L::TensorProductOperator) = (L.outer, L.inner)
+islinear(L::TensorProductOperator) = islinear(L.outer) & islinear(L.inner)
+Base.iszero(L::TensorProductOperator) = iszero(L.outer) | iszero(L.inner)
+has_adjoint(L::TensorProductOperator) = has_adjoint(L.outer) & has_adjoint(L.inner)
+has_mul!(L::TensorProductOperator) = has_mul!(L.outer) & has_mul!(L.inner)
+has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
+has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
 # operator application
 function Base.:*(L::TensorProductOperator, u::AbstractVector)
-    sz = (size(L.A, 2), size(L.B, 2))
+    sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
 
-    V = L.A * U * transpose(L.B)
+    V = L.inner * U * transpose(L.outer)
 
     _vec(V)
 end
 
 function Base.:\(L::TensorProductOperator, u::AbstractVector)
-    sz = (size(L.A, 2), size(L.B, 2))
+    sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
 
-    C = L.A \ U
-    V = transpose(L.B \ transpose(C))
+    C = L.inner \ U
+    V = transpose(L.outer \ transpose(C))
 
     _vec(V)
 end
 
 function cache_operator(L::TensorProductOperator, u::AbstractVector)
-    sz = (size(L.A, 2), size(L.B, 2))
+    sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
     cache = A * U
 
@@ -631,17 +633,18 @@ end
 function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    szU = (size(L.A, 2), size(L.B, 2)) # in
-    szV = (size(L.A, 1), size(L.B, 1)) # out
+    szU = (size(L.inner, 2), size(L.outer, 2)) # in
+    szV = (size(L.inner, 1), size(L.outer, 1)) # out
 
     U = _reshape(u, szU)
     V = _reshape(v, szV)
 
     """ V .= A * U * B' """
+
     # C .= A * U
-    mul!(L.cache, L.A, U)
+    mul!(L.cache, L.inner, U)
     # V .= U * B'
-    mul!(V, L.cache, transpose(L.B))
+    mul!(V, L.cache, transpose(L.outer))
 
     v
 end
@@ -649,8 +652,8 @@ end
 function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector, α, β)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    szU = (size(L.A, 2), size(L.B, 2)) # in
-    szV = (size(L.A, 1), size(L.B, 1)) # out
+    szU = (size(L.inner, 2), size(L.outer, 2)) # in
+    szV = (size(L.inner, 1), size(L.outer, 1)) # out
 
     U = _reshape(u, szU)
     V = _reshape(v, szV)
@@ -658,9 +661,9 @@ function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::Abst
     """ V .= α(A * U * B') + β(V)"""
 
     # C .= A * U
-    mul!(L.cache, L.A, U)
+    mul!(L.cache, L.inner, U)
     # V = α(C * B') + β(V)"""
-    mul!(V, L.cache, transpose(L.B), α, β)
+    mul!(V, L.cache, transpose(L.outer), α, β)
 
     v
 end
@@ -668,8 +671,8 @@ end
 function LinearAlgebra.ldiv!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    szU = (size(L.A, 2), size(L.B, 2)) # in
-    szV = (size(L.A, 1), size(L.B, 1)) # out
+    szU = (size(L.inner, 2), size(L.outer, 2)) # in
+    szV = (size(L.inner, 1), size(L.outer, 1)) # out
 
     U = _reshape(u, szU)
     V = _reshape(v, szV)
@@ -677,9 +680,9 @@ function LinearAlgebra.ldiv!(v::AbstractVector, A::TensorProductOperator, u::Abs
     """ V .= A * U * B' """
 
     # C .= A \ U
-    ldiv!(L.cache, L.A, U)
+    ldiv!(L.cache, L.inner, U)
     # V .= U / B' <===> V' .= B \ U'
-    ldiv!(transpose(V), L.B, transpose(L.cache))
+    ldiv!(transpose(V), L.outer, transpose(L.cache))
 
     v
 end
@@ -687,15 +690,15 @@ end
 function LinearAlgebra.ldiv!(A::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    sz = (size(L.A, 2), size(L.B, 2))
+    sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
 
     """ U .= A * U * B' """
 
     # U .= A \ U
-    ldiv!(L.A, U)
+    ldiv!(L.inner, U)
     # U .= U / B' <===> U' .= B \ U'
-    ldiv!(L.B, transpose(U))
+    ldiv!(L.outer, transpose(U))
 
     u
 end
@@ -705,9 +708,10 @@ for op in (
            :+ , :- , :* , :/, :\,
           )
     @eval function Base.$op(A::TensorProductOperator, B::TensorProductOperator)
-        A = $op(A.A, B.A)
-        B = $op(A.B, B.B)
-        TensorProductOp2D(A, B)
+        outer = $op(A.outer, B.outer)
+        inner = $op(A.inner, B.inner)
+        cache = A.cache isa Nothing ? B.cache : nothing
+        TensorProductOp2D(outer, inner; cache = cache)
     end
 end
 #

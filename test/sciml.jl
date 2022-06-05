@@ -142,6 +142,47 @@ end
 end
 
 @testset "TensorProductOperator" begin
+    m1, n1 = 3 , 5
+    m2, n2 = 7 , 11
+    m2, n2 = 13, 17
+
+    A = rand(m1, n1)
+    B = rand(m2, n2)
+    C = rand(m3, n3)
+    u = rand(n1*n2*n3)
+    α = rand()
+    β = rand()
+
+    AB  = A ⊗ B
+    ABC = A ⊗ B ⊗ C
+     
+    ABmulu = AB * u
+    ABdivu = AB \ u
+
+    ABCmulu = ABC * u
+    ABCdivu = ABC \ u
+
+    opAB  = ⊗(A, B)
+    opABC = ⊗(A, B, C)
+
+    @test opAB  isa TensorProductOperator
+    @test opABC isa TensorProductOperator
+
+    @test opAB * u ≈ ABmulu
+    @test opAB \ u ≈ ABdivu
+
+#   op = cache_operator(op, u)
+#   v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
+#   v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
+
+#   A = rand(N) |> Diagonal |> MatrixOperator
+#   B = rand(N) |> Diagonal |> MatrixOperator
+#   C = rand(N) |> Diagonal |> MatrixOperator
+
+#   op = ∘(A, B, C)
+#   op = cache_operator(op, u)
+#   v=rand(N); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
+#   v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
 end
 
 @testset "Operator Algebra" begin
