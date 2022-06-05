@@ -227,6 +227,7 @@ LinearAlgebra.rmul!(u::AbstractVector, α::ScalarOperator) = rmul!(u, α.val)
 LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = mul!(v, α.val, u)
 LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a, b) = mul!(v, α.val, u, a, b)
 LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVector, y::AbstractVector) = axpy!(α.val, x, y)
+LinearAlgebra.axpby!(α::ScalarOperator, x::AbstractVector, β::ScalarOperator, y::AbstractVector) = axpby!(α.val, x, β.val, y)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
 LinearAlgebra.ldiv!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = ldiv!(v, α.val, u)
