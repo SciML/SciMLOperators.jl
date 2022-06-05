@@ -141,6 +141,9 @@ end
     v = copy(u); @test A \ v ≈ ldiv!(op2, u)
 end
 
+@testset "TensorProductOperator" begin
+end
+
 @testset "Operator Algebra" begin
     # try out array arithmatic
 end

@@ -697,4 +697,15 @@ function LinearAlgebra.ldiv!(A::TensorProductOperator, u::AbstractVector)
 
     u
 end
+
+# fusion
+for op in (
+           :+ , :- , :* , :/, :\,
+          )
+    @eval function Base.$op(A::TensorProductOperator, B::TensorProductOperator)
+        A = $op(A.A, B.A)
+        B = $op(A.B, B.B)
+        TensorProductOp2D(A, B)
+    end
+end
 #
