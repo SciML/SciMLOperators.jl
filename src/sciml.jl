@@ -266,7 +266,7 @@ end
 """
     Matrix free operators (given by a function)
 """
-struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperator{T}
+struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -281,10 +281,16 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperato
     p::P
     """ Time """
     t::Tt
+    """ Is cache set? """
+    isset::Bool
+    """ Cache """
+    cache::C
 
-    function FunctionOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t)
+    function FunctionOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t, isset, cache)
         iip = traits.isinplace
         T   = traits.T
+
+        isset = cache isa Nothing
 
         new{iip,
             T,
@@ -295,11 +301,11 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt} <: AbstractSciMLOperato
             typeof(traits),
             typeof(p),
             typeof(t),
+            typeof(cache),
            }(
-             op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t,
+             op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t, isset, cache,
             )
     end
-
 end
 
 function FunctionOperator(op;
@@ -316,6 +322,8 @@ function FunctionOperator(op;
 
                           p=nothing,
                           t=nothing,
+
+                          cache=nothing,
 
                           # traits
                           opnorm=nothing,
@@ -345,6 +353,8 @@ function FunctionOperator(op;
         op_adjoint_inverse = op_inverse
     end
 
+    t = t isa Nothing ? zero(T) : t
+
     traits = (;
               opnorm = opnorm,
               isreal = isreal,
@@ -357,6 +367,8 @@ function FunctionOperator(op;
               size = size,
              )
 
+    isset = cache isa Nothing
+
     FunctionOperator(
                      op,
                      op_adjoint,
@@ -365,6 +377,8 @@ function FunctionOperator(op;
                      traits,
                      p,
                      t,
+                     isset,
+                     cache,
                     )
 end
 
@@ -375,7 +389,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t)
 end
 
 Base.size(L::FunctionOperator) = L.traits.size
-function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
+function Base.adjoint(L::FunctionOperator)
 
     if ishermitian(L) | (isreal(L) & issymmetric(L))
         return L
@@ -396,7 +410,11 @@ function Base.adjoint(L::FunctionOperator{iip,T}) where{iip,T}
     p = L.p
     t = L.t
 
-    FuncitonOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t)
+    cache = issquare(L) ? cache : nothing
+    isset = cache isa Nothing
+
+
+    FuncitonOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t, isset, cache)
 end
 
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
@@ -423,11 +441,32 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, L.p, L.t)
 
+function update_cache(L::FunctionOperator, u::AbstractVector)
+    @set! L.cache = similar(u)
+    L
+end
+
 function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
     L.op(v, u, L.p, L.t)
 end
 
+function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector, α, β)
+    try
+        L.op(v, u, L.p, L.t, α, β)
+    catch
+        copy!(L.cache, v)
+        mul!(v, u, L.p, L.t)
+        lmul!(α, v)
+        axpy!(β, L.cache, v)
+    end
+end
+
 function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
     L.op_inverse(v, u, L.p, L.t)
+end
+
+function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
+    copy!(L.cache, u)
+    L.op_inverse(u, L.cache, L.p, L.t)
 end
 #
