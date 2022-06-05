@@ -27,8 +27,15 @@ end
 (L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 
-function cache_operator(L::AbstractSciMLOperator, args...)
-    @warn "caching behaviour not defined for operator of type $(typeof(L))"
+"""
+Allocate caches for a SciMLOperator for fast evaluation
+
+arguments:
+    L :: AbstractSciMLOperator
+    u :: AbstractVector argument to L
+"""
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVector)
+    L
 end
 
 ###
@@ -77,6 +84,7 @@ isconstant(L) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 #isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 
+islinear(L) = false
 islinear(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
@@ -92,11 +100,13 @@ islinear(::Union{
         ) = true
 
 has_mul(L) = true
-has_mul!(L) = false
+has_mul!(L) = true
 
+has_ldiv(L) = false
 has_ldiv(::Union{
                  AbstractMatrix,
                  Factorization,
+                 Number,
                 }
         ) = true
 
@@ -108,6 +118,7 @@ has_ldiv!(::Union{
                  }
          ) = true
 
+has_adjoint(L) = false
 has_adjoint(::Union{
                     # LinearAlgebra
                     AbstractMatrix,
@@ -125,6 +136,7 @@ has_adjoint(::Union{
 issquare(A) = size(A,1) === size(A,2)
 issquare(::Union{
                  UniformScaling,
+                 Number,
                 }
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
@@ -181,7 +193,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u
     mul!(v, convert(AbstractMatrix,L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
 end
 #

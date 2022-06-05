@@ -12,6 +12,7 @@ function Base.one(A::AbstractSciMLOperator)
     IdentityOperator{N}()
 end
 
+# TODO - sparse diagonal
 Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(ones(Bool, N))
 
 # traits
@@ -47,7 +48,7 @@ function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::Abstrac
     copy!(v, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α, β) where{N}
     @assert length(u) == N
     mul!(v, I, u, α, β)
 end
@@ -91,6 +92,7 @@ function Base.zero(A::AbstractSciMLOperator)
     NullOperator{N}()
 end
 
+# TODO sparse diagonal
 Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
 
 # traits
@@ -120,7 +122,7 @@ function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVec
     lmul!(false, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector, α::Number, β::Number) where{N}
+function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector, α, β) where{N}
     @assert length(u) == length(v) == N
     lmul!(β, v)
 end
@@ -223,8 +225,9 @@ end
 LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVector) = lmul!(α.val, u)
 LinearAlgebra.rmul!(u::AbstractVector, α::ScalarOperator) = rmul!(u, α.val)
 LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = mul!(v, α.val, u)
-LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a::Number, b::Number) = mul!(v, α.val, u, a, b)
+LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a, b) = mul!(v, α.val, u, a, b)
 LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVector, y::AbstractVector) = axpy!(α.val, x, y)
+LinearAlgebra.axpby!(α::ScalarOperator, x::AbstractVector, β::ScalarOperator, y::AbstractVector) = axpby!(α.val, x, β.val, y)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
 LinearAlgebra.ldiv!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = ldiv!(v, α.val, u)
@@ -321,7 +324,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVec
     mul!(v, L.L, u, L.λ.val, false)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α, β)
     cache = L.λ.val * α # mul!(L.cache, L.λ.val, α) # TODO - set L.cache as 
     mul!(v, L.L, u, cache, β)
 end
@@ -423,7 +426,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVect
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α::Number, β::Number)
+function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α, β)
     lmul!(β, v)
     for op in L.ops
         iszero(op) && continue
@@ -446,9 +449,9 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     """ cache for 3 and 5 argument mul! """
     cache::C
     """ is cache set """
-    isunset::Bool
+    isset::Bool
 
-    function ComposedOperator(ops, cache, isunset::Bool)
+    function ComposedOperator(ops, cache, isset::Bool)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
@@ -456,14 +459,14 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
         end
 
         T = promote_type(eltype.(ops)...)
-        isunset = cache === nothing
-        new{T,typeof(ops),typeof(cache)}(ops, cache, isunset)
+        isset = cache !== nothing
+        new{T,typeof(ops),typeof(cache)}(ops, cache, isset)
     end
 end
 
 function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
-    isunset = cache === nothing
-    ComposedOperator(ops, cache, isunset)
+    isset = cache !== nothing
+    ComposedOperator(ops, cache, isset)
 end
 
 # constructors
@@ -531,7 +534,7 @@ function cache_operator(L::ComposedOperator, u::AbstractVector)
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     cache = L.cache.c3
     vecs = (v, cache..., u)
@@ -541,8 +544,8 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α::Number, β::Number)
-    @assert !(L.isunset) "cache needs to be set up to use LinearAlgebra.mul!"
+function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α, β)
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     cache = L.cache.c5
     copy!(cache, v)
@@ -553,7 +556,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
-    @assert !(L.isunset) "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
+    @assert L.isset "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
 
     cache = L.cache.c3
     vecs = (u, reverse(cache)..., v)
@@ -597,7 +600,7 @@ for (op, LType, VType) in (
     # constructor
     @eval Base.$op(L::AbstractSciMLOperator) = $LType(L)
 
-    @eval Base.convert(AbstractMatrix, L::$LType) = $op(convert(AbstractMatrix, L.L))
+    @eval Base.convert(::Type{AbstractMatrix}, L::$LType) = $op(convert(AbstractMatrix, L.L))
 
     # traits
     @eval Base.size(L::$LType) = size(L.L) |> reverse
@@ -634,7 +637,7 @@ for (op, LType, VType) in (
 
     # v' ← α * (u' * A') + β * v'
     # v  ← α * (A  * u ) + β * v
-    @eval function LinearAlgebra.mul!(v::$VType, u::$VType, L::$LType, α::Number, β::Number)
+    @eval function LinearAlgebra.mul!(v::$VType, u::$VType, L::$LType, α, β)
         mul!(v.parent, L.L, u.parent, α, β)
         v
     end
@@ -653,5 +656,79 @@ for (op, LType, VType) in (
         u
     end
 end
-#
+
+"""
+    Lazy Operator Inverse
+"""
+struct InvertedOperator{T, LType, C} <: AbstractSciMLOperator{T}
+    L::LType
+    cache::C
+    isset::Bool
+
+    function InvertedOperator(L::AbstractSciMLOperator{T}, cache, isset) where{T}
+        isset = cache !== nothing
+        new{T,typeof(L),typeof(cache)}(L, cache, isset)
+    end
+end
+
+function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
+    isset = cache !== nothing
+    InvertedOperator(L, cache, isset)
+end
+
+Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
+Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
+
+Base.size(L::InvertedOperator) = size(L.L) |> reverse
+Base.adjoint(L::InvertedOperator) = InvertedOperator(L.L')
+
+getops(L::InvertedOperator) = (L.L,)
+
+has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
+has_ldiv(L::InvertedOperator) = has_mul(L.L)
+has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
+
+@forward InvertedOperator.L (
+                             # LinearAlgebra
+                             LinearAlgebra.isreal,
+                             LinearAlgebra.issymmetric,
+                             LinearAlgebra.ishermitian,
+                             LinearAlgebra.isposdef,
+                             LinearAlgebra.opnorm,
+
+                             # SciML
+                             isconstant,
+                             has_adjoint,
+                            )
+
+Base.:*(L::InvertedOperator, u::AbstractVector) = L.L \ u
+Base.:\(L::InvertedOperator, u::AbstractVector) = L.L * u
+
+function cache_operator(L::InvertedOperator, u::AbstractVector)
+    cache = similar(u)
+    @set! L.cache = cache
+    L
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector)
+    ldiv!(v, L.L, u)
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector, α, β)
+    @assert L.isset "cache needs to be set up to use 5 arg LinearAlgebra.ldiv!"
+    copy!(L.cache, v)
+    ldiv!(v, L.L, u)
+    lmul!(α, v)
+    axpy!(β, L.cache, v)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVector, L::InvertedOperator, u)
+    mul!(v, L.L, u)
+end
+
+function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVector)
+    @assert L.isset "cache needs to be set up to use 2 arg LinearAlgebra.ldiv!"
+    copy!(L.cache, u)
+    mul!(u, L.L, L.cache)
+end
 #

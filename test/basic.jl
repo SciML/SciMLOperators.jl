@@ -8,6 +8,8 @@ using SciMLOperators: IdentityOperator,
                       ComposedOperator,
                       AdjointedOperator,
                       TransposedOperator,
+                      InvertedOperator,
+
                       AbstractAdjointedVector,
                       AbstractTransposedVector,
 
@@ -236,5 +238,24 @@ end
         v=rand(N); @test ldiv!(op(v), op(u), DDt) ≈ op(D \ u)
         v=copy(u); @test ldiv!(op(u), DDt) ≈ op(D \ v)
     end
+end
+
+@testset "InvertedOperator" begin
+    s  = rand(N)
+    D  = Diagonal(s) |> MatrixOperator
+    Di = InvertedOperator(D)
+    u  = rand(N)
+    α  = rand()
+    β  = rand()
+
+    Di = cache_operator(Di, u)
+
+    @test Di * u ≈ u ./ s
+    v=rand(N); @test mul!(v, Di, u) ≈ u ./ s
+    v=rand(N); w=copy(v); @test mul!(v, Di, u, α, β) ≈ α *(u ./ s) + β*w
+
+    @test Di \ u ≈ u .* s
+    v=rand(N); @test ldiv!(v, Di, u) ≈ u .* s
+    v=copy(u); @test ldiv!(Di, u) ≈ v .* s
 end
 #
