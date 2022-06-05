@@ -192,8 +192,8 @@ end
     AB = kron(A, B)
     op = ⊗(A, B)
     op = cache_operator(op, u)
-    v=rand(N); @test ldiv!(v, op, u) ≈ AB \ u
-#   v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
+    v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
+    v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
 end
 
 @testset "Operator Algebra" begin

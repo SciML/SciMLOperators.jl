@@ -657,10 +657,6 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::TensorProductOperator, u::Abs
 
     # C .= A \ U
     ldiv!(L.cache, L.inner, U)
-
-    @show size(V)
-    @show size(L.outer)
-    @show size(L.cache)
     # V .= C / B' <===> V' .= B \ C'
     ldiv!(transpose(V), L.outer, transpose(L.cache))
 
