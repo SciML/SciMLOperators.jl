@@ -532,12 +532,12 @@ function Base.:*(L::TensorOperator, u::AbstractVector)
     U = _reshape(u, sz)
 
     V = L.mats[1] * u
-    for i in 2:length(L.mats)
+    for i in 2:length(L.mats)-1
         # views, or,
         # permute dims or something
         V = L.A * V
     end
-    V = V * transpose(L.B)
+    V = V * transpose(L.mats[end])
 
     _vec(V)
 end
@@ -612,7 +612,9 @@ function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractV
     V = _reshape(v, szV)
 
     """ V .= A * U * B' """
+    # C .= A * U
     mul!(L.cache, L.A, U)
+    # V .= U * B'
     mul!(V, L.cache, transpose(L.B))
 
     v
@@ -627,9 +629,11 @@ function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractV
     U = _reshape(u, szU)
     V = _reshape(v, szV)
 
-    """ V .= A * U * B' """
+    """ V .= α(A * U * B') + β(V)"""
+    # C .= A * U
     mul!(L.cache, L.A, U)
-    mul!(V, L.cache, transpose(L.B))
+    # V = α(C * B') + β(V)"""
+    mul!(V, L.cache, transpose(L.B), α, β)
 
     v
 end
