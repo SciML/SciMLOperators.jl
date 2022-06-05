@@ -561,13 +561,20 @@ struct TensorProductOperator{T,A,B,C} <: AbstractSciMLOperator{T}
     end
 end
 
-# pairwise fusion
-TensorProductOperator(ops::AbstractMatrix...) = reduce(TensorProductOperator, ops)
-
-function TensorProductOperator(A::AbstractMatrix, B::AbstractMatrix; cache = nothing)
+function TensorProductOperator(A, B; cache = nothing)
     isset = cache !== nothing
     TensorProductOperator(A, B, cache, isset)
 end
+
+TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
+function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
+    convert(AbstractMatrix, L.A) ⊗ convert(AbstractMatrix, L.B)
+end
+function SparseArrays.sparse(L::TensorProductOperator)
+    sparse(L.A) ⊗ sparse(L.B)
+end
+
+LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
 
 Base.size(L::TensorProductOperator) = size(L.A) .* size(L.B)
 
@@ -584,17 +591,37 @@ for op in (
     end
 end
 
+getops(L::TensorProductOperator) = (L.A, L.B)
+islinear(L::TensorProductOperator) = islinear(L.A) & islinear(L.B)
+Base.iszero(L::TensorProductOperator) = iszero(L.A) | iszero(L.B)
+has_adjoint(L::TensorProductOperator) = has_adjoint(L.A) & has_adjoint(L.B)
+has_mul!(L::TensorProductOperator) = has_mul!(L.A) & has_mul!(L.B)
+has_ldiv(L::TensorProductOperator) = has_ldiv(L.A) & has_ldiv(L.B)
+has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.A) & has_ldiv!(L.B)
+
 # operator application
 function Base.:*(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.A, 2), size(L.B, 2))
-    U = _reshape(u, sz)
+    U  = _reshape(u, sz)
+
     V = L.A * U * transpose(L.B)
+
+    _vec(V)
+end
+
+function Base.:\(L::TensorProductOperator, u::AbstractVector)
+    sz = (size(L.A, 2), size(L.B, 2))
+    U  = _reshape(u, sz)
+
+    C = L.A \ U
+    V = transpose(L.B \ transpose(C))
+
     _vec(V)
 end
 
 function cache_operator(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.A, 2), size(L.B, 2))
-    U = _reshape(u, sz)
+    U  = _reshape(u, sz)
     cache = A * U
 
     @set! L.cache = cache
