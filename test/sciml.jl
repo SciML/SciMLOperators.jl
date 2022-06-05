@@ -72,6 +72,8 @@ end
     u = rand(N)
     p = nothing
     t = 0.0
+    α = rand()
+    β = rand()
 
     A = rand(N,N) |> Symmetric
     F = lu(A)
@@ -131,10 +133,14 @@ end
     @test !has_ldiv(op2)
     @test has_ldiv!(op2)
 
-    v = zero(u); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
-    v = zero(u); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
+    op2 = cache_operator(op2, u)
 
-    v = zero(u); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
+    v = rand(N); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
+    v = rand(N); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
+    v = rand(N); w=copy(v); @test α*(A*u)+ β*w ≈ mul!(v, op2, u, α, β)
+
+    v = rand(N); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
+    v = copy(u); @test A \ v ≈ ldiv!(op2, u)
 end
 
 @testset "Operator Algebra" begin

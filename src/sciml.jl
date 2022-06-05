@@ -286,11 +286,21 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOpera
     """ Cache """
     cache::C
 
-    function FunctionOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t, isset, cache)
+    function FunctionOperator(op,
+                              op_adjoint,
+                              op_inverse,
+                              op_adjoint_inverse,
+                              traits,
+                              p,
+                              t,
+                              isset,
+                              cache
+                             )
+
         iip = traits.isinplace
         T   = traits.T
 
-        isset = cache isa Nothing
+        isset = cache !== nothing
 
         new{iip,
             T,
@@ -303,7 +313,15 @@ struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOpera
             typeof(t),
             typeof(cache),
            }(
-             op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t, isset, cache,
+             op,
+             op_adjoint,
+             op_inverse,
+             op_adjoint_inverse,
+             traits,
+             p,
+             t,
+             isset,
+             cache,
             )
     end
 end
@@ -367,7 +385,7 @@ function FunctionOperator(op;
               size = size,
              )
 
-    isset = cache isa Nothing
+    isset = cache !== nothing
 
     FunctionOperator(
                      op,
@@ -411,10 +429,19 @@ function Base.adjoint(L::FunctionOperator)
     t = L.t
 
     cache = issquare(L) ? cache : nothing
-    isset = cache isa Nothing
+    isset = cache !== nothing
 
 
-    FuncitonOperator(op, op_adjoint, op_inverse, op_adjoint_inverse, traits, p, t, isset, cache)
+    FuncitonOperator(op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     traits,
+                     p,
+                     t,
+                     isset,
+                     cache
+                    )
 end
 
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
@@ -441,7 +468,7 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, L.p, L.t)
 
-function update_cache(L::FunctionOperator, u::AbstractVector)
+function cache_operator(L::FunctionOperator, u::AbstractVector)
     @set! L.cache = similar(u)
     L
 end
@@ -451,14 +478,11 @@ function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector, α, β)
-    try
-        L.op(v, u, L.p, L.t, α, β)
-    catch
-        copy!(L.cache, v)
-        mul!(v, u, L.p, L.t)
-        lmul!(α, v)
-        axpy!(β, L.cache, v)
-    end
+    @assert L.isset "set up cache by calling cache_operator($L, $u)"
+    copy!(L.cache, v)
+    mul!(v, L, u)
+    lmul!(α, v)
+    axpy!(β, L.cache, v)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
@@ -466,7 +490,8 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::Abstract
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
+    @assert L.isset "set up cache by calling cache_operator($L, $u)"
     copy!(L.cache, u)
-    L.op_inverse(u, L.cache, L.p, L.t)
+    ldiv!(u, L, L.cache)
 end
 #
