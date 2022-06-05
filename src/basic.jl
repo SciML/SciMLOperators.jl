@@ -513,7 +513,7 @@ Base.iszero(L::ComposedOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedOperator) = all(has_adjoint, L.ops)
 has_mul!(L::ComposedOperator) = all(has_mul!, L.ops)
 has_ldiv(L::ComposedOperator) = all(has_ldiv, L.ops)
-has_ldiv!(L::ComposedOperator) = all(has_mul!, L.ops)
+has_ldiv!(L::ComposedOperator) = all(has_ldiv!, L.ops)
 
 factorize(L::ComposedOperator) = prod(factorize, reverse(L.ops))
 for fact in (
