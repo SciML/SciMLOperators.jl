@@ -509,14 +509,47 @@ end
     where U is a lazy representation of the vector u as
     a matrix with the appropriate size.
 """
-struct TensorProduct2DOperator{T,A,B,C} <: SciMLOperators.AbstractSciMLOperator{T}
+
+struct TensorOperator{T,M,C} <: AbstractSciMLOperator{T}
+    mats::M
+    cache::C
+    isset::Bool
+
+    function TensorOperator(mats, cache, isset)
+        T = promote_type(eltype.(mats)...)
+        isset = cache !== nothing
+        new{T,
+            typeof(mats),
+            typeof(cache)
+           }(
+             mats, cache, isset
+            )
+    end
+end
+
+function Base.:*(L::TensorOperator, u::AbstractVector)
+    sz = size.(L.mats, 2)
+    U = _reshape(u, sz)
+
+    V = L.mats[1] * u
+    for i in 2:length(L.mats)
+        # views, or,
+        # permute dims or something
+        V = L.A * V
+    end
+    V = V * transpose(L.B)
+
+    _vec(V)
+end
+
+struct Tensor2DOperator{T,A,B,C} <: AbstractSciMLOperator{T}
     A::A
     B::B
 
     cache::C
     isset::Bool
 
-    function TensorProduct2DOperator(A, B, cache, isset)
+    function Tensor2DOperator(A, B, cache, isset)
         T = promote_type(eltype.((A, B))...)
         isset = cache !== nothing
         new{T,
@@ -528,31 +561,76 @@ struct TensorProduct2DOperator{T,A,B,C} <: SciMLOperators.AbstractSciMLOperator{
             )
     end
 end
-# make this multidimensional by using the multidimensional indexing
-# trick in domains
 
-function TensorProduct2DOperator(A::AbstractMatrix, B::AbstractMatrix; cache = nothing)
+# pairwise fusion
+#TensorOperator(ops::AbstractMatrix...) = reduce(Tensor2DOperator, ops)
+
+function Tensor2DOperator(A::AbstractMatrix, B::AbstractMatrix; cache = nothing)
     isset = cache !== nothing
-    TensorProduct2DOperator(A, B, cache, isset)
+    Tensor2DOperator(A, B, cache, isset)
 end
 
-Base.size(L::TensorProduct2DOperator) = size(A.A) .* size(A.B)
+Base.size(L::Tensor2DOperator) = size(L.A) .* size(L.B)
 
 for op in (
            :adjoint,
            :transpose,
           )
-    @eval function Base.$op(L::TensorProduct2DOperator)
-        TensorProduct2DOperator($op(L.A),
-                                $op(L.B);
-                                cache = issquare(A) ? L.cache : nothing
-                               )
+    @eval function Base.$op(L::Tensor2DOperator)
+        Tensor2DOperator(
+                         $op(L.A),
+                         $op(L.B);
+                         cache = issquare(A) ? L.cache : nothing
+                        )
     end
 end
 
-function Base.:*(L::TensorProduct2DOperator, u::AbstractVector)
+# operator application
+function Base.:*(L::Tensor2DOperator, u::AbstractVector)
     sz = (size(L.A, 2), size(L.B, 2))
-    u = _reshape(u, sz)
-    v = L.A * u * transpose(L.B)
+    U = _reshape(u, sz)
+    V = L.A * U * transpose(L.B)
+    _vec(V)
+end
+
+function cache_operator(L::Tensor2DOperator, u::AbstractVector)
+    sz = (size(L.A, 2), size(L.B, 2))
+    U = _reshape(u, sz)
+    cache = A * U
+
+    @set! L.cache = cache
+    L
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractVector)
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+
+    szU = (size(L.A, 2), size(L.B, 2)) # in
+    szV = (size(L.A, 1), size(L.B, 1)) # out
+
+    U = _reshape(u, szU)
+    V = _reshape(v, szV)
+
+    """ V .= A * U * B' """
+    mul!(L.cache, L.A, U)
+    mul!(V, L.cache, transpose(L.B))
+
+    v
+end
+
+function LinearAlgebra.mul!(v::AbstractVector, A::Tensor2DOperator, u::AbstractVector, α, β)
+    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+
+    szU = (size(L.A, 2), size(L.B, 2)) # in
+    szV = (size(L.A, 1), size(L.B, 1)) # out
+
+    U = _reshape(u, szU)
+    V = _reshape(v, szV)
+
+    """ V .= A * U * B' """
+    mul!(L.cache, L.A, U)
+    mul!(V, L.cache, transpose(L.B))
+
+    v
 end
 #

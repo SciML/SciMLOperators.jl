@@ -6,6 +6,7 @@ using LinearAlgebra
 import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
+import Base: ReshapedArray
 import Lazy: @forward
 import Setfield: @set!
 
@@ -44,7 +45,9 @@ export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
        AffineOperator,
-       FunctionOperator
+       FunctionOperator,
+       TensorOperator,
+       Tensor2DOperator #TODO rm when done with general case
 
 export update_coefficients!,
        update_coefficients,
