@@ -11,7 +11,6 @@ makedocs(
                              assets = ["assets/favicon.ico"],
                              canonical="https://scimlbase.sciml.ai/stable/"),
     pages=pages
-    ]
 )
 
 deploydocs(
