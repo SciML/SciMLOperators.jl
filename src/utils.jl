@@ -1,7 +1,9 @@
 #
 """ use Base.ReshapedArray """
-_reshape(a,dims::NTuple{D,Int}) where{D} = reshape(a,dims)
-_reshape(a::Array, dims::NTuple{D,Int}) where{D} = ReshapedArray(a, dims, ())
+_reshape(a, dims::NTuple{D,Int}) where{D} = reshape(a,dims)
+function _reshape(a::AbstractArray, dims::NTuple{D,Int}) where{D}
+    ReshapedArray(a, dims, ())
+end
 
 _vec(a) = vec(a)
 _vec(a::AbstractVector) = a

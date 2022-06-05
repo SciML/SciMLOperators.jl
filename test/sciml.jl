@@ -144,35 +144,39 @@ end
 @testset "TensorProductOperator" begin
     m1, n1 = 3 , 5
     m2, n2 = 7 , 11
-    m2, n2 = 13, 17
+    m3, n3 = 13, 17
 
     A = rand(m1, n1)
     B = rand(m2, n2)
     C = rand(m3, n3)
-    u = rand(n1*n2*n3)
     α = rand()
     β = rand()
 
-    AB  = A ⊗ B
-    ABC = A ⊗ B ⊗ C
+    AB  = kron(A, B)
+    ABC = kron(A, B, C)
      
-    ABmulu = AB * u
-    ABdivu = AB \ u
+    u2 = rand(n1*n2)
+    u3 = rand(n1*n2*n3)
 
-    ABCmulu = ABC * u
-    ABCdivu = ABC \ u
+    ABmulu = AB * u2
+    ABCmulu = ABC * u3
 
-    opAB  = ⊗(A, B)
-    opABC = ⊗(A, B, C)
+    opAB  = TensorProductOperator(A, B)
+    opABC = TensorProductOperator(A, B, C)
 
     @test opAB  isa TensorProductOperator
     @test opABC isa TensorProductOperator
 
-    @test opAB * u ≈ ABmulu
-    @test opAB \ u ≈ ABdivu
+    @test convert(AbstractMatrix, opAB)  ≈ AB
+    @test convert(AbstractMatrix, opABC) ≈ ABC
 
-#   op = cache_operator(op, u)
-#   v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
+    @test opAB * u2 ≈ AB * u2
+
+#   @test opABC * u3 ≈ ABCmulu #TODO allow SciMLOperators to act on AbstractArrays
+
+    opAB  = cache_operator(opAB,  u2)
+#   opABC = cache_operator(opABC, u3)
+    v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
 #   v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
 
 #   A = rand(N) |> Diagonal |> MatrixOperator

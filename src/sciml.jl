@@ -134,13 +134,6 @@ for op in (
     end
 end
 
-for op in (
-           :*, :∘
-          )
-    @eval Base.$op(A::AbstractMatrix, B::AbstractSciMLOperator) = $op(MatrixOperator(A), B)
-    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractMatrix) = $op(A, MatrixOperator(B))
-end
-
 """ Diagonal Operator """
 DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
@@ -501,38 +494,6 @@ function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
     ldiv!(u, L, L.cache)
 end
 
-#struct TensorOperator{T,M,C} <: AbstractSciMLOperator{T}
-#    mats::M
-#    cache::C
-#    isset::Bool
-#
-#    function TensorOperator(mats, cache, isset)
-#        T = promote_type(eltype.(mats)...)
-#        isset = cache !== nothing
-#        new{T,
-#            typeof(mats),
-#            typeof(cache)
-#           }(
-#             mats, cache, isset
-#            )
-#    end
-#end
-#
-#function Base.:*(L::TensorOperator, u::AbstractVector)
-#    sz = size.(L.mats, 2)
-#    U = _reshape(u, sz)
-#
-#    V = L.mats[1] * u
-#    for i in 2:length(L.mats)-1
-#        # views, or,
-#        # permute dims or something
-#        V = L.A * V
-#    end
-#    V = V * transpose(L.mats[end])
-#
-#    _vec(V)
-#end
-
 """
     Lazy Tensor Product Operator
 
@@ -565,15 +526,16 @@ end
 
 function TensorProductOperator(out, in; cache = nothing)
     isset = cache !== nothing
-    TensorProductOperator(A, B, cache, isset)
+    TensorProductOperator(out, in, cache, isset)
 end
 
+⊗(ops...) = TensorProductOperator(ops...)
 TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
-    convert(AbstractMatrix, L.outer) ⊗ convert(AbstractMatrix, L.inner)
+    kron(convert(AbstractMatrix, L.outer), convert(AbstractMatrix, L.inner))
 end
 function SparseArrays.sparse(L::TensorProductOperator)
-    sparse(L.outer) ⊗ sparse(L.inner)
+    kron(sparse(L.outer) ⊗ sparse(L.inner))
 end
 
 #LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
@@ -606,9 +568,10 @@ function Base.:*(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
 
-    V = L.inner * U * transpose(L.outer)
+    C = (L.inner * U)
+    V = transpose(L.outer * transpose(C))
 
-    _vec(V)
+    v = _vec(V)
 end
 
 function Base.:\(L::TensorProductOperator, u::AbstractVector)
@@ -627,6 +590,10 @@ function cache_operator(L::TensorProductOperator, u::AbstractVector)
     cache = A * U
 
     @set! L.cache = cache
+
+    L.inner isa AbstractSciMLOperator && @set! L.inner = cache_operator(L.inner)
+    L.outer isa AbstractSciMLOperator && @set! L.outer = cache_operator(L.outer)
+
     L
 end
 
