@@ -153,9 +153,6 @@ issquare(::Union{
 
                  # Base
                  Number,
-
-                 # SciMLOperators
-                 ScalarOperator,
                 }
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
