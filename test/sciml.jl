@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator
+using SciMLOperators: InvertibleOperator, ⊗
 
 Random.seed!(0)
 N = 8
@@ -95,7 +95,6 @@ end
                            op_inverse=f1i,
 
                            opnorm=true,
-                           isreal=true,
                            issymmetric=true,
                            ishermitian=true,
                            isposdef=true,
@@ -111,7 +110,6 @@ end
                            op_inverse=f2i,
 
                            opnorm=true,
-                           isreal=true,
                            issymmetric=true,
                            ishermitian=true,
                            isposdef=true,
@@ -141,6 +139,61 @@ end
 
     v = rand(N); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
     v = copy(u); @test A \ v ≈ ldiv!(op2, u)
+end
+
+@testset "TensorProductOperator" begin
+    m1, n1 = 3 , 5
+    m2, n2 = 7 , 11
+    m3, n3 = 13, 17
+
+    A = rand(m1, n1)
+    B = rand(m2, n2)
+    C = rand(m3, n3)
+    α = rand()
+    β = rand()
+
+    AB  = kron(A, B)
+    ABC = kron(A, B, C)
+
+    u2 = rand(n1*n2)
+    u3 = rand(n1*n2*n3)
+
+    opAB  = TensorProductOperator(A, B)
+    opABC = TensorProductOperator(A, B, C)
+
+    @test opAB  isa TensorProductOperator
+    @test opABC isa TensorProductOperator
+
+    @test convert(AbstractMatrix, opAB)  ≈ AB
+    @test convert(AbstractMatrix, opABC) ≈ ABC
+
+    @test opAB * u2 ≈ AB * u2
+#   @test opABC * u3 ≈ ABCmulu #TODO allow SciMLOperators to act on AbstractArrays
+
+    opAB  = cache_operator(opAB,  u2)
+#   opABC = cache_operator(opABC, u3)
+
+    N2 = n1*n2
+    N3 = n1*n2*n3
+    M2 = m1*m2
+    M3 = m1*m2*m3
+    v2=rand(M2); @test mul!(v2, opAB , u2) ≈ AB  * u2
+#   v=rand(M3); @test mul!(v, opABC, u) ≈ ABC * u3
+
+    v2=rand(M2); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
+#   v3=rand(M3); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
+
+    N1 = 8
+    N2 = 12
+    A = Bidiagonal(rand(N1,N1), :L)
+    B = Bidiagonal(rand(N2,N2), :L)
+    u = rand(N1*N2)
+
+    AB = kron(A, B)
+    op = ⊗(A, B)
+    op = cache_operator(op, u)
+    v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
+    v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
 end
 
 @testset "Operator Algebra" begin

@@ -6,11 +6,13 @@ using LinearAlgebra
 import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
+import Base: ReshapedArray
 import Lazy: @forward
 import Setfield: @set!
 
 # overload
-import Base: size, +, -, *, /, \, adjoint, ∘, inv, one, convert, Matrix, iszero, ==
+import Base: +, -, *, /, \, ∘, ==
+import Base: conj, one, iszero, inv, adjoint, transpose, size, convert, Matrix
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp, Diagonal
 import SparseArrays: sparse
 
@@ -34,6 +36,7 @@ $(TYPEDEF)
 """
 abstract type AbstractMatrixFreeOperator{T} <: AbstractSciMLOperator{T} end
 
+include("utils.jl")
 include("interface.jl")
 include("basic.jl")
 include("sciml.jl")
@@ -42,7 +45,8 @@ export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
        AffineOperator,
-       FunctionOperator
+       FunctionOperator,
+       TensorProductOperator
 
 export update_coefficients!,
        update_coefficients,

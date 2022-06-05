@@ -18,9 +18,10 @@ Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(
 # traits
 Base.size(::IdentityOperator{N}) where{N} = (N, N)
 Base.adjoint(A::IdentityOperator) = A
+Base.transpose(A::IdentityOperator) = A
 LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
-             :isreal, :issymmetric, :ishermitian, :isposdef,
+             :issymmetric, :ishermitian, :isposdef,
             )
     @eval LinearAlgebra.$pred(::IdentityOperator) = true
 end
@@ -98,9 +99,10 @@ Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zero
 # traits
 Base.size(::NullOperator{N}) where{N} = (N, N)
 Base.adjoint(A::NullOperator) = A
+Base.transpose(A::NullOperator) = A
 LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
 for pred in (
-             :isreal, :issymmetric, :ishermitian,
+             :issymmetric, :ishermitian,
             )
     @eval LinearAlgebra.$pred(::NullOperator) = true
 end
@@ -184,6 +186,7 @@ function Base.adjoint(α::ScalarOperator) # TODO - test
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
     ScalarOperator(val; update_func=update_func)
 end
+Base.transpose(α::ScalarOperator) = α
 
 getops(α::ScalarOperator) = (α.val)
 islinear(L::ScalarOperator) = true
@@ -286,7 +289,12 @@ SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
 Base.size(L::ScaledOperator) = size(L.L)
-Base.adjoint(L::ScaledOperator) = ScaledOperator(L.λ', L.op')
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.op))
+end
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledOperator) = (L.λ, L.L)
@@ -404,7 +412,12 @@ SparseArrays.sparse(L::AddedOperator) = sum(_sparse, L.ops)
 
 # traits
 Base.size(L::AddedOperator) = size(first(L.ops))
-Base.adjoint(L::AddedOperator) = AddedOperator(adjoint.(L.ops)...)
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
+end
 
 getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -486,7 +499,12 @@ SparseArrays.sparse(L::ComposedOperator) = prod(_sparse, L.ops)
 
 # traits
 Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
-Base.adjoint(L::ComposedOperator) = ComposedOperator(adjoint.(reverse(L.ops)))
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...)
+end
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 getops(L::ComposedOperator) = L.ops
@@ -495,7 +513,7 @@ Base.iszero(L::ComposedOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedOperator) = all(has_adjoint, L.ops)
 has_mul!(L::ComposedOperator) = all(has_mul!, L.ops)
 has_ldiv(L::ComposedOperator) = all(has_ldiv, L.ops)
-has_ldiv!(L::ComposedOperator) = all(has_mul!, L.ops)
+has_ldiv!(L::ComposedOperator) = all(has_ldiv!, L.ops)
 
 factorize(L::ComposedOperator) = prod(factorize, reverse(L.ops))
 for fact in (
@@ -593,6 +611,11 @@ end
 AbstractAdjointedVector  = Adjoint{  <:Number, <:AbstractVector}
 AbstractTransposedVector = Transpose{<:Number, <:AbstractVector}
 
+has_adjoint(::AdjointedOperator) = true
+
+Base.transpose(L::AdjointedOperator) = conj(L.L)
+Base.adjoint(L::TransposedOperator) = conj(L.L)
+
 for (op, LType, VType) in (
                            (:adjoint,   :AdjointedOperator,  :AbstractAdjointedVector ),
                            (:transpose, :TransposedOperator, :AbstractTransposedVector),
@@ -606,12 +629,10 @@ for (op, LType, VType) in (
     @eval Base.size(L::$LType) = size(L.L) |> reverse
     @eval Base.$op(L::$LType) = L.L
 
-    @eval has_adjoint(L::$LType) = true
     @eval getops(L::$LType) = (L.L,)
 
     @eval @forward $LType.L (
                              # LinearAlgebra
-                             LinearAlgebra.isreal,
                              LinearAlgebra.issymmetric,
                              LinearAlgebra.ishermitian,
                              LinearAlgebra.isposdef,
@@ -690,7 +711,6 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 
 @forward InvertedOperator.L (
                              # LinearAlgebra
-                             LinearAlgebra.isreal,
                              LinearAlgebra.issymmetric,
                              LinearAlgebra.ishermitian,
                              LinearAlgebra.isposdef,
