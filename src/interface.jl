@@ -1,17 +1,19 @@
 #
 ###
-# (u,p,t) and (du,u,p,t) interface
+# Operator interface
 ###
 
-#=
-1. Function call and multiplication: L(du, u, p, t) for inplace and du = L(u, p, t) for
-   out-of-place, meaning L*u and mul!(du, L, u).
-2. If the operator is not a constant, update it with (u,p,t). A mutating form, i.e.
-   update_coefficients!(A,u,p,t) that changes the internal coefficients, and a
-   out-of-place form B = update_coefficients(A,u,p,t).
-3. isconstant(A) trait for whether the operator is constant or not.
-4. islinear(A) trait for whether the operator is linear or not.
-=#
+"""
+Function call and multiplication:
+    - L(du, u, p, t) for in-place operator evaluation,
+    - du = L(u, p, t) for out-of-place operator evaluation
+
+If the operator is not a constant, update it with (u,p,t). A mutating form, i.e.
+update_coefficients!(A,u,p,t) that changes the internal coefficients, and a
+out-of-place form B = update_coefficients(A,u,p,t).
+
+"""
+function (::AbstractSciMLOperator) end
 
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 
@@ -39,7 +41,7 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractVector)
 end
 
 ###
-# AbstractSciMLOperator Traits
+# Operator Traits
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
@@ -94,7 +96,7 @@ islinear(::Union{
                  # Base
                  Number,
 
-                 # SciMLOperator
+                 # SciMLOperators
                  AbstractSciMLLinearOperator,
                 }
         ) = true
@@ -139,15 +141,21 @@ has_adjoint(::Union{
                     # Base
                     Number,
 
-                    # SciMLOperator
+                    # SciMLOperators
                     AbstractSciMLLinearOperator,
                    }
            ) = true
 
 issquare(A) = size(A,1) === size(A,2)
 issquare(::Union{
+                 # LinearAlgebra
                  UniformScaling,
+
+                 # Base
                  Number,
+
+                 # SciMLOperators
+                 ScalarOperator,
                 }
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
