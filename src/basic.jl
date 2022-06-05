@@ -21,7 +21,7 @@ Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
 LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
-             :isreal, :issymmetric, :ishermitian, :isposdef,
+             :issymmetric, :ishermitian, :isposdef,
             )
     @eval LinearAlgebra.$pred(::IdentityOperator) = true
 end
@@ -102,7 +102,7 @@ Base.adjoint(A::NullOperator) = A
 Base.transpose(A::NullOperator) = A
 LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
 for pred in (
-             :isreal, :issymmetric, :ishermitian,
+             :issymmetric, :ishermitian,
             )
     @eval LinearAlgebra.$pred(::NullOperator) = true
 end
@@ -611,6 +611,11 @@ end
 AbstractAdjointedVector  = Adjoint{  <:Number, <:AbstractVector}
 AbstractTransposedVector = Transpose{<:Number, <:AbstractVector}
 
+has_adjoint(::AdjointedOperator) = true
+
+Base.transpose(L::AdjointedOperator) = conj(L.L)
+Base.adjoint(L::TransposedOperator) = conj(L.L)
+
 for (op, LType, VType) in (
                            (:adjoint,   :AdjointedOperator,  :AbstractAdjointedVector ),
                            (:transpose, :TransposedOperator, :AbstractTransposedVector),
@@ -624,12 +629,10 @@ for (op, LType, VType) in (
     @eval Base.size(L::$LType) = size(L.L) |> reverse
     @eval Base.$op(L::$LType) = L.L
 
-    @eval has_adjoint(L::$LType) = true
     @eval getops(L::$LType) = (L.L,)
 
     @eval @forward $LType.L (
                              # LinearAlgebra
-                             LinearAlgebra.isreal,
                              LinearAlgebra.issymmetric,
                              LinearAlgebra.ishermitian,
                              LinearAlgebra.isposdef,
@@ -708,7 +711,6 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 
 @forward InvertedOperator.L (
                              # LinearAlgebra
-                             LinearAlgebra.isreal,
                              LinearAlgebra.issymmetric,
                              LinearAlgebra.ishermitian,
                              LinearAlgebra.isposdef,

@@ -95,7 +95,6 @@ end
                            op_inverse=f1i,
 
                            opnorm=true,
-                           isreal=true,
                            issymmetric=true,
                            ishermitian=true,
                            isposdef=true,
@@ -111,7 +110,6 @@ end
                            op_inverse=f2i,
 
                            opnorm=true,
-                           isreal=true,
                            issymmetric=true,
                            ishermitian=true,
                            isposdef=true,

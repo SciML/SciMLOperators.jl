@@ -19,7 +19,6 @@ Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator
 
 # traits
 @forward MatrixOperator.A (
-                           LinearAlgebra.isreal,
                            LinearAlgebra.issymmetric,
                            LinearAlgebra.ishermitian,
                            LinearAlgebra.isposdef,
@@ -203,7 +202,6 @@ getops(L::InvertibleOperator) = (L.F,)
 
 @forward InvertibleOperator.F (
                                # LinearAlgebra
-                               LinearAlgebra.isreal,
                                LinearAlgebra.issymmetric,
                                LinearAlgebra.ishermitian,
                                LinearAlgebra.isposdef,
@@ -355,7 +353,6 @@ function FunctionOperator(op;
 
                           # traits
                           opnorm=nothing,
-                          isreal=true,
                           issymmetric=false,
                           ishermitian=false,
                           isposdef=false,
@@ -370,6 +367,7 @@ function FunctionOperator(op;
     T isa Nothing  && @error "Please provide a Number type for the Operator"
     size isa Nothing  && @error "Please provide a size (m, n)"
 
+    isreal = T <: Real
     adjointable = ishermitian | (isreal & issymmetric)
     invertible  = !(op_inverse isa Nothing)
 
@@ -385,7 +383,6 @@ function FunctionOperator(op;
 
     traits = (;
               opnorm = opnorm,
-              isreal = isreal,
               issymmetric = issymmetric,
               ishermitian = ishermitian,
               isposdef = isposdef,
@@ -463,7 +460,6 @@ function LinearAlgebra.opnorm(L::FunctionOperator, p)
   opn = L.opnorm
   return opn isa Number ? opn : M.opnorm(p)
 end
-LinearAlgebra.isreal(L::FunctionOperator) = L.traits.isreal
 LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef

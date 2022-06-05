@@ -161,6 +161,11 @@ issquare(A...) = @. (&)(issquare(A)...)
 # default linear operator traits
 ###
 
+Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
+function Base.conj(L::AbstractSciMLOperator)
+    isreal(L) && return L
+    convert(AbstractMatrix, L) |> conj
+end
 function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
     size(L1) != size(L2) && return false
     convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
@@ -183,7 +188,6 @@ end
 LinearAlgebra.exp(L::AbstractSciMLLinearOperator) = exp(Matrix(L))
 LinearAlgebra.opnorm(L::AbstractSciMLLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 for pred in (
-             :isreal,
              :issymmetric,
              :ishermitian,
              :isposdef,
