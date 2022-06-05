@@ -156,8 +156,10 @@ issquare(A...) = @. (&)(issquare(A)...)
 # default linear operator traits
 ###
 
-Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator) =
+function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator) =
+    size(L1) != size(L2) && return false
     convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
+end
 
 LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
 has_exp(L::AbstractSciMLLinearOperator) = true
