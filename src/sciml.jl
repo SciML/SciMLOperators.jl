@@ -664,11 +664,11 @@ function LinearAlgebra.ldiv!(A::Tensor2DOperator, u::AbstractVector)
 
     U = _reshape(u, sz)
 
-    """ V .= A * U * B' """
-    # C .= A \ U
-    ldiv!(L.cache, L.A, U)
-    # V .= U / B' <===> V' .= B \ U'
-    ldiv!(transpose(U), L.B, transpose(L.cache))
+    """ U .= A * U * B' """
+    # U .= A \ U
+    ldiv!(L.A, U)
+    # U .= U / B' <===> U' .= B \ U'
+    ldiv!(L.B, transpose(U))
 
     u
 end
