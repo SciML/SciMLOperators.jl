@@ -3,3 +3,4 @@ pages = [
         "Operators" => Any[
             "operators/matrix_free_operators.md",
         ]
+]
