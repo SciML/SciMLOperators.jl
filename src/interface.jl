@@ -172,7 +172,6 @@ expmv(L::AbstractSciMLLinearOperator,u,p,t) = exp(L,t)*u
 expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
 
 Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
-Base.adjoint(A::AbstractSciMLLinearOperator) = Adjoint(A) # TODO write lazy adjoint operator interface here
 
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N}
     convert(AbstractMatrix, L)[I...]

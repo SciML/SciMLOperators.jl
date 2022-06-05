@@ -29,7 +29,17 @@ Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator
                            has_ldiv!,
                           )
 Base.size(L::MatrixOperator) = size(L.A)
-Base.adjoint(L::MatrixOperator) = MatrixOperator(L.A'; update_func=(A,u,p,t)->L.update_func(L.A,u,p,t)')
+for op in (
+           :adjoint,
+           :transpose,
+          )
+    @eval function Base.$op(L::MatrixOperator)
+        MatrixOperator(
+                       $op(L.A);
+                       update_func = (A,u,p,t) -> $op(L.update_func(L.A,u,p,t))
+                      )
+    end
+end
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
 update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
@@ -493,5 +503,56 @@ function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
     @assert L.isset "set up cache by calling cache_operator($L, $u)"
     copy!(L.cache, u)
     ldiv!(u, L, L.cache)
+end
+
+"""
+    Lazy Tensor Product Operator
+
+    (A ⊗ B)(u) = vec(A * U * transpose(B))
+
+    where U is a lazy representation of the vector u as
+    a matrix with the appropriate size.
+"""
+struct TensorProduct2DOperator{T,A,B,C} <: SciMLOperators.AbstractSciMLOperator{T}
+    A::A
+    B::B
+
+    cache::C
+    isset::Bool
+
+    function TensorProduct2DOperator(A, B, cache, isset)
+        T = promote_type(eltype.((A, B))...)
+        isset = cache !== nothing
+        new{T,
+            typeof(A),
+            typeof(B),
+            typeof(cache)
+           }(
+             A, B, cache, isset
+            )
+    end
+end
+# make this multidimensional by using the multidimensional indexing
+# trick in domains
+
+function TensorProduct2DOperator(A::AbstractMatrix, B::AbstractMatrix; cache = nothing)
+    isset = cache !== nothing
+    TensorProduct2DOperator(A, B, cache, isset)
+end
+
+Base.size(L::TensorProduct2DOperator) = size(A.A) .* size(A.B)
+
+for op in (
+           :adjoint,
+           :transpose,
+          )
+function Base.adjoint(L::TensorProduct2DOperator)
+    TensorProduct2DOperator(L.A', L.B'; cache = issquare(A) ? L.cache : nothing)
+end
+
+function Base.:*(L::TensorProduct2DOperator, u::AbstractVector)
+    sz = (size(L.A, 2), size(L.B, 2))
+    u = _reshape(u, sz)
+    v = L.A * u * transpose(L.B)
 end
 #

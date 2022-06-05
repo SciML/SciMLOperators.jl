@@ -34,6 +34,7 @@ $(TYPEDEF)
 """
 abstract type AbstractMatrixFreeOperator{T} <: AbstractSciMLOperator{T} end
 
+include("utils.jl")
 include("interface.jl")
 include("basic.jl")
 include("sciml.jl")
