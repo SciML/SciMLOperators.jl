@@ -587,7 +587,7 @@ end
 function cache_operator(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
-    cache = A * U
+    cache = L.inner * U
 
     @set! L.cache = cache
 
@@ -597,7 +597,7 @@ function cache_operator(L::TensorProductOperator, u::AbstractVector)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     szU = (size(L.inner, 2), size(L.outer, 2)) # in
@@ -606,7 +606,10 @@ function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::Abst
     U = _reshape(u, szU)
     V = _reshape(v, szV)
 
-    """ V .= A * U * B' """
+    """
+        v .= kron(B, A) * u
+        V .= A * U * B'
+    """
 
     # C .= A * U
     mul!(L.cache, L.inner, U)
@@ -616,7 +619,7 @@ function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::Abst
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector, α, β)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     szU = (size(L.inner, 2), size(L.outer, 2)) # in
@@ -625,7 +628,10 @@ function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::Abst
     U = _reshape(u, szU)
     V = _reshape(v, szV)
 
-    """ V .= α(A * U * B') + β(V)"""
+    """
+        v .= α * kron(B, A) * u + β * v
+        V .= α * (A * U * B') + β * v
+    """
 
     # C .= A * U
     mul!(L.cache, L.inner, U)
@@ -635,7 +641,7 @@ function LinearAlgebra.mul!(v::AbstractVector, A::TensorProductOperator, u::Abst
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, A::TensorProductOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     szU = (size(L.inner, 2), size(L.outer, 2)) # in
@@ -644,23 +650,33 @@ function LinearAlgebra.ldiv!(v::AbstractVector, A::TensorProductOperator, u::Abs
     U = _reshape(u, szU)
     V = _reshape(v, szV)
 
-    """ V .= A * U * B' """
+    """
+        v .= kron(B, A) ldiv u
+        V .= (A ldiv U) / B'
+    """
 
     # C .= A \ U
     ldiv!(L.cache, L.inner, U)
-    # V .= U / B' <===> V' .= B \ U'
+
+    @show size(V)
+    @show size(L.outer)
+    @show size(L.cache)
+    # V .= C / B' <===> V' .= B \ C'
     ldiv!(transpose(V), L.outer, transpose(L.cache))
 
     v
 end
 
-function LinearAlgebra.ldiv!(A::TensorProductOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
 
-    """ U .= A * U * B' """
+    """
+        u .= kron(B, A) ldiv u
+        U .= (A ldiv U) / B'
+    """
 
     # U .= A \ U
     ldiv!(L.inner, U)

@@ -154,12 +154,9 @@ end
 
     AB  = kron(A, B)
     ABC = kron(A, B, C)
-     
+
     u2 = rand(n1*n2)
     u3 = rand(n1*n2*n3)
-
-    ABmulu = AB * u2
-    ABCmulu = ABC * u3
 
     opAB  = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
@@ -171,21 +168,31 @@ end
     @test convert(AbstractMatrix, opABC) ≈ ABC
 
     @test opAB * u2 ≈ AB * u2
-
 #   @test opABC * u3 ≈ ABCmulu #TODO allow SciMLOperators to act on AbstractArrays
 
     opAB  = cache_operator(opAB,  u2)
 #   opABC = cache_operator(opABC, u3)
-    v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
-#   v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
 
-#   A = rand(N) |> Diagonal |> MatrixOperator
-#   B = rand(N) |> Diagonal |> MatrixOperator
-#   C = rand(N) |> Diagonal |> MatrixOperator
+    N2 = n1*n2
+    N3 = n1*n2*n3
+    M2 = m1*m2
+    M3 = m1*m2*m3
+    v2=rand(M2); @test mul!(v2, opAB , u2) ≈ AB  * u2
+#   v=rand(M3); @test mul!(v, opABC, u) ≈ ABC * u3
 
-#   op = ∘(A, B, C)
-#   op = cache_operator(op, u)
-#   v=rand(N); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
+    v2=rand(M2); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
+#   v3=rand(M3); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
+
+    N1 = 8
+    N2 = 12
+    A = Bidiagonal(rand(N1,N1), :L)
+    B = Bidiagonal(rand(N2,N2), :L)
+    u = rand(N1*N2)
+
+    AB = kron(A, B)
+    op = ⊗(A, B)
+    op = cache_operator(op, u)
+    v=rand(N); @test ldiv!(v, op, u) ≈ AB \ u
 #   v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
 end
 
