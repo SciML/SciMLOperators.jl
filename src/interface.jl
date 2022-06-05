@@ -100,7 +100,18 @@ islinear(::Union{
         ) = true
 
 has_mul(L) = true
-has_mul!(L) = true
+
+has_mul!(L) = false
+has_mul!(::Union{
+                 # LinearAlgebra
+                 AbstractVector,
+                 AbstractMatrix,
+                 UniformScaling,
+
+                 # Base
+                 Number,
+                }
+        ) = true
 
 has_ldiv(L) = false
 has_ldiv(::Union{

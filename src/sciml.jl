@@ -19,7 +19,14 @@ Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator
 
 # traits
 @forward MatrixOperator.A (
-                           issquare, has_ldiv, has_ldiv!
+                           LinearAlgebra.isreal,
+                           LinearAlgebra.issymmetric,
+                           LinearAlgebra.ishermitian,
+                           LinearAlgebra.isposdef,
+
+                           issquare,
+                           has_ldiv,
+                           has_ldiv!,
                           )
 Base.size(L::MatrixOperator) = size(L.A)
 Base.adjoint(L::MatrixOperator) = MatrixOperator(L.A'; update_func=(A,u,p,t)->L.update_func(L.A,u,p,t)')
