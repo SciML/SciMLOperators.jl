@@ -29,6 +29,10 @@ end
 (L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 
+###
+# caching interface
+###
+
 """
 Allocate caches for a SciMLOperator for fast evaluation
 
@@ -36,7 +40,13 @@ arguments:
     L :: AbstractSciMLOperator
     u :: AbstractVector argument to L
 """
+cache_operator(L, u) = L
+cache_self(L, u) = L
+cache_internals(L, u) = L
+
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVector)
+    L = cache_self(L, u)
+    L = cache_internals(L, u)
     L
 end
 

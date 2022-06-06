@@ -188,7 +188,7 @@ function Base.adjoint(α::ScalarOperator) # TODO - test
 end
 Base.transpose(α::ScalarOperator) = α
 
-getops(α::ScalarOperator) = (α.val)
+getops(α::ScalarOperator) = (α.val,)
 islinear(L::ScalarOperator) = true
 issquare(L::ScalarOperator) = true
 isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
@@ -297,7 +297,7 @@ for op in (
 end
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
-getops(L::ScaledOperator) = (L.λ, L.L)
+getops(L::ScaledOperator) = (L.λ, L.L,)
 islinear(L::ScaledOperator) = all(islinear, L.ops)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 Base.iszero(L::ScaledOperator) = iszero(L.L) | iszero(L.λ)
@@ -305,6 +305,12 @@ has_adjoint(L::ScaledOperator) = has_adjoint(L.L)
 has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
+
+function cache_internals(L::ScaledOperator, u::AbstractVector)
+    @set! L.L = cache_operator(L.L, u)
+    @set! L.λ = cache_operator(L.λ, u)
+    L
+end
 
 # getindex
 Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.op[i]
@@ -423,6 +429,13 @@ getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
+function cache_internals(L::AddedOperator, u::AbstractVector)
+    for i=1:length(ops)
+        @set! L.ops[i] = cache_operator(L.ops[i], u)
+    end
+    L
+end
+
 getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
@@ -532,30 +545,35 @@ end
 Base.:*(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function cache_operator(L::ComposedOperator, u::AbstractVector)
-    # for 3 arg mul!
-    # Tuple of N-1 cache vectors. cache[N-1] = op[N] * u and so on
-    vec = u
-    c3 = ()
+function cache_self(L::ComposedOperator, u::AbstractVector)
+    vec = similar(u)
+    cache = (vec,)
     for i in reverse(2:length(L.ops))
-        vec = L.ops[i] * vec
-        c3 = (c3..., vec)
+        vec   = L.ops[i] * vec
+        cache = (vec, cache...)
     end
 
-    # for 5 arg mul!
-    c5 = similar(u)
-
-    cache = (;c3=c3, c5=c5)
-
     @set! L.cache = cache
+    L
+end
+
+function cache_internals(L::ComposedOperator, u::AbstractVector)
+    if !(L.isset)
+        L = cache_self(L, u)
+    end
+
+    vecs = L.cache
+    for i in reverse(1:length(L.ops))
+        @set! L.ops[i] = cache_operator(L.ops[i], vecs[i])
+    end
+
     L
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    cache = L.cache.c3
-    vecs = (v, cache..., u)
+    vecs = (v, L.cache[1:end-1]..., u)
     for i in reverse(1:length(L.ops))
         mul!(vecs[i], L.ops[i], vecs[i+1])
     end
@@ -565,7 +583,7 @@ end
 function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α, β)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
-    cache = L.cache.c5
+    cache = L.cache[end]
     copy!(cache, v)
 
     mul!(v, L, u)
@@ -576,8 +594,7 @@ end
 function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
     @assert L.isset "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
 
-    cache = L.cache.c3
-    vecs = (u, reverse(cache)..., v)
+    vecs = (u, reverse(L.cache[1:end-1])..., v)
     for i in 1:length(L.ops)
         ldiv!(vecs[i+1], L.ops[i], vecs[i])
     end
@@ -724,9 +741,14 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 Base.:*(L::InvertedOperator, u::AbstractVector) = L.L \ u
 Base.:\(L::InvertedOperator, u::AbstractVector) = L.L * u
 
-function cache_operator(L::InvertedOperator, u::AbstractVector)
+function cache_self(L::InvertedOperator, u::AbstractVector)
     cache = similar(u)
     @set! L.cache = cache
+    L
+end
+
+function cache_internals(L::InvertedOperator, u::AbstractVector)
+    @set! L.L = cache_operator(L.L, u)
     L
 end
 
