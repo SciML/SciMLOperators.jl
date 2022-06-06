@@ -430,7 +430,7 @@ Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
 function cache_internals(L::AddedOperator, u::AbstractVector)
-    for i=1:length(ops)
+    for i=1:length(L.ops)
         @set! L.ops[i] = cache_operator(L.ops[i], u)
     end
     L
