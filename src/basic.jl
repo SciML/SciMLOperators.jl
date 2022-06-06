@@ -377,6 +377,8 @@ function AddedOperator(ops::AbstractSciMLOperator...)
     AddedOperator(ops)
 end
 
+AddedOperator(L::AbstractSciMLOperator) = L
+
 # constructors
 Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
