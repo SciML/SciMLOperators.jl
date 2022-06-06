@@ -354,7 +354,7 @@ function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVector)
 end
 
 """
-Lazy operator addition (A + B)
+Lazy operator addition
 
     (A1 + A2 + A3...)u = A1*u + A2*u + A3*u ....
 """
@@ -364,10 +364,7 @@ struct AddedOperator{T,
     ops::O
 
     function AddedOperator(ops...)
-        sz = size(first(ops))
-        for op in ops[2:end]
-            @assert size(op) == sz "Size mismatich in operators $ops"
-        end
+        @assert isequal(size.(ops)...) "Size mismatich in operators $ops"
 
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
