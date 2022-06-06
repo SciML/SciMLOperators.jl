@@ -363,15 +363,18 @@ struct AddedOperator{T,
                     } <: AbstractSciMLOperator{T}
     ops::O
 
-    function AddedOperator(ops::AbstractSciMLOperator...)
-        sz = size(first(ops))
-        for op in ops[2:end]
-            @assert size(op) == sz "Size mismatich in operators $ops"
-        end
-
+    function AddedOperator(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
+end
+
+function AddedOperator(ops::AbstractSciMLOperator...)
+    sz = size(first(ops))
+    for op in ops[2:end]
+        @assert size(op) == sz "Size mismatich in operators $ops"
+    end
+    AddedOperator(ops)
 end
 
 # constructors
