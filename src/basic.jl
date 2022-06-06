@@ -249,9 +249,11 @@ struct ScaledOperator{T,
     L::LType
     cache::T
 
-    function ScaledOperator(λ::ScalarOperator, L::AbstractSciMLOperator)
-        T = promote_type(eltype.((λ, L))...)
-        cache = zero(T)
+    function ScaledOperator(λ::ScalarOperator{Tλ},
+                            L::AbstractSciMLOperator{TL},
+                            cache = zero(promote_type(Tλ,TL))
+                           ) where{Tλ,TL}
+        T = promote_type(Tλ, TL)
         new{T,typeof(λ),typeof(L)}(λ, L, cache)
     end
 end
