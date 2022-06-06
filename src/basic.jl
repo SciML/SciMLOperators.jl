@@ -669,6 +669,11 @@ for (op, LType, VType) in (
                              has_ldiv!,
                             )
 
+    @eval function cache_internals(L::$LType, u::AbstractVector)
+        @set! L.L = cache_operator(L.L, _reshape(u, size(L,1)))
+        L
+    end
+
     # oeprator application
     @eval Base.:*(u::$VType, L::$LType) = $op(L.L * u.parent)
     @eval Base.:/(u::$VType, L::$LType) = $op(L.L \ u.parent)
