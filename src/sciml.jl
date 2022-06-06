@@ -135,7 +135,7 @@ for op in (
 end
 
 """ Diagonal Operator """
-DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
+DiagonalOperator(u::AbstractArray) = MatrixOperator(Diagonal(_vec(u)))
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
 """
