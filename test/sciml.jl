@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator, ⊗
+using SciMLOperators: AbstractSciMLOperator, InvertibleOperator, ⊗
 
 Random.seed!(0)
 N = 8
@@ -197,6 +197,30 @@ end
 end
 
 @testset "Operator Algebra" begin
-    # try out array arithmatic
+    N2 = N*N
+    A = rand(N,N)
+    B = rand(N,N)
+    C = rand(N,N)
+    D = rand(N,N)
+
+    u = rand(N2)
+    α = rand()
+    β = rand()
+
+    T1 = ⊗(A, B)
+    T2 = ⊗(C, D)
+
+    D1  = DiagonalOperator(rand(N2))
+    D2  = DiagonalOperator(rand(N2))
+
+    TT = AbstractSciMLOperator[T1, T2]
+    DD = Diagonal(AbstractSciMLOperator[D1, D2]) # TODO - error in display
+
+    op = TT' * DD * TT
+
+    op = cache_operator(op, u)
+
+    v=rand(N2); @test mul!(v, op, u) ≈ op * u
+    v=rand(N2); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
 end
 #
