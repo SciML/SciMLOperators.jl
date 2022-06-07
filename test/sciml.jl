@@ -214,7 +214,7 @@ end
     D2  = DiagonalOperator(rand(N2))
 
     TT = AbstractSciMLOperator[T1, T2]
-    DD = Diagonal(AbstractSciMLOperator[D1, D2]) # TODO - error in display
+    DD = Diagonal(AbstractSciMLOperator[D1, D2])
 
     op = TT' * DD * TT
 
