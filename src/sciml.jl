@@ -457,6 +457,7 @@ LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
+getops(::FunctionOperator) = ()
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(L::FunctionOperator{iip}) where{iip} = !iip
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
@@ -467,7 +468,7 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, L.p, L.t)
 
-function cache_operator(L::FunctionOperator, u::AbstractVector)
+function cache_self(L::FunctionOperator, u::AbstractVector)
     @set! L.cache = similar(u)
     L
 end
@@ -584,16 +585,28 @@ function Base.:\(L::TensorProductOperator, u::AbstractVector)
     _vec(V)
 end
 
-function cache_operator(L::TensorProductOperator, u::AbstractVector)
+function cache_self(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
     cache = L.inner * U
 
     @set! L.cache = cache
+    L
+end
 
-    L.inner isa AbstractSciMLOperator && @set! L.inner = cache_operator(L.inner)
-    L.outer isa AbstractSciMLOperator && @set! L.outer = cache_operator(L.outer)
+function cache_internals(L::TensorProductOperator, u::AbstractVector)
+    if !(L.isset)
+        L = cache_self(L, u)
+    end
 
+    sz = (size(L.inner, 2), size(L.outer, 2))
+    U  = _reshape(u, sz)
+
+    uinner = U
+    uouter = transpose(L.cache)
+
+    @set! L.inner = cache_operator(L.inner, uinner)
+    @set! L.outer = cache_operator(L.outer, uouter)
     L
 end
 
