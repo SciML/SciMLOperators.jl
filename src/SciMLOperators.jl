@@ -11,8 +11,8 @@ import Lazy: @forward
 import Setfield: @set!
 
 # overload
-import Base: +, -, *, /, \, ∘, ==
-import Base: conj, one, iszero, inv, adjoint, transpose, size, convert, Matrix
+import Base: +, -, *, /, \, ∘, ==, one, zero
+import Base: conj, iszero, inv, adjoint, transpose, size, convert, Matrix
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp, Diagonal
 import SparseArrays: sparse
 
