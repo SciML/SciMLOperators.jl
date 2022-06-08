@@ -63,7 +63,7 @@ function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractArray) where{N}
     u
 end
 
-# operator fusion, composition
+# operator fusion with identity returns operator itself
 for op in (
            :*, :∘,
           )
@@ -139,7 +139,9 @@ function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVec
 end
 
 # operator fusion, composition
-for op in (:*, :∘)
+for op in (
+           :*, :∘,
+          )
     @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
         NullOperator{N}()
@@ -151,7 +153,10 @@ for op in (:*, :∘)
     end
 end
 
-for op in (:+, :-)
+# operator addition, subtraction with NullOperator returns operator itself
+for op in (
+           :+, :-,
+          )
     @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A) == (N, N)
         A
@@ -220,19 +225,12 @@ for op in (
         @eval Base.$op(α::ScalarOperator, x::$T) = $op(α.val, x)
         @eval Base.$op(x::$T, α::ScalarOperator) = $op(x, α.val)
     end
-    # TODO should result be Number or ScalarOperator
     @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
-    #@eval function Base.$op(x::ScalarOperator, y::ScalarOperator) # TODO - test
-    #    val = $op(x.val, y.val)
-    #    update_func = (oldval,u,p,t) -> x.update_func(oldval,u,p,t) * y.update_func(oldval,u,p,t)
-    #    ScalarOperator(val; update_func=update_func)
-    #end
 end
 
 for op in (:-, :+)
     @eval Base.$op(α::ScalarOperator, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::ScalarOperator) = $op(x, α.val)
-    # TODO - should result be Number or ScalarOperator?
     @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
 end
 
