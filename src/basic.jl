@@ -417,16 +417,6 @@ for op in (
             AddedOperator(λ*Id, $op(L))
         end
     end
-
-    @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
-        @assert size(A) == size(L)
-        AddedOperator(MatrixOperator(A), $op(L))
-    end
-
-    @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
-        @assert size(A) == size(L)
-        AddedOperator(L, MatrixOperator($op(A)))
-    end
 end
 
 Base.convert(::Type{AbstractMatrix}, L::AddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)

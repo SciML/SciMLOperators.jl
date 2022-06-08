@@ -78,24 +78,28 @@ LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector, α, 
 LinearAlgebra.ldiv!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = ldiv!(v, L.A, u)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVector) = ldiv!(L.A, u)
 
-MatMulCompatibleTypes = (
-                         :AbstractMatrix,
-                         :UniformScaling,
-                        )
-
 for op in (
-           :+, :-, :*,
+           :+, :-, :*
           )
-    for T in MatMulCompatibleTypes
-        @eval function Base.$op(L::MatrixOperator, M::$T)
-            A = $op(L.A, M)
-            MatrixOperator(A)
-        end
 
-        @eval function Base.$op(M::$T, L::MatrixOperator)
-            A = $op(M, L.A)
-            MatrixOperator(A)
-        end
+    @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
+        @assert size(A) == size(L)
+        $op(MatrixOperator(A), $op(L))
+    end
+    @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
+        @assert size(A) == size(L)
+        $op(L, MatrixOperator($op(A)))
+    end
+
+    @eval function Base.$op(A::UniformScaling, L::AbstractSciMLOperator)
+        @assert issquare(A)
+        N = size(A, 1)
+        $op(A.λ * IdentityOperator{N}(), $op(L))
+    end
+    @eval function Base.$op(L::AbstractSciMLOperator, A::UniformScaling)
+        @assert issquare(A)
+        N = size(A, 1)
+        $op($op(L), A.λ * IdentityOperator{N}())
     end
 end
 
