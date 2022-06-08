@@ -63,9 +63,9 @@ function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractArray) where{N}
     u
 end
 
-# operator fusion, composition
+# operator fusion with identity returns operator itself
 for op in (
-           :*, :∘, :/, :\,
+           :*, :∘,
           )
     @eval function Base.$op(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
@@ -76,6 +76,16 @@ for op in (
         @assert size(A, 2) == N
         A
     end
+end
+
+function Base.:\(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
+    @assert size(A, 1) == N
+    A
+end
+
+function Base.:/(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
+    @assert size(A, 2) == N
+    A
 end
 
 """
@@ -129,7 +139,9 @@ function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVec
 end
 
 # operator fusion, composition
-for op in (:*, :∘)
+for op in (
+           :*, :∘,
+          )
     @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
         NullOperator{N}()
@@ -141,7 +153,10 @@ for op in (:*, :∘)
     end
 end
 
-for op in (:+, :-)
+# operator addition, subtraction with NullOperator returns operator itself
+for op in (
+           :+, :-,
+          )
     @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A) == (N, N)
         A
@@ -210,19 +225,12 @@ for op in (
         @eval Base.$op(α::ScalarOperator, x::$T) = $op(α.val, x)
         @eval Base.$op(x::$T, α::ScalarOperator) = $op(x, α.val)
     end
-    # TODO should result be Number or ScalarOperator
     @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
-    #@eval function Base.$op(x::ScalarOperator, y::ScalarOperator) # TODO - test
-    #    val = $op(x.val, y.val)
-    #    update_func = (oldval,u,p,t) -> x.update_func(oldval,u,p,t) * y.update_func(oldval,u,p,t)
-    #    ScalarOperator(val; update_func=update_func)
-    #end
 end
 
 for op in (:-, :+)
     @eval Base.$op(α::ScalarOperator, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::ScalarOperator) = $op(x, α.val)
-    # TODO - should result be Number or ScalarOperator?
     @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
 end
 
@@ -409,16 +417,6 @@ for op in (
             AddedOperator(λ*Id, $op(L))
         end
     end
-
-    @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
-        @assert size(A) == size(L)
-        AddedOperator(MatrixOperator(A), $op(L))
-    end
-
-    @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
-        @assert size(A) == size(L)
-        AddedOperator(L, MatrixOperator($op(A)))
-    end
 end
 
 Base.convert(::Type{AbstractMatrix}, L::AddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)
@@ -509,8 +507,7 @@ Base.:∘(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops...,
 Base.:∘(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
 Base.:∘(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
 
-# operator fusion falls back on composition
-Base.:*(ops::AbstractSciMLOperator...) = reduce(*, ops) # pairwise fusion
+Base.:*(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
 Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
 Base.:*(A::ComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
 Base.:*(A::AbstractSciMLOperator, B::ComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)

@@ -48,6 +48,7 @@ Base.iszero(L::MatrixOperator) = iszero(L.A)
 
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
 
+# TODO - add tests
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = L.A
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
@@ -77,60 +78,28 @@ LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector, α, 
 LinearAlgebra.ldiv!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = ldiv!(v, L.A, u)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVector) = ldiv!(L.A, u)
 
-# operator fusion, composition
-function Base.:*(A::MatrixOperator, B::MatrixOperator)
-    M = A.A * B.A
-    update_func = (M,u,p,t) -> A.update_func(M,u,p,t) * B.update_func(M,u,p,t) #TODO
-    MatrixOperator(M; update_func=update_func)
-end
-
-
-
 for op in (
-           :*, :/, :\,
+           :+, :-, :*
           )
 
-    @eval function Base.$op(L::MatrixOperator, x::Number)
-        A = $op(L.A, x)
-        update_func = L.update_func #TODO
-        MatrixOperator(A; update_func=update_func)
+    @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
+        @assert size(A) == size(L)
+        $op(MatrixOperator(A), $op(L))
     end
-    @eval function Base.$op(x::Number, L::MatrixOperator)
-        A = $op(x, L.A)
-        update_func = L.update_func #TODO
-        MatrixOperator(A; update_func=update_func)
+    @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
+        @assert size(A) == size(L)
+        $op(L, MatrixOperator($op(A)))
     end
 
-    @eval function Base.$op(L::MatrixOperator, x::ScalarOperator)
-        A = $op(L.A, x.val)
-        update_func = L.update_func #TODO
-        MatrixOperator(A; update_func=update_func)
+    @eval function Base.$op(A::UniformScaling, L::AbstractSciMLOperator)
+        @assert issquare(A)
+        N = size(A, 1)
+        $op(A.λ * IdentityOperator{N}(), $op(L))
     end
-    @eval function Base.$op(x::ScalarOperator, L::MatrixOperator)
-        A = $op(x.val, L.A)
-        update_func = L.update_func #TODO
-        MatrixOperator(A; update_func=update_func)
-    end
-end
-
-MatMulCompatibleTypes = (
-                         :AbstractMatrix,
-                         :UniformScaling,
-                        )
-
-for op in (
-           :+, :-, :*,
-          )
-    for T in MatMulCompatibleTypes
-        @eval function Base.$op(L::MatrixOperator, M::$T)
-            A = $op(L.A, M)
-            MatrixOperator(A)
-        end
-
-        @eval function Base.$op(M::$T, L::MatrixOperator)
-            A = $op(M, L.A)
-            MatrixOperator(A)
-        end
+    @eval function Base.$op(L::AbstractSciMLOperator, A::UniformScaling)
+        @assert issquare(A)
+        N = size(A, 1)
+        $op($op(L), A.λ * IdentityOperator{N}())
     end
 end
 
@@ -693,17 +662,5 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
     ldiv!(L.outer, transpose(U))
 
     u
-end
-
-# fusion
-for op in (
-           :+ , :- , :* , :/, :\,
-          )
-    @eval function Base.$op(A::TensorProductOperator, B::TensorProductOperator)
-        outer = $op(A.outer, B.outer)
-        inner = $op(A.inner, B.inner)
-        cache = A.cache isa Nothing ? B.cache : nothing
-        TensorProductOp2D(outer, inner; cache = cache)
-    end
 end
 #

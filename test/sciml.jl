@@ -168,7 +168,9 @@ end
     @test convert(AbstractMatrix, opABC) ≈ ABC
 
     @test opAB * u2 ≈ AB * u2
-#   @test opABC * u3 ≈ ABCmulu #TODO allow SciMLOperators to act on AbstractArrays
+    # TODO - figure out a way to nest TensorProductOperators
+    # allow SciMLOperators to act on AbstractArrays
+#   @test opABC * u3 ≈ ABCmulu
 
     opAB  = cache_operator(opAB,  u2)
 #   opABC = cache_operator(opABC, u3)
