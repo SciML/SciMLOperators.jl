@@ -517,8 +517,7 @@ Base.:∘(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops...,
 Base.:∘(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
 Base.:∘(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
 
-# operator fusion falls back on composition
-Base.:*(ops::AbstractSciMLOperator...) = reduce(*, ops) # pairwise fusion
+Base.:*(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
 Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
 Base.:*(A::ComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
 Base.:*(A::AbstractSciMLOperator, B::ComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)

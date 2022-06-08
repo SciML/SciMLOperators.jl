@@ -175,9 +175,9 @@ end
 end
 
 @testset "ComposedOperator" begin
-    A = rand(N,N) |> MatrixOperator
-    B = rand(N,N) |> MatrixOperator
-    C = rand(N,N) |> MatrixOperator
+    A = rand(N,N)
+    B = rand(N,N)
+    C = rand(N,N)
     u = rand(N)
     α = rand()
     β = rand()
@@ -185,10 +185,10 @@ end
     ABCmulu = (A * B * C) * u
     ABCdivu = (A * B * C) \ u
 
-    op = ∘(A, B, C)
+    op = ∘(MatrixOperator.((A, B, C))...)
 
     @test op isa ComposedOperator
-    @test *(op.ops...) isa MatrixOperator
+    @test *(op.ops...) isa ComposedOperator
 
     @test op * u ≈ ABCmulu
     @test op \ u ≈ ABCdivu
@@ -197,11 +197,11 @@ end
     v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
     v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
 
-    A = rand(N) |> Diagonal |> MatrixOperator
-    B = rand(N) |> Diagonal |> MatrixOperator
-    C = rand(N) |> Diagonal |> MatrixOperator
+    A = rand(N) |> Diagonal
+    B = rand(N) |> Diagonal
+    C = rand(N) |> Diagonal
 
-    op = ∘(A, B, C)
+    op = ∘(MatrixOperator.((A, B, C))...)
     op = cache_operator(op, u)
     v=rand(N); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
