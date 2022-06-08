@@ -65,7 +65,7 @@ end
 
 # operator fusion, composition
 for op in (
-           :*, :∘, :/, :\,
+           :*, :∘,
           )
     @eval function Base.$op(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
         @assert size(A, 1) == N
@@ -76,6 +76,16 @@ for op in (
         @assert size(A, 2) == N
         A
     end
+end
+
+function Base.:\(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
+    @assert size(A, 1) == N
+    A
+end
+
+function Base.:/(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
+    @assert size(A, 2) == N
+    A
 end
 
 """

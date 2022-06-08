@@ -45,13 +45,12 @@ N = 8
     v=rand(N); @test ldiv!(v, Id, u) ≈ u
     v=copy(u); @test ldiv!(Id, u) ≈ v
 
-    # TODO fix after working on composition operator
-    #for op in (
-    #           *, ∘,
-    #          )
-    #    @test op(id, a) ≈ a
-    #    @test op(a, id) ≈ a
-    #end
+    for op in (
+               *, ∘,
+              )
+        @test op(Id, A) isa MatrixOperator
+        @test op(A, Id) isa MatrixOperator
+    end
 end
 
 @testset "NullOperator" begin
@@ -73,13 +72,18 @@ end
     v=rand(N); @test mul!(v, Z, u) ≈ zero(u)
     v=rand(N); w=copy(v); @test mul!(v, Z, u, α, β) ≈ α*(0*u) + β*w
 
-    # TODO fix after working on composition operator
-    #for op in (
-    #           *, ∘,
-    #          )
-    #    @test op(id, a) ≈ a
-    #    @test op(a, id) ≈ a
-    #end
+    for op in (
+               *, ∘,
+              )
+        @test op(Z, A) isa NullOperator
+        @test op(A, Z) isa NullOperator
+    end
+    for op in (
+               +, -,
+              )
+        @test op(Z, A) isa MatrixOperator
+        @test op(A, Z) isa MatrixOperator
+    end
 end
 
 @testset "ScalarOperator" begin
