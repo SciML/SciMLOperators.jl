@@ -663,16 +663,4 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
 
     u
 end
-
-# fusion
-for op in (
-           :+ , :- , :* , :/, :\,
-          )
-    @eval function Base.$op(A::TensorProductOperator, B::TensorProductOperator)
-        outer = $op(A.outer, B.outer)
-        inner = $op(A.inner, B.inner)
-        cache = A.cache isa Nothing ? B.cache : nothing
-        TensorProductOp2D(outer, inner; cache = cache)
-    end
-end
 #
