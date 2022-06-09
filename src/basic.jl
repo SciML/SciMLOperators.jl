@@ -750,25 +750,25 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
                              has_adjoint,
                             )
 
-Base.:*(L::InvertedOperator, u::AbstractVector) = L.L \ u
-Base.:\(L::InvertedOperator, u::AbstractVector) = L.L * u
+Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
+Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
-function cache_self(L::InvertedOperator, u::AbstractVector)
+function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
     cache = similar(u)
     @set! L.cache = cache
     L
 end
 
-function cache_internals(L::InvertedOperator, u::AbstractVector)
+function cache_internals(L::InvertedOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat)
     ldiv!(v, L.L, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up to use 5 arg LinearAlgebra.ldiv!"
     copy!(L.cache, v)
     ldiv!(v, L.L, u)
@@ -776,11 +776,11 @@ function LinearAlgebra.mul!(v::AbstractVector, L::InvertedOperator, u::AbstractV
     axpy!(β, L.cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::InvertedOperator, u)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u)
     mul!(v, L.L, u)
 end
 
-function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up to use 2 arg LinearAlgebra.ldiv!"
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
