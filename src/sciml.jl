@@ -499,13 +499,23 @@ function TensorProductOperator(out, in; cache = nothing)
     TensorProductOperator(out, in, cache, isset)
 end
 
-⊗(ops...) = TensorProductOperator(ops...)
+# constructors
+TensorProductOperator(op::AbstractSciMLOperator) = op
+TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
+
+# overload ⊗ (\otimes)
+⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
+
+# convert to matrix
+Base.kron(ops::AbstractSciMLOperator...) = kron(convert.(AbstractMatrix, ops)...)
+
 function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
     kron(convert(AbstractMatrix, L.outer), convert(AbstractMatrix, L.inner))
 end
+
 function SparseArrays.sparse(L::TensorProductOperator)
-    kron(sparse(L.outer) ⊗ sparse(L.inner))
+    kron(sparse(L.outer), sparse(L.inner))
 end
 
 #LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)

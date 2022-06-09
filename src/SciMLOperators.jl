@@ -11,9 +11,10 @@ import Lazy: @forward
 import Setfield: @set!
 
 # overload
-import Base: +, -, *, /, \, ∘, ==, one, zero
-import Base: conj, iszero, inv, adjoint, transpose, size, convert, Matrix
-import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, exp, Diagonal
+import Base: +, -, *, /, \, ∘, ==, one, zero, conj, exp, kron
+import Base: iszero, inv, adjoint, transpose, size, convert
+import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
+import LinearAlgebra: Matrix, Diagonal
 import SparseArrays: sparse
 
 """
@@ -46,7 +47,8 @@ export ScalarOperator,
        DiagonalOperator,
        AffineOperator,
        FunctionOperator,
-       TensorProductOperator
+       TensorProductOperator,
+       ⊗
 
 export update_coefficients!,
        update_coefficients,
