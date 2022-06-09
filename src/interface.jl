@@ -228,6 +228,10 @@ for op in (
     @eval function Base.$op(u::LinearAlgebra.TransposeAbsVec, L::AbstractSciMLOperator)
         transpose($op(transpose(L), transpose(u)))
     end
+
+    #TODO
+    # Base.$op(u, L) = transpose($op(transpose(L), transpose(u)))
+    # mul!, ldiv!
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)

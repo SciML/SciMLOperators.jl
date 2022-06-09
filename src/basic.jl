@@ -632,8 +632,8 @@ struct TransposedOperator{T,LType} <: AbstractSciMLOperator{T}
     end
 end
 
-AbstractAdjointedVector  = Adjoint{  <:Number, <:AbstractVector}
-AbstractTransposedVector = Transpose{<:Number, <:AbstractVector}
+AbstractAdjointedVector  = Adjoint{  <:Number,<:AbstractVector}
+AbstractTransposedVector = Transpose{<:Number,<:AbstractVector}
 
 has_adjoint(::AdjointedOperator) = true
 

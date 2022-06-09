@@ -48,7 +48,7 @@ Base.iszero(L::MatrixOperator) = iszero(L.A)
 
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
 
-# TODO - add tests
+# TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = L.A
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
