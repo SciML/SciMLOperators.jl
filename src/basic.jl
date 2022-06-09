@@ -437,7 +437,7 @@ getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
-function cache_internals(L::AddedOperator, u::AbstractVector)
+function cache_internals(L::AddedOperator, u::AbstractVecOrMat)
     for i=1:length(L.ops)
         @set! L.ops[i] = cache_operator(L.ops[i], u)
     end
@@ -447,11 +447,11 @@ end
 getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
-function Base.:*(L::AddedOperator, u::AbstractVector)
+function Base.:*(L::AddedOperator, u::AbstractVecOrMat)
     sum(op -> iszero(op) ? similar(u, Bool) * false : op * u, L.ops)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AddedOperator, u::AbstractVecOrMat)
     mul!(v, first(L.ops), u)
     for op in L.ops[2:end]
         iszero(op) && continue
@@ -460,7 +460,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVect
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AddedOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AddedOperator, u::AbstractVecOrMat, α, β)
     lmul!(β, v)
     for op in L.ops
         iszero(op) && continue
