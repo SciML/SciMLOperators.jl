@@ -71,12 +71,12 @@ Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_fun
 getops(L::MatrixOperator) = (L.A)
 
 # operator application
-Base.:*(L::MatrixOperator, u::AbstractVector) = L.A * u
-Base.:\(L::MatrixOperator, u::AbstractVector) = L.A \ u
-LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = mul!(v, L.A, u)
-LinearAlgebra.mul!(v::AbstractVector, L::MatrixOperator, u::AbstractVector, α, β) = mul!(v, L.A, u, α, β)
-LinearAlgebra.ldiv!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = ldiv!(v, L.A, u)
-LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVector) = ldiv!(L.A, u)
+Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
+Base.:\(L::MatrixOperator, u::AbstractVecOrMat) = L.A \ u
+LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat) = mul!(v, L.A, u)
+LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat, α, β) = mul!(v, L.A, u, α, β)
+LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(v, L.A, u)
+LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
 for op in (
            :+, :-,
@@ -445,7 +445,8 @@ function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector, α, β)
-    @assert L.isset "set up cache by calling cache_operator($L, $u)"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
     copy!(L.cache, v)
     mul!(v, L, u)
     lmul!(α, v)
@@ -457,7 +458,8 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::Abstract
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
-    @assert L.isset "set up cache by calling cache_operator($L, $u)"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
     copy!(L.cache, u)
     ldiv!(u, L, L.cache)
 end
@@ -588,7 +590,8 @@ function cache_internals(L::TensorProductOperator, u::AbstractVector)
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector)
-    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     szU = (size(L.inner, 2), size(L.outer, 2)) # in
     szV = (size(L.inner, 1), size(L.outer, 1)) # out
@@ -610,7 +613,8 @@ function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::Abst
 end
 
 function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector, α, β)
-    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     szU = (size(L.inner, 2), size(L.outer, 2)) # in
     szV = (size(L.inner, 1), size(L.outer, 1)) # out
@@ -632,7 +636,8 @@ function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::Abst
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector)
-    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     szU = (size(L.inner, 2), size(L.outer, 2)) # in
     szV = (size(L.inner, 1), size(L.outer, 1)) # out
@@ -654,7 +659,8 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::TensorProductOperator, u::Abs
 end
 
 function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
-    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)

@@ -578,7 +578,8 @@ function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     vecs = (v, L.cache[1:end-1]..., u)
     for i in reverse(1:length(L.ops))
@@ -588,7 +589,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
-    @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     cache = L.cache[end]
     copy!(cache, v)
@@ -599,7 +601,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
 
     vecs = (u, reverse(L.cache[1:end-1])..., v)
     for i in 1:length(L.ops)
@@ -769,7 +772,9 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstrac
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
-    @assert L.isset "cache needs to be set up to use 5 arg LinearAlgebra.ldiv!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
+
     copy!(L.cache, v)
     ldiv!(v, L.L, u)
     lmul!(α, v)
@@ -781,7 +786,9 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u)
 end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up to use 2 arg LinearAlgebra.ldiv!"
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
+
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
 end
