@@ -616,10 +616,10 @@ function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVecOrMat)
     u
 end
 
-struct AdjointedOperator{T,LType} <: AbstractSciMLOperator{T}
+struct AdjointOperator{T,LType} <: AbstractSciMLOperator{T}
     L::LType
 
-    function AdjointedOperator(L::AbstractSciMLOperator{T}) where{T}
+    function AdjointOperator(L::AbstractSciMLOperator{T}) where{T}
         new{T,typeof(L)}(L)
     end
 end
@@ -632,16 +632,16 @@ struct TransposedOperator{T,LType} <: AbstractSciMLOperator{T}
     end
 end
 
-AbstractAdjointedVector  = Adjoint{  <:Number,<:AbstractVector}
-AbstractTransposedVector = Transpose{<:Number,<:AbstractVector}
+AbstractAdjointVector  = Adjoint{  <:Number,<:AbstractVecOrMat}
+AbstractTransposedVector = Transpose{<:Number,<:AbstractVecOrMat}
 
-has_adjoint(::AdjointedOperator) = true
+has_adjoint(::AdjointOperator) = true
 
-Base.transpose(L::AdjointedOperator) = conj(L.L)
+Base.transpose(L::AdjointOperator) = conj(L.L)
 Base.adjoint(L::TransposedOperator) = conj(L.L)
 
 for (op, LType, VType) in (
-                           (:adjoint,   :AdjointedOperator,  :AbstractAdjointedVector ),
+                           (:adjoint,   :AdjointOperator,    :AbstractAdjointVector ),
                            (:transpose, :TransposedOperator, :AbstractTransposedVector),
                           )
     # constructor
@@ -669,7 +669,7 @@ for (op, LType, VType) in (
                              has_ldiv!,
                             )
 
-    @eval function cache_internals(L::$LType, u::AbstractVector)
+    @eval function cache_internals(L::$LType, u::AbstractVecOrMat)
         @set! L.L = cache_operator(L.L, _reshape(u, size(L,1)))
         L
     end

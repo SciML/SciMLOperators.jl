@@ -381,7 +381,7 @@ function Base.adjoint(L::FunctionOperator)
     end
 
     if !(has_adjoint(L))
-        return AdjointedOperator(L)
+        return AdjointOperator(L)
     end
 
     op = L.op_adjoint

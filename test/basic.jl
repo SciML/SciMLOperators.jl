@@ -6,11 +6,11 @@ using SciMLOperators: IdentityOperator,
                       ScaledOperator,
                       AddedOperator,
                       ComposedOperator,
-                      AdjointedOperator,
+                      AdjointOperator,
                       TransposedOperator,
                       InvertedOperator,
 
-                      AbstractAdjointedVector,
+                      AbstractAdjointVector,
                       AbstractTransposedVector,
 
                       getops,
@@ -210,7 +210,7 @@ end
 @testset "Adjoint, Transpose" begin
 
     for (op, LType, VType) in (
-                               (adjoint,   AdjointedOperator,  AbstractAdjointedVector ),
+                               (adjoint,   AdjointOperator,    AbstractAdjointVector ),
                                (transpose, TransposedOperator, AbstractTransposedVector),
                               )
         A = rand(N,N)
