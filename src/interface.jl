@@ -217,7 +217,17 @@ end
 for op in (
            :*, :\,
           )
-    @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVecOrMat) = $op(convert(AbstractMatrix,L), x)
+    @eval function Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVecOrMat)
+        $op(convert(AbstractMatrix,L), x)
+    end
+
+    @eval function Base.$op(u::LinearAlgebra.AdjointAbsVec, L::AbstractSciMLOperator)
+        adjoint($op(L', u))
+    end
+    
+    @eval function Base.$op(u::LinearAlgebra.TransposeAbsVec, L::AbstractSciMLOperator)
+        transpose($op(transpose(L), transpose(u)))
+    end
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
