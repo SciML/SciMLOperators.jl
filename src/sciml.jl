@@ -79,7 +79,7 @@ LinearAlgebra.ldiv!(v::AbstractVector, L::MatrixOperator, u::AbstractVector) = l
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVector) = ldiv!(L.A, u)
 
 for op in (
-           :+, :-, :*
+           :+, :-,
           )
 
     @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
@@ -90,17 +90,15 @@ for op in (
         @assert size(A) == size(L)
         $op(L, MatrixOperator($op(A)))
     end
+end
 
-    @eval function Base.$op(A::UniformScaling, L::AbstractSciMLOperator)
-        @assert issquare(A)
-        N = size(A, 1)
-        $op(A.λ * IdentityOperator{N}(), $op(L))
-    end
-    @eval function Base.$op(L::AbstractSciMLOperator, A::UniformScaling)
-        @assert issquare(A)
-        N = size(A, 1)
-        $op($op(L), A.λ * IdentityOperator{N}())
-    end
+function Base.:*(A::AbstractMatrix, L::AbstractSciMLOperator)
+    @assert size(A) == size(L)
+    *(MatrixOperator(A), L)
+end
+function Base.:*(L::AbstractSciMLOperator, A::AbstractMatrix)
+    @assert size(A) == size(L)
+    *(L, MatrixOperator(A))
 end
 
 """ Diagonal Operator """
