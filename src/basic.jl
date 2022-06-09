@@ -252,17 +252,18 @@ LinearAlgebra.ldiv!(α::ScalarOperator, u::AbstractVecOrMat) = ldiv!(α.val, u)
 struct ScaledOperator{T,
                       λType<:ScalarOperator,
                       LType<:AbstractSciMLOperator,
+                      C,
                      } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
-    cache::T
+    cache::C
 
     function ScaledOperator(λ::ScalarOperator{Tλ},
                             L::AbstractSciMLOperator{TL},
-                            cache = zero(promote_type(Tλ,TL))
+                            cache = zeros(promote_type(Tλ,TL), 1),
                            ) where{Tλ,TL}
         T = promote_type(Tλ, TL)
-        new{T,typeof(λ),typeof(L)}(λ, L, cache)
+        new{T,typeof(λ),typeof(L),typeof(cache)}(λ, L, cache)
     end
 end
 
@@ -351,8 +352,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
-    cache = L.λ.val * α # mul!(L.cache, L.λ.val, α) # TODO - set L.cache as 
-    mul!(v, L.L, u, cache, β)
+    mul!(L.cache, [L.λ.val,], [α,])
+    mul!(v, L.L, u, first(L.cache), β)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
