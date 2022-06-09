@@ -4,7 +4,7 @@ $(TYPEDEF)
 struct IdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-IdentityOperator(u::AbstractVecOrMat) = IdentityOperator{size(u,1)}()
+IdentityOperator(u::AbstractArray) = IdentityOperator{size(u,1)}()
 
 function Base.one(A::AbstractSciMLOperator)
     @assert issquare(A)
@@ -39,7 +39,7 @@ for op in (
           )
     @eval function Base.$op(::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
         @assert size(u, 1) == N
-        copy(x)
+        copy(u)
     end
 end
 
@@ -94,7 +94,7 @@ $(TYPEDEF)
 struct NullOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-NullOperator(u::AbstractVecOrMat) = NullOperator{size(u,1)}()
+NullOperator(u::AbstractArray) = NullOperator{size(u,1)}()
 
 function Base.zero(A::AbstractSciMLOperator)
     @assert issquare(A)
@@ -219,30 +219,30 @@ for op in (
           )
     for T in (
               :Number,
-              :AbstractVector,
+              :AbstractVecOrMat,
              )
         @eval Base.$op(α::ScalarOperator, x::$T) = $op(α.val, x)
         @eval Base.$op(x::$T, α::ScalarOperator) = $op(x, α.val)
     end
-    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose
 end
 
 for op in (:-, :+)
     @eval Base.$op(α::ScalarOperator, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::ScalarOperator) = $op(x, α.val)
-    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val)
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose
 end
 
-LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVector) = lmul!(α.val, u)
-LinearAlgebra.rmul!(u::AbstractVector, α::ScalarOperator) = rmul!(u, α.val)
-LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = mul!(v, α.val, u)
-LinearAlgebra.mul!(v::AbstractVector, α::ScalarOperator, u::AbstractVector, a, b) = mul!(v, α.val, u, a, b)
-LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVector, y::AbstractVector) = axpy!(α.val, x, y)
-LinearAlgebra.axpby!(α::ScalarOperator, x::AbstractVector, β::ScalarOperator, y::AbstractVector) = axpby!(α.val, x, β.val, y)
+LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVecOrMat) = lmul!(α.val, u)
+LinearAlgebra.rmul!(u::AbstractVecOrMat, α::ScalarOperator) = rmul!(u, α.val)
+LinearAlgebra.mul!(v::AbstractVecOrMat, α::ScalarOperator, u::AbstractVecOrMat) = mul!(v, α.val, u)
+LinearAlgebra.mul!(v::AbstractVecOrMat, α::ScalarOperator, u::AbstractVecOrMat, a, b) = mul!(v, α.val, u, a, b)
+LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVecOrMat, y::AbstractVecOrMat) = axpy!(α.val, x, y)
+LinearAlgebra.axpby!(α::ScalarOperator, x::AbstractVecOrMat, β::ScalarOperator, y::AbstractVecOrMat) = axpby!(α.val, x, β.val, y)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
-LinearAlgebra.ldiv!(v::AbstractVector, α::ScalarOperator, u::AbstractVector) = ldiv!(v, α.val, u)
-LinearAlgebra.ldiv!(α::ScalarOperator, u::AbstractVector) = ldiv!(α.val, u)
+LinearAlgebra.ldiv!(v::AbstractVecOrMat, α::ScalarOperator, u::AbstractVecOrMat) = ldiv!(v, α.val, u)
+LinearAlgebra.ldiv!(α::ScalarOperator, u::AbstractVecOrMat) = ldiv!(α.val, u)
 
 """
     ScaledOperator
@@ -285,8 +285,10 @@ for T in ScalingNumberTypes
     
     @eval Base.:*(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(λ, L)
     @eval Base.:*(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(λ, L)
+
     @eval Base.:\(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(inv(λ), L)
     @eval Base.:\(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(λ, inv(L))
+
     @eval Base.:/(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(inv(λ), L)
     @eval Base.:/(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(λ, inv(L))
 end
