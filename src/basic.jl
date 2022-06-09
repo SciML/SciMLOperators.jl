@@ -549,10 +549,10 @@ for fact in (
 end
 
 # operator application
-Base.:*(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
-Base.:\(L::ComposedOperator, u::AbstractVector) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
+Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function cache_self(L::ComposedOperator, u::AbstractVector)
+function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
     vec = similar(u)
     cache = (vec,)
     for i in reverse(2:length(L.ops))
@@ -564,7 +564,7 @@ function cache_self(L::ComposedOperator, u::AbstractVector)
     L
 end
 
-function cache_internals(L::ComposedOperator, u::AbstractVector)
+function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
     if !(L.isset)
         L = cache_self(L, u)
     end
@@ -577,7 +577,7 @@ function cache_internals(L::ComposedOperator, u::AbstractVector)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     vecs = (v, L.cache[1:end-1]..., u)
@@ -587,7 +587,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up to use LinearAlgebra.mul!"
 
     cache = L.cache[end]
@@ -598,7 +598,7 @@ function LinearAlgebra.mul!(v::AbstractVector, L::ComposedOperator, u::AbstractV
     axpy!(β, cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up to use 3 arg LinearAlgebra.ldiv!"
 
     vecs = (u, reverse(L.cache[1:end-1])..., v)
@@ -608,7 +608,7 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::ComposedOperator, u::Abstract
     v
 end
 
-function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVecOrMat)
 
     for i in 1:length(L.ops)
         ldiv!(L.ops[i], u)
