@@ -176,12 +176,12 @@ getops(L::InvertibleOperator) = (L.F,)
                               )
 
 # operator application
-Base.:*(L::InvertibleOperator, x::AbstractVector) = L.F * x
-Base.:\(L::InvertibleOperator, x::AbstractVector) = L.F \ x
-LinearAlgebra.mul!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector) = mul!(v, L.F, u)
-LinearAlgebra.mul!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector,α, β) = mul!(v, L.F, u, α, β)
-LinearAlgebra.ldiv!(v::AbstractVector, L::InvertibleOperator, u::AbstractVector) = ldiv!(v, L.F, u)
-LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVector) = ldiv!(L.F, u)
+Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.F * x
+Base.:\(L::InvertibleOperator, x::AbstractVecOrMat) = L.F \ x
+LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat) = mul!(v, L.F, u)
+LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat,α, β) = mul!(v, L.F, u, α, β)
+LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(v, L.F, u)
+LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
     L = AffineOperator(A, b)
@@ -191,7 +191,7 @@ struct AffineOperator{T,AType,bType} <: AbstractSciMLOperator{T}
     A::AType
     b::bType
 
-    function AffineOperator(A::AbstractSciMLOperator, b::AbstractVector)
+    function AffineOperator(A::AbstractSciMLOperator, b::AbstractVecOrMat)
         T = promote_type(eltype.((A,b))...)
         new{T,typeof(A),typeof(b)}(A, b)
     end
@@ -208,25 +208,25 @@ has_ldiv(L::AffineOperator) = has_ldiv(L.A)
 has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 
-Base.:*(L::AffineOperator, u::AbstractVector) = L.A * u + L.b
-Base.:\(L::AffineOperator, u::AbstractVector) = L.A \ (u - L.b)
+Base.:*(L::AffineOperator, u::AbstractVecOrMat) = L.A * u + L.b
+Base.:\(L::AffineOperator, u::AbstractVecOrMat) = L.A \ (u - L.b)
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
     mul!(v, L.A, u)
     axpy!(true, L.b, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AffineOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat, α, β)
     mul!(v, L.A, u, α, β)
     axpy!(α, L.b, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::AffineOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
     copy!(v, u)
     ldiv!(L, v)
 end
 
-function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
     axpy!(-true, L.b, u)
     ldiv!(L.A, u)
 end
@@ -412,13 +412,13 @@ function Base.adjoint(L::FunctionOperator)
 end
 
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
-  L.traits.opnorm === nothing && error("""
-    M.opnorm is nothing, please define opnorm as a function that takes one
-    argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
-    defined")`
-  """)
-  opn = L.opnorm
-  return opn isa Number ? opn : M.opnorm(p)
+    L.traits.opnorm === nothing && error("""
+      M.opnorm is nothing, please define opnorm as a function that takes one
+      argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
+      defined")`
+    """)
+    opn = L.opnorm
+    return opn isa Number ? opn : M.opnorm(p)
 end
 LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
@@ -432,19 +432,19 @@ has_ldiv(L::FunctionOperator{iip}) where{iip} = !iip & !(L.op_inverse isa Nothin
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 # operator application
-Base.:*(L::FunctionOperator, u::AbstractVector) = L.op(u, L.p, L.t)
-Base.:\(L::FunctionOperator, u::AbstractVector) = L.op_inverse(u, L.p, L.t)
+Base.:*(L::FunctionOperator, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
+Base.:\(L::FunctionOperator, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)
 
-function cache_self(L::FunctionOperator, u::AbstractVector)
+function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
     @set! L.cache = similar(u)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat)
     L.op(v, u, L.p, L.t)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator($L, $u)"
     copy!(L.cache, v)
@@ -453,11 +453,11 @@ function LinearAlgebra.mul!(v::AbstractVector, L::FunctionOperator, u::AbstractV
     axpy!(β, L.cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::FunctionOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat)
     L.op_inverse(v, u, L.p, L.t)
 end
 
-function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator($L, $u)"
     copy!(L.cache, u)
