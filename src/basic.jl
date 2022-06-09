@@ -4,7 +4,7 @@ $(TYPEDEF)
 struct IdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-IdentityOperator(u::AbstractVector) = IdentityOperator{length(u)}()
+IdentityOperator(u::AbstractVecOrMat) = IdentityOperator{size(u,1)}()
 
 function Base.one(A::AbstractSciMLOperator)
     @assert issquare(A)
@@ -37,29 +37,29 @@ has_ldiv!(::IdentityOperator) = true
 for op in (
            :*, :\,
           )
-    @eval function Base.$op(::IdentityOperator{N}, x::AbstractVector) where{N}
-        @assert length(x) == N
+    @eval function Base.$op(::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
+        @assert size(u, 1) == N
         copy(x)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector) where{N}
-    @assert length(u) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
+    @assert size(u, 1) == N
     copy!(v, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractVector, α, β) where{N}
-    @assert length(u) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat, α, β) where{N}
+    @assert size(u, 1) == N
     mul!(v, I, u, α, β)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, ::IdentityOperator{N}, u::AbstractArray) where{N}
-    @assert length(u) == N
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
+    @assert size(u, 1) == N
     copy!(v, u)
 end
 
-function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractArray) where{N}
-    @assert length(u) == N
+function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
+    @assert size(u, 1) == N
     u
 end
 
@@ -94,7 +94,7 @@ $(TYPEDEF)
 struct NullOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 
 # constructors
-NullOperator(u::AbstractVector) = NullOperator{length(u)}()
+NullOperator(u::AbstractVecOrMat) = NullOperator{size(u,1)}()
 
 function Base.zero(A::AbstractSciMLOperator)
     @assert issquare(A)
@@ -125,16 +125,15 @@ has_adjoint(::NullOperator) = true
 has_mul!(::NullOperator) = true
 
 # opeator application
-Base.:*(::NullOperator{N}, x::AbstractVector) where{N} = (@assert length(x) == N; zero(x))
-Base.:*(x::AbstractVector, ::NullOperator{N}) where{N} = (@assert length(x) == N; zero(x))
+Base.:*(::NullOperator{N}, u::AbstractVecOrMat) where{N} = (@assert size(u, 1) == N; zero(u))
 
-function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector) where{N}
-    @assert length(u) == length(v) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, ::NullOperator{N}, u::AbstractVecOrMat) where{N}
+    @assert size(u, 1) == size(v, 1) == N
     lmul!(false, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, ::NullOperator{N}, u::AbstractVector, α, β) where{N}
-    @assert length(u) == length(v) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, ::NullOperator{N}, u::AbstractVecOrMat, α, β) where{N}
+    @assert size(u, 1) == size(v, 1) == N
     lmul!(β, v)
 end
 

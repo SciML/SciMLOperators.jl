@@ -38,13 +38,13 @@ Allocate caches for a SciMLOperator for fast evaluation
 
 arguments:
     L :: AbstractSciMLOperator
-    u :: AbstractVector argument to L
+    u :: AbstractVecOrMat argument to L
 """
 cache_operator(L, u) = L
 cache_self(L, u) = L
 cache_internals(L, u) = L
 
-function cache_operator(L::AbstractSciMLOperator, u::AbstractVector)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L = cache_self(L, u)
     L = cache_internals(L, u)
     L
@@ -116,7 +116,7 @@ has_mul(L) = true
 has_mul!(L) = false
 has_mul!(::Union{
                  # LinearAlgebra
-                 AbstractVector,
+                 AbstractVecOrMat,
                  AbstractMatrix,
                  UniformScaling,
 
@@ -217,14 +217,14 @@ end
 for op in (
            :*, :\,
           )
-    @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVector) = $op(convert(AbstractMatrix,L), x)
+    @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVecOrMat) = $op(convert(AbstractMatrix,L), x)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
     mul!(v, convert(AbstractMatrix,L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
 end
 #
