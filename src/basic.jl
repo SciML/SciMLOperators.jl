@@ -224,13 +224,13 @@ for op in (
         @eval Base.$op(α::ScalarOperator, x::$T) = $op(α.val, x)
         @eval Base.$op(x::$T, α::ScalarOperator) = $op(x, α.val)
     end
-    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose instead?
 end
 
 for op in (:-, :+)
     @eval Base.$op(α::ScalarOperator, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::ScalarOperator) = $op(x, α.val)
-    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose instead?
 end
 
 LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVecOrMat) = lmul!(α.val, u)
@@ -318,7 +318,7 @@ has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
-function cache_internals(L::ScaledOperator, u::AbstractVector)
+function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     @set! L.λ = cache_operator(L.λ, u)
     L
@@ -343,24 +343,24 @@ end
 for op in (
            :*, :\,
           )
-    @eval Base.$op(L::ScaledOperator, x::AbstractVector) = $op(L.λ, $op(L.L, x))
+    @eval Base.$op(L::ScaledOperator, x::AbstractVecOrMat) = $op(L.λ, $op(L.L, x))
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
     mul!(v, L.L, u, L.λ.val, false)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::ScaledOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
     cache = L.λ.val * α # mul!(L.cache, L.λ.val, α) # TODO - set L.cache as 
     mul!(v, L.L, u, cache, β)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::ScaledOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
     ldiv!(v, L.L, u)
     ldiv!(L.λ, v)
 end
 
-function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVecOrMat)
     ldiv!(L.λ, u)
     ldiv!(L.L, u)
 end
