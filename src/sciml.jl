@@ -543,15 +543,17 @@ has_mul!(L::TensorProductOperator) = has_mul!(L.outer) & has_mul!(L.inner)
 has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
+# TODO - extend to AbstractVecOrMat, and fix size everywhere
+
 # operator application
 function Base.:*(L::TensorProductOperator, u::AbstractVector)
     sz = (size(L.inner, 2), size(L.outer, 2))
     U  = _reshape(u, sz)
 
-    C = (L.inner * U)
+    C = L.inner * U
     V = transpose(L.outer * transpose(C))
 
-    v = _vec(V)
+    _vec(V)
 end
 
 function Base.:\(L::TensorProductOperator, u::AbstractVector)
