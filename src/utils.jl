@@ -2,6 +2,7 @@
 """ use Base.ReshapedArray """
 _reshape(a, dims::NTuple{D,Int}) where{D} = reshape(a,dims)
 function _reshape(a::AbstractArray, dims::NTuple{D,Int}) where{D}
+    dims == size(a) && return a
     ReshapedArray(a, dims, ())
 end
 
