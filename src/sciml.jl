@@ -609,12 +609,24 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     k = size(u, 2)
 
     V = _reshape(v, (mi,mo,k))
+    C = L.cache
 
     for i=1:k
         idx = (Colon(), Colon(), i)
 
-        mul!(V[idx...], L, view(u, idx...))
-    end
+        """
+            v .= kron(B, A) * u
+            V .= A * U * B'
+        """
+
+        uu = view(U, idx...)
+        cc = view(C, idx...)
+
+        # C .= A * U
+        mul!(C[:,:,i], L.inner, uu)
+        # V .= U * B'
+        mul!(V, cc, transpose(L.outer))
+        end
 
     v
 end
