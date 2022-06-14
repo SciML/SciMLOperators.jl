@@ -484,6 +484,9 @@ TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
+# overload Base.kron if any arg isa AbstractSciMLOperator
+#Base.kron(ops::Union{AbstractVecOrMat,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
+
 # convert to matrix
 Base.kron(ops::AbstractSciMLOperator...) = kron(convert.(AbstractMatrix, ops)...)
 
@@ -520,47 +523,53 @@ has_mul!(L::TensorProductOperator) = has_mul!(L.outer) & has_mul!(L.inner)
 has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
-# TODO - define methods for *(TensorProductOp, AbstractMatrix)
-
 # operator application
-function Base.:*(L::TensorProductOperator, u::AbstractVector)
-    sz = (size(L.inner, 2), size(L.outer, 2))
-    U  = _reshape(u, sz)
+for op in (
+           :*, :\,
+          )
+    @eval function Base.$op(L::TensorProductOperator, u::AbstractVecOrMat)
+        mi, ni = size(L.inner)
+        mo, no = size(L.outer)
+        m , n  = size(L)
+        k = size(u, 2)
 
-    C = L.inner * U
-    V = transpose(L.outer * transpose(C))
+        U = _reshape(u, (ni, no, k))
+        C = similar( u, (mi, no, k))
+        V = similar( u, (mi, mo, k))
 
-    _vec(V)
+        for i=1:k
+            idx = (Colon(), Colon(), i)
+
+            uu = view(U, idx...)
+            cc = view(C, idx...)
+
+            C[idx...] = $op(L.inner, uu)
+            V[idx...] = transpose($op(L.outer, transpose(cc)))
+        end
+
+        u isa AbstractMatrix ? _reshape(V, (m, k)) : _reshape(V, (m,))
+    end
 end
 
-function Base.:\(L::TensorProductOperator, u::AbstractVector)
-    sz = (size(L.inner, 2), size(L.outer, 2))
-    U  = _reshape(u, sz)
+function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
+    mi, _  = size(L.inner)
+    _ , no = size(L.outer)
+    k = size(u, 2)
 
-    C = L.inner \ U
-    V = transpose(L.outer \ transpose(C))
-
-    _vec(V)
-end
-
-function cache_self(L::TensorProductOperator, u::AbstractVector)
-    sz = (size(L.inner, 2), size(L.outer, 2))
-    U  = _reshape(u, sz)
-    cache = L.inner * U
-
-    @set! L.cache = cache
+    @set! L.cache = similar( u, (mi, no, k))
     L
 end
 
-function cache_internals(L::TensorProductOperator, u::AbstractVector)
+function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
     if !(L.isset)
         L = cache_self(L, u)
     end
 
-    sz = (size(L.inner, 2), size(L.outer, 2))
-    U  = _reshape(u, sz)
+    mi, _  = size(L.inner)
+    _ , no = size(L.outer)
+    k = size(u, 2)
 
-    uinner = U
+    uinner = _reshape(u, (ni, no, k))
     uouter = transpose(L.cache)
 
     @set! L.inner = cache_operator(L.inner, uinner)
@@ -587,6 +596,25 @@ function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::Abst
     mul!(L.cache, L.inner, U)
     # V .= U * B'
     mul!(V, L.cache, transpose(L.outer))
+
+    v
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator($L, $u)"
+
+    mi, _ = size(L.inner)
+    mo, _ = size(L.outer)
+    k = size(u, 2)
+
+    V = _reshape(v, (mi,mo,k))
+
+    for i=1:k
+        idx = (Colon(), Colon(), i)
+
+        mul!(V[idx...], L, view(u, idx...))
+    end
 
     v
 end

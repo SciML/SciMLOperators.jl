@@ -261,14 +261,12 @@ for op in (
         end
 
         uu = _reshape(u, sizes[1])
-
-        vv = L * uu
+        vv = $op(L, uu)
 
         _reshape(vv, sizev)
     end
 end
 
-# TODO
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
     sizes = _mat_sizes(L, u)
 
