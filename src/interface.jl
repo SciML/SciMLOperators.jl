@@ -250,7 +250,7 @@ end
 # AbstractArray implementation
 ###
 
-# TODO
+# TODO - AbstractArray implementation
 for op in (
            :*, :\,
           )

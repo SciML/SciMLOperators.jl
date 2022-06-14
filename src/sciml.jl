@@ -484,8 +484,7 @@ TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
-# overload Base.kron if any arg isa AbstractSciMLOperator
-#Base.kron(ops::Union{AbstractVecOrMat,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
+#Base.kron(ops::Union{AbstractArray,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # convert to matrix
 Base.kron(ops::AbstractSciMLOperator...) = kron(convert.(AbstractMatrix, ops)...)
@@ -533,18 +532,20 @@ for op in (
         m , n  = size(L)
         k = size(u, 2)
 
-        U = _reshape(u, (ni, no, k))
-        C = similar( u, (mi, no, k))
-        V = similar( u, (mi, mo, k))
+        U = _reshape(u, ni, no*k)
+        C = $op(L.inner, U)
 
-        for i=1:k
-            idx = (Colon(), Colon(), i)
+        V = if k > 1
+            C = _reshape(C, (mi, no, k))
+            V = similar( u, (mi, mo, k))
 
-            uu = view(U, idx...)
-            cc = view(C, idx...)
+            @views for i=1:k
+                V[:,:,i] = transpose($op(L.outer, transpose(C[:,:,i])))
+            end
 
-            C[idx...] = $op(L.inner, uu)
-            V[idx...] = transpose($op(L.outer, transpose(cc)))
+            V
+        else
+            transpose($op(L.outer, transpose(C)))
         end
 
         u isa AbstractMatrix ? _reshape(V, (m, k)) : _reshape(V, (m,))
@@ -556,7 +557,7 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     _ , no = size(L.outer)
     k = size(u, 2)
 
-    @set! L.cache = similar( u, (mi, no, k))
+    @set! L.cache = similar(u, (mi, no*k))
     L
 end
 
@@ -565,27 +566,27 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
         L = cache_self(L, u)
     end
 
-    mi, _  = size(L.inner)
-    _ , no = size(L.outer)
+    _, ni = size(L.inner)
+    _, no = size(L.outer)
     k = size(u, 2)
 
-    uinner = _reshape(u, (ni, no, k))
-    uouter = transpose(L.cache)
+    uinner = _reshape(u, (ni, no*k))
+    uouter = _reshape(L.cache, (no, mi, k))
 
     @set! L.inner = cache_operator(L.inner, uinner)
     @set! L.outer = cache_operator(L.outer, uouter)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator($L, $u)"
 
-    szU = (size(L.inner, 2), size(L.outer, 2)) # in
-    szV = (size(L.inner, 1), size(L.outer, 1)) # out
+    mi, ni = size(L.inner)
+    _ , no = size(L.outer)
+    k = size(u, 2)
 
-    U = _reshape(u, szU)
-    V = _reshape(v, szV)
+    U = _reshape(u, (ni, no*k))
 
     """
         v .= kron(B, A) * u
@@ -594,52 +595,30 @@ function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::Abst
 
     # C .= A * U
     mul!(L.cache, L.inner, U)
-    # V .= U * B'
-    mul!(V, L.cache, transpose(L.outer))
+
+    # V .= U * B' <===> V' .= B * C'
+    if k>1
+        C = _reshape(L.cache, (mi, no, k))
+
+        @views for i=1:k
+            mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]))
+        end
+    else
+        mul!(transpose(V), L.outer, transpose(L.cache))
+    end
 
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator($L, $u)"
 
-    mi, _ = size(L.inner)
-    mo, _ = size(L.outer)
+    mi, ni = size(L.inner)
+    _ , no = size(L.outer)
     k = size(u, 2)
 
-    V = _reshape(v, (mi,mo,k))
-    C = L.cache
-
-    for i=1:k
-        idx = (Colon(), Colon(), i)
-
-        """
-            v .= kron(B, A) * u
-            V .= A * U * B'
-        """
-
-        uu = view(U, idx...)
-        cc = view(C, idx...)
-
-        # C .= A * U
-        mul!(C[:,:,i], L.inner, uu)
-        # V .= U * B'
-        mul!(V, cc, transpose(L.outer))
-        end
-
-    v
-end
-
-function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector, α, β)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
-
-    szU = (size(L.inner, 2), size(L.outer, 2)) # in
-    szV = (size(L.inner, 1), size(L.outer, 1)) # out
-
-    U = _reshape(u, szU)
-    V = _reshape(v, szV)
+    U = _reshape(u, (ni, no*k))
 
     """
         v .= α * kron(B, A) * u + β * v
@@ -648,21 +627,30 @@ function LinearAlgebra.mul!(v::AbstractVector, L::TensorProductOperator, u::Abst
 
     # C .= A * U
     mul!(L.cache, L.inner, U)
-    # V = α(C * B') + β(V)"""
-    mul!(V, L.cache, transpose(L.outer), α, β)
+
+    # V = α(C * B') + β(V)
+    if k>1
+        C = _reshape(L.cache, (mi, no, k))
+
+        @views for i=1:k
+            mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]), α, β)
+        end
+    else
+        mul!(transpose(V), L.outer, transpose(L.cache), α, β)
+    end
 
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVector, L::TensorProductOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator($L, $u)"
 
-    szU = (size(L.inner, 2), size(L.outer, 2)) # in
-    szV = (size(L.inner, 1), size(L.outer, 1)) # out
+    mi, ni = size(L.inner)
+    _ , no = size(L.outer)
+    k = size(u, 2)
 
-    U = _reshape(u, szU)
-    V = _reshape(v, szV)
+    U = _reshape(u, (ni, no*k))
 
     """
         v .= kron(B, A) ldiv u
@@ -671,24 +659,54 @@ function LinearAlgebra.ldiv!(v::AbstractVector, L::TensorProductOperator, u::Abs
 
     # C .= A \ U
     ldiv!(L.cache, L.inner, U)
+
     # V .= C / B' <===> V' .= B \ C'
-    ldiv!(transpose(V), L.outer, transpose(L.cache))
+    if k>1
+        C = _reshape(L.cache, (mi, no, k))
+
+        @views for i=1:k
+            ldiv!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]))
+        end
+    else
+        ldiv!(transpose(V), L.outer, transpose(L.cache))
+    end
 
     v
 end
 
-function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
+function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator($L, $u)"
 
-    sz = (size(L.inner, 2), size(L.outer, 2))
-    U  = _reshape(u, sz)
+    mi, ni = size(L.inner)
+    _ , no = size(L.outer)
+    k = size(u, 2)
+
+    U = _reshape(u, (ni, no*k))
 
     """
         u .= kron(B, A) ldiv u
         U .= (A ldiv U) / B'
     """
 
+    # U .= A \ U
+    ldiv!(L.inner, U)
+
+    # U .= U / B' <===> U' .= B \ U'
+    if k>1
+        C = _reshape(L.cache, (mi, no, k))
+
+        @views for i=1:k
+            ldiv!(L.outer, transpose(C[:,:,i]))
+        end
+    else
+        ldiv!(L.outer, transpose(U))
+    end
+
+    u
+end
+
+function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
     # U .= A \ U
     ldiv!(L.inner, U)
     # U .= U / B' <===> U' .= B \ U'
