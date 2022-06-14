@@ -78,29 +78,6 @@ LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat, 
 LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(v, L.A, u)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
-for op in (
-           :+, :-,
-          )
-
-    @eval function Base.$op(A::AbstractMatrix, L::AbstractSciMLOperator)
-        @assert size(A) == size(L)
-        $op(MatrixOperator(A), $op(L))
-    end
-    @eval function Base.$op(L::AbstractSciMLOperator, A::AbstractMatrix)
-        @assert size(A) == size(L)
-        $op(L, MatrixOperator($op(A)))
-    end
-end
-
-function Base.:*(A::AbstractMatrix, L::AbstractSciMLOperator)
-    @assert size(A) == size(L)
-    *(MatrixOperator(A), L)
-end
-function Base.:*(L::AbstractSciMLOperator, A::AbstractMatrix)
-    @assert size(A) == size(L)
-    *(L, MatrixOperator(A))
-end
-
 """ Diagonal Operator """
 DiagonalOperator(u::AbstractArray) = MatrixOperator(Diagonal(_vec(u)))
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))

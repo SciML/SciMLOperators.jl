@@ -217,9 +217,9 @@ end
 for op in (
            :*, :\,
           )
-    @eval function Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVecOrMat)
-        $op(convert(AbstractMatrix,L), x)
-    end
+#   @eval function Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVecOrMat)
+#       $op(convert(AbstractMatrix,L), x)
+#   end
 
     @eval function Base.$op(u::LinearAlgebra.AdjointAbsVec, L::AbstractSciMLOperator)
         adjoint($op(L', u))
@@ -241,4 +241,26 @@ end
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
 end
+
+###
+# AbstractArray implementation
+###
+
+# TODO
+for op in (
+           :*, :\,
+          )
+#   @eval function Base.$op(L::AbstractSciMLOperator, u::AbstractArray{<:Number,N}) where{N>2}
+    @eval function Base.$op(L::AbstractSciMLOperator, u::AbstractArray)
+        n = size(L, 2)
+        sz = (size(L, 1), size(u)[2:end]...)
+        vv = L * _reshape(u, (n,:))
+        _reshape(vv, sz)
+    end
+end
+
+# TODO
+# mul!  - 3, 5 arg
+# ldiv! - 2, 3 arg
+
 #
