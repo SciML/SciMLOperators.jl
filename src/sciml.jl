@@ -543,7 +543,7 @@ has_mul!(L::TensorProductOperator) = has_mul!(L.outer) & has_mul!(L.inner)
 has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
-# TODO - extend to AbstractVecOrMat, and fix size everywhere
+# TODO - define methods for *(TensorProductOp, AbstractMatrix)
 
 # operator application
 function Base.:*(L::TensorProductOperator, u::AbstractVector)
