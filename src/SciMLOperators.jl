@@ -27,16 +27,6 @@ $(TYPEDEF)
 """
 abstract type AbstractSciMLLinearOperator{T} <: AbstractSciMLOperator{T} end
 
-"""
-$(TYPEDEF)
-"""
-abstract type AbstractSciMLCompositeOperator{T} <: AbstractSciMLOperator{T} end
-
-"""
-$(TYPEDEF)
-"""
-abstract type AbstractMatrixFreeOperator{T} <: AbstractSciMLOperator{T} end
-
 include("utils.jl")
 include("interface.jl")
 include("basic.jl")
@@ -47,8 +37,7 @@ export ScalarOperator,
        DiagonalOperator,
        AffineOperator,
        FunctionOperator,
-       TensorProductOperator,
-       ⊗
+       TensorProductOperator
 
 export update_coefficients!,
        update_coefficients,
