@@ -188,6 +188,10 @@ expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
 
 Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
 
+###
+# fallback implementations
+###
+
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N}
     convert(AbstractMatrix, L)[I...]
 end
@@ -251,19 +255,60 @@ for op in (
            :*, :\,
           )
     @eval function Base.$op(L::AbstractSciMLOperator, u::AbstractArray)
-        m, n = size(L)
-        nk = length(u)
+        sizes = _mat_sizes(L, u)
+        sizev = issquare(L) ? size(u) : begin
+            (size(L, 1), size(u)[2:end]...,)
+        end
 
-        uu = _reshape(u, (n, nk ÷ n))
+        uu = _reshape(u, sizes[1])
+
         vv = L * uu
 
-        sz = (m, size(u)[2:end]...)
-        _reshape(vv, sz)
+        _reshape(vv, sizev)
     end
 end
 
 # TODO
-# mul!  - 3, 5 arg
-# ldiv! - 2, 3 arg
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
+    sizes = _mat_sizes(L, u)
 
+    uu = _reshape(u, sizes[1])
+    vv = _reshape(v, sizes[2])
+
+    mul!(vv, L, uu)
+
+    v
+end
+
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray, α, β)
+    sizes = _mat_sizes(L, u)
+
+    uu = _reshape(u, sizes[1])
+    vv = _reshape(v, sizes[2])
+
+    mul!(vv, L, uu, α, β)
+
+    v
+end
+
+function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
+    sizes = _mat_sizes(L, u)
+
+    uu = _reshape(u, sizes[1])
+    vv = _reshape(v, sizes[2])
+
+    ldiv!(vv, L, uu)
+
+    v
+end
+
+function LinearAlgebra.ldiv!(L::AbstractSciMLLinearOperator, u::AbstractArray)
+    sizes = _mat_sizes(L, u)
+
+    uu = _reshape(u, sizes[1])
+
+    ldiv!(L, uu)
+
+    u
+end
 #
