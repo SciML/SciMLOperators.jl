@@ -47,8 +47,7 @@ export ScalarOperator,
        DiagonalOperator,
        AffineOperator,
        FunctionOperator,
-       TensorProductOperator,
-       ⊗
+       TensorProductOperator
 
 export update_coefficients!,
        update_coefficients,
