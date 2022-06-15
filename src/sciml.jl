@@ -484,6 +484,7 @@ TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
+# TODO - overload Base.kron
 #Base.kron(ops::Union{AbstractArray,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # convert to matrix
@@ -532,7 +533,7 @@ for op in (
         m , n  = size(L)
         k = size(u, 2)
 
-        U = _reshape(u, ni, no*k)
+        U = _reshape(u, (ni, no*k))
         C = $op(L.inner, U)
 
         V = if k > 1
@@ -566,8 +567,8 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
         L = cache_self(L, u)
     end
 
-    _, ni = size(L.inner)
-    _, no = size(L.outer)
+    mi, ni = size(L.inner)
+    _ , no = size(L.outer)
     k = size(u, 2)
 
     uinner = _reshape(u, (ni, no*k))
@@ -583,7 +584,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     set up cache by calling cache_operator($L, $u)"
 
     mi, ni = size(L.inner)
-    _ , no = size(L.outer)
+    mo, no = size(L.outer)
     k = size(u, 2)
 
     U = _reshape(u, (ni, no*k))
@@ -598,12 +599,14 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
 
     # V .= U * B' <===> V' .= B * C'
     if k>1
+        V = _reshape(v, (mi, mo, k))
         C = _reshape(L.cache, (mi, no, k))
 
         @views for i=1:k
             mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]))
         end
     else
+        V = _reshape(v, (mi, mo))
         mul!(transpose(V), L.outer, transpose(L.cache))
     end
 
@@ -615,7 +618,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     set up cache by calling cache_operator($L, $u)"
 
     mi, ni = size(L.inner)
-    _ , no = size(L.outer)
+    mo, no = size(L.outer)
     k = size(u, 2)
 
     U = _reshape(u, (ni, no*k))
@@ -630,12 +633,14 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
 
     # V = α(C * B') + β(V)
     if k>1
+        V = _reshape(v, (mi, mo, k))
         C = _reshape(L.cache, (mi, no, k))
 
         @views for i=1:k
             mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]), α, β)
         end
     else
+        V = _reshape(v, (mi, mo))
         mul!(transpose(V), L.outer, transpose(L.cache), α, β)
     end
 
@@ -647,7 +652,7 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     set up cache by calling cache_operator($L, $u)"
 
     mi, ni = size(L.inner)
-    _ , no = size(L.outer)
+    mo, no = size(L.outer)
     k = size(u, 2)
 
     U = _reshape(u, (ni, no*k))
@@ -663,11 +668,13 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     # V .= C / B' <===> V' .= B \ C'
     if k>1
         C = _reshape(L.cache, (mi, no, k))
+        V = _reshape(v, (mi, mo, k))
 
         @views for i=1:k
             ldiv!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]))
         end
     else
+        V = _reshape(v, (mi, mo))
         ldiv!(transpose(V), L.outer, transpose(L.cache))
     end
 
@@ -702,15 +709,6 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     else
         ldiv!(L.outer, transpose(U))
     end
-
-    u
-end
-
-function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVector)
-    # U .= A \ U
-    ldiv!(L.inner, U)
-    # U .= U / B' <===> U' .= B \ U'
-    ldiv!(L.outer, transpose(U))
 
     u
 end

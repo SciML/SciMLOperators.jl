@@ -12,7 +12,6 @@ _vec(a::AbstractVector) = a
 _vec(a::AbstractArray) = _reshape(a,(length(a),))
 _vec(a::ReshapedArray) = _vec(a.parent)
 
-_view(a, dims::NTuple{D,Int}) = view(a, dims...)
 function _view(a, dims::NTuple{D,Int}) where{D}
     # just one Colon -> _vec
     all(dim -> isa(dim, Colon), dims) && return a

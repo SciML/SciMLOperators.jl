@@ -10,8 +10,8 @@ using SciMLOperators: IdentityOperator,
                       TransposedOperator,
                       InvertedOperator,
 
-                      AbstractAdjointVector,
-                      AbstractTransposedVector,
+                      AbstractAdjointVecOrMat,
+                      AbstractTransposedVecOrMat,
 
                       getops,
                       cache_operator
@@ -210,8 +210,8 @@ end
 @testset "Adjoint, Transpose" begin
 
     for (op, LType, VType) in (
-                               (adjoint,   AdjointOperator,    AbstractAdjointVector ),
-                               (transpose, TransposedOperator, AbstractTransposedVector),
+                               (adjoint,   AdjointOperator,    AbstractAdjointVecOrMat   ),
+                               (transpose, TransposedOperator, AbstractTransposedVecOrMat),
                               )
         A = rand(N,N)
         D = Bidiagonal(rand(N,N), :L)
