@@ -5,9 +5,10 @@ using SciMLOperators: AbstractSciMLOperator, InvertibleOperator, ⊗
 
 Random.seed!(0)
 N = 8
+K = 12
 
 @testset "MatrixOperator, InvertibleOperator" begin
-    u = rand(N)
+    u = rand(N,K)
     p = nothing
     t = 0
     α = rand()
@@ -43,27 +44,27 @@ N = 8
     @test A  \ u ≈ AA  \ u ≈ FF  \ u
     @test At \ u ≈ AAt \ u ≈ FFt \ u
 
-    v=rand(N); @test mul!(v, AA, u) ≈ A * u
-    v=rand(N); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
+    v=rand(N,K); @test mul!(v, AA, u) ≈ A * u
+    v=rand(N,K); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
 @testset "AffineOperator" begin
-    u = rand(N)
+    u = rand(N,K)
     A = rand(N,N)
     D = Diagonal(A)
-    b = rand(N)
+    b = rand(N,K)
     α = rand()
     β = rand()
 
     L = AffineOperator(MatrixOperator(A), b)
 
     @test L * u ≈ A * u + b
-    v=rand(N); @test mul!(v, L, u) ≈ A * u + b
-    v=rand(N); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*w
+    v=rand(N,K); @test mul!(v, L, u) ≈ A * u + b
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*w
 
     L = AffineOperator(MatrixOperator(D), b)
     @test L \ u ≈ D \ (u - b)
-    v=rand(N); @test ldiv!(v, L, u) ≈ D \ (u-b)
+    v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-b)
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-b)
 end
 
