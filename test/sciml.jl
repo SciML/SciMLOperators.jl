@@ -156,8 +156,8 @@ end
     AB  = kron(A, B)
     ABC = kron(A, B, C)
 
-    u2 = rand(n1*n2)
-    u3 = rand(n1*n2*n3)
+    u2 = rand(n1*n2, K)
+    u3 = rand(n1*n2*n3, K)
 
     opAB  = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
@@ -168,23 +168,21 @@ end
     @test convert(AbstractMatrix, opAB)  ≈ AB
     @test convert(AbstractMatrix, opABC) ≈ ABC
 
-    @test opAB * u2 ≈ AB * u2
-    # TODO - figure out a way to nest TensorProductOperators
-    # allow SciMLOperators to act on AbstractArrays
-#   @test opABC * u3 ≈ ABCmulu
+    @test opAB  * u2 ≈ AB  * u2
+    @test opABC * u3 ≈ ABC * u3
 
     opAB  = cache_operator(opAB,  u2)
-#   opABC = cache_operator(opABC, u3)
+    opABC = cache_operator(opABC, u3)
 
     N2 = n1*n2
     N3 = n1*n2*n3
     M2 = m1*m2
     M3 = m1*m2*m3
-    v2=rand(M2); @test mul!(v2, opAB , u2) ≈ AB  * u2
-#   v=rand(M3); @test mul!(v, opABC, u) ≈ ABC * u3
+    v2=rand(M2,K); @test mul!(v2, opAB , u2) ≈ AB  * u2
+#   v3=rand(M3,K); @test mul!(v3, opABC, u3) ≈ ABC * u3
 
-    v2=rand(M2); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
-#   v3=rand(M3); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
+    v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
+#   v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
 
     N1 = 8
     N2 = 12

@@ -412,7 +412,7 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)
 
-function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
+function cache_self(L::FunctionOperator, u::AbstractArray)
     @set! L.cache = similar(u)
     L
 end
@@ -423,7 +423,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
     copy!(L.cache, v)
     mul!(v, L, u)
     lmul!(α, v)
@@ -436,7 +436,7 @@ end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
     copy!(L.cache, u)
     ldiv!(u, L, L.cache)
 end
@@ -553,7 +553,7 @@ for op in (
     end
 end
 
-function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
+function cache_self(L::TensorProductOperator, u::AbstractArray)
     mi, _  = size(L.inner)
     _ , no = size(L.outer)
     k = size(u, 2)
@@ -562,7 +562,7 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     L
 end
 
-function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
+function cache_internals(L::TensorProductOperator, u::AbstractArray)
     if !(L.isset)
         L = cache_self(L, u)
     end
@@ -576,12 +576,13 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
 
     @set! L.inner = cache_operator(L.inner, uinner)
     @set! L.outer = cache_operator(L.outer, uouter)
+
     L
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     mi, ni = size(L.inner)
     mo, no = size(L.outer)
@@ -615,7 +616,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     mi, ni = size(L.inner)
     mo, no = size(L.outer)
@@ -649,7 +650,7 @@ end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     mi, ni = size(L.inner)
     mo, no = size(L.outer)
@@ -683,7 +684,7 @@ end
 
 function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     mi, ni = size(L.inner)
     _ , no = size(L.outer)

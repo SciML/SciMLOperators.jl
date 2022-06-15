@@ -319,7 +319,7 @@ has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
-function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
+function cache_internals(L::ScaledOperator, u::AbstractArray)
     @set! L.L = cache_operator(L.L, u)
     @set! L.λ = cache_operator(L.λ, u)
     L
@@ -437,7 +437,7 @@ getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
-function cache_internals(L::AddedOperator, u::AbstractVecOrMat)
+function cache_internals(L::AddedOperator, u::AbstractArray)
     for i=1:length(L.ops)
         @set! L.ops[i] = cache_operator(L.ops[i], u)
     end
@@ -552,7 +552,7 @@ end
 Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
+function cache_self(L::ComposedOperator, u::AbstractArray)
     vec = similar(u)
     cache = (vec,)
     for i in reverse(2:length(L.ops))
@@ -564,7 +564,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
     L
 end
 
-function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
+function cache_internals(L::ComposedOperator, u::AbstractArray)
     if !(L.isset)
         L = cache_self(L, u)
     end
@@ -579,7 +579,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     vecs = (v, L.cache[1:end-1]..., u)
     for i in reverse(1:length(L.ops))
@@ -590,7 +590,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     cache = L.cache[end]
     copy!(cache, v)
@@ -602,7 +602,7 @@ end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     vecs = (u, reverse(L.cache[1:end-1])..., v)
     for i in 1:length(L.ops)
@@ -665,13 +665,13 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
 Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
-function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
+function cache_self(L::InvertedOperator, u::AbstractArray)
     cache = similar(u)
     @set! L.cache = cache
     L
 end
 
-function cache_internals(L::InvertedOperator, u::AbstractVecOrMat)
+function cache_internals(L::InvertedOperator, u::AbstractArray)
     @set! L.L = cache_operator(L.L, u)
     L
 end
@@ -682,7 +682,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     copy!(L.cache, v)
     ldiv!(v, L.L, u)
@@ -696,7 +696,7 @@ end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator($L, $u)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
