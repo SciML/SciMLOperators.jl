@@ -18,10 +18,11 @@ using SciMLOperators: IdentityOperator,
 
 Random.seed!(0)
 N = 8
+K = 12
 
 @testset "IdentityOperator" begin
     A  = rand(N, N) |> MatrixOperator
-    u  = rand(N)
+    u  = rand(N,K)
     α = rand()
     β = rand()
     Id = IdentityOperator{N}()
@@ -39,11 +40,11 @@ N = 8
         @test op(Id, u) ≈ u
     end
 
-    v=rand(N); @test mul!(v, Id, u) ≈ u
-    v=rand(N); w=copy(v); @test mul!(v, Id, u, α, β) ≈ α*(I*u) + β*w
+    v=rand(N,K); @test mul!(v, Id, u) ≈ u
+    v=rand(N,K); w=copy(v); @test mul!(v, Id, u, α, β) ≈ α*(I*u) + β*w
 
-    v=rand(N); @test ldiv!(v, Id, u) ≈ u
-    v=copy(u); @test ldiv!(Id, u) ≈ v
+    v=rand(N,K); @test ldiv!(v, Id, u) ≈ u
+    v=copy(u);   @test ldiv!(Id, u) ≈ v
 
     for op in (
                *, ∘,
@@ -55,7 +56,7 @@ end
 
 @testset "NullOperator" begin
     A = rand(N, N) |> MatrixOperator
-    u = rand(N)
+    u = rand(N,K)
     α = rand()
     β = rand()
     Z = NullOperator{N}()
@@ -69,8 +70,8 @@ end
 
     @test Z * u ≈ zero(u)
 
-    v=rand(N); @test mul!(v, Z, u) ≈ zero(u)
-    v=rand(N); w=copy(v); @test mul!(v, Z, u, α, β) ≈ α*(0*u) + β*w
+    v=rand(N,K); @test mul!(v, Z, u) ≈ zero(u)
+    v=rand(N,K); w=copy(v); @test mul!(v, Z, u, α, β) ≈ α*(0*u) + β*w
 
     for op in (
                *, ∘,
@@ -91,7 +92,7 @@ end
     b = rand()
     x = rand()
     α = ScalarOperator(x)
-    u = rand(N)
+    u = rand(N,K)
 
     @test α isa ScalarOperator
     @test convert(Number, α) isa Number
@@ -106,16 +107,17 @@ end
         @test op(a, α) ≈ op(a, x)
     end
 
-    v = copy(u); @test lmul!(α, u) == v * x
-    v = copy(u); @test rmul!(u, α) == x * v
+    v=copy(u); @test lmul!(α, u) == v * x
+    v=copy(u); @test rmul!(u, α) == x * v
 
-    v=rand(N); @test mul!(v, α, u) == u * x
-    v=rand(N); w=copy(v); @test mul!(v, α, u, a, b) ≈ a*(x*u) + b*w
+    v=rand(N,K); @test mul!(v, α, u) == u * x
+    v=rand(N,K); w=copy(v); @test mul!(v, α, u, a, b) ≈ a*(x*u) + b*w
 
-    v=rand(N); @test ldiv!(v, α, u) == u / x
-    w=copy(u); @test ldiv!(α, u) == w / x
+    v=rand(N,K); @test ldiv!(v, α, u) == u / x
+    w=copy(u);   @test ldiv!(α, u) == w / x
 
-    v = rand(N); w = copy(v); @test axpy!(α, u, v) == u * x + w
+    X=rand(N,K); Y=rand(N,K); Z=copy(Y); a=rand(); aa=ScalarOperator(a);
+    @test axpy!(aa,X,Y) ≈ a*X+Z
 
     @test abs(ScalarOperator(-x)) == x
 end
