@@ -70,7 +70,7 @@ end
 
 @testset "FunctionOperator" begin
 
-    u = rand(N)
+    u = rand(N,K)
     p = nothing
     t = 0.0
     α = rand()
@@ -134,12 +134,12 @@ end
 
     op2 = cache_operator(op2, u)
 
-    v = rand(N); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
-    v = rand(N); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
-    v = rand(N); w=copy(v); @test α*(A*u)+ β*w ≈ mul!(v, op2, u, α, β)
+    v = rand(N,K); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
+    v = rand(N,K); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
+    v = rand(N,K); w=copy(v); @test α*(A*u)+ β*w ≈ mul!(v, op2, u, α, β)
 
-    v = rand(N); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
-    v = copy(u); @test A \ v ≈ ldiv!(op2, u)
+    v = rand(N,K); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
+    v = copy(u);   @test A \ v ≈ ldiv!(op2, u)
 end
 
 @testset "TensorProductOperator" begin
