@@ -635,8 +635,8 @@ struct TransposedOperator{T,LType} <: AbstractSciMLOperator{T}
     end
 end
 
-AbstractAdjointVector  = Adjoint{  <:Number,<:AbstractVecOrMat}
-AbstractTransposedVector = Transpose{<:Number,<:AbstractVecOrMat}
+AbstractAdjointVecOrMat    = Adjoint{  T,<:AbstractVecOrMat} where{T}
+AbstractTransposedVecOrMat = Transpose{T,<:AbstractVecOrMat} where{T}
 
 has_adjoint(::AdjointOperator) = true
 
@@ -644,8 +644,8 @@ Base.transpose(L::AdjointOperator) = conj(L.L)
 Base.adjoint(L::TransposedOperator) = conj(L.L)
 
 for (op, LType, VType) in (
-                           (:adjoint,   :AdjointOperator,    :AbstractAdjointVector ),
-                           (:transpose, :TransposedOperator, :AbstractTransposedVector),
+                           (:adjoint,   :AdjointOperator,    :AbstractAdjointVecOrMat   ),
+                           (:transpose, :TransposedOperator, :AbstractTransposedVecOrMat),
                           )
     # constructor
     @eval Base.$op(L::AbstractSciMLOperator) = $LType(L)
@@ -677,7 +677,7 @@ for (op, LType, VType) in (
         L
     end
 
-    # oeprator application
+    # operator application
     @eval Base.:*(u::$VType, L::$LType) = $op(L.L * u.parent)
     @eval Base.:/(u::$VType, L::$LType) = $op(L.L \ u.parent)
 

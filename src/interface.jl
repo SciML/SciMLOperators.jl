@@ -167,30 +167,27 @@ issquare(::Union{
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
-###
-# default linear operator traits
-###
-
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
-function Base.conj(L::AbstractSciMLOperator)
-    isreal(L) && return L
-    convert(AbstractMatrix, L) |> conj
-end
-function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
-    size(L1) != size(L2) && return false
-    convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
-end
+Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
 
 LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
 has_exp(L::AbstractSciMLLinearOperator) = true
 expmv(L::AbstractSciMLLinearOperator,u,p,t) = exp(L,t)*u
 expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
 
-Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
-
 ###
 # fallback implementations
 ###
+
+function Base.conj(L::AbstractSciMLOperator)
+    isreal(L) && return L
+    convert(AbstractMatrix, L) |> conj
+end
+
+function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
+    size(L1) != size(L2) && return false
+    convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
+end
 
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N}
     convert(AbstractMatrix, L)[I...]
@@ -219,23 +216,12 @@ for op in (
 end
 
 for op in (
-           :*, :\,
+           :+, :-,
           )
-    @eval function Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVecOrMat)
-        $op(convert(AbstractMatrix,L), x)
-    end
 
-    @eval function Base.$op(u::LinearAlgebra.AdjointAbsVec, L::AbstractSciMLOperator)
-        adjoint($op(L', u))
+    @eval function Base.$op(L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
+        $op(convert(AbstractMatrix,L), u)
     end
-    
-    @eval function Base.$op(u::LinearAlgebra.TransposeAbsVec, L::AbstractSciMLOperator)
-        transpose($op(transpose(L), transpose(u)))
-    end
-
-    #TODO
-    # Base.$op(u, L) = transpose($op(transpose(L), transpose(u)))
-    # mul!, ldiv!
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
@@ -244,6 +230,43 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
+end
+
+###
+# adjoint implementation
+###
+
+for op in (
+           :*, :\,
+          )
+    @eval function Base.$op(u::AbstractVecOrMat, L::AbstractSciMLOperator)
+        oper = u isa Transpose ? transpose : adjoint
+        $op(oper(L), oper(u)) |> oper
+    end
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::AbstractSciMLOperator)
+    op = (u isa Transpose) | (v isa Transpose) ? transpose : adjoint
+    mul!(op(v), op(L), op(u))
+    v
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::AbstractSciMLOperator, α, β)
+    op = (u isa Transpose) | (v isa Transpose) ? transpose : adjoint
+    mul!(op(v), op(L), op(u), α, β)
+    v
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::AbstractSciMLOperator)
+    op = (u isa Transpose) | (v isa Transpose) ? transpose : adjoint
+    ldiv!(op(v), op(L), op(u))
+    v
+end
+
+function LinearAlgebra.ldiv!(u::AbstractVecOrMat, L::AbstractSciMLOperator)
+    op = (u isa Transpose) ? transpose : adjoint
+    ldiv!(op(v), op(L), op(u))
+    v
 end
 
 ###
