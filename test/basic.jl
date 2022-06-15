@@ -125,7 +125,7 @@ end
 @testset "ScaledOperator" begin
     A = rand(N,N)
     D = Diagonal(rand(N))
-    u = rand(N)
+    u = rand(N,K)
     α = rand()
     β = rand()
     a = rand()
@@ -136,11 +136,11 @@ end
     @test op * u       ≈     α * A * u
     @test (β * op) * u ≈ β * α * A * u
 
-    v=rand(N); @test mul!(v, op, u) ≈ α * A * u
-    v=rand(N); w=copy(v); @test mul!(v, op, u, a, b) ≈ a*(α*A*u) + b*w
+    v=rand(N,K); @test mul!(v, op, u) ≈ α * A * u
+    v=rand(N,K); w=copy(v); @test mul!(v, op, u, a, b) ≈ a*(α*A*u) + b*w
 
     op = ScaledOperator(α, MatrixOperator(D))
-    v=rand(N); @test ldiv!(v, op, u) ≈ (α * D) \ u
+    v=rand(N,K); @test ldiv!(v, op, u) ≈ (α * D) \ u
     v=copy(u); @test ldiv!(op, u) ≈ (α * D) \ v
 end
 
@@ -150,7 +150,7 @@ end
     C = rand(N,N) |> MatrixOperator
     α = rand()
     β = rand()
-    u = rand(N)
+    u = rand(N,K)
 
     for op in (
                +, -
@@ -172,15 +172,15 @@ end
     end
 
     op = AddedOperator(A, B)
-    v=rand(N); @test mul!(v, op, u) ≈ (A+B) * u
-    v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(A+B)*u + β*w
+    v=rand(N,K); @test mul!(v, op, u) ≈ (A+B) * u
+    v=rand(N,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(A+B)*u + β*w
 end
 
 @testset "ComposedOperator" begin
     A = rand(N,N)
     B = rand(N,N)
     C = rand(N,N)
-    u = rand(N)
+    u = rand(N,K)
     α = rand()
     β = rand()
 
@@ -196,8 +196,8 @@ end
     @test op \ u ≈ ABCdivu
 
     op = cache_operator(op, u)
-    v=rand(N); @test mul!(v, op, u) ≈ ABCmulu
-    v=rand(N); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
+    v=rand(N,K); @test mul!(v, op, u) ≈ ABCmulu
+    v=rand(N,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
 
     A = rand(N) |> Diagonal
     B = rand(N) |> Diagonal
@@ -205,8 +205,8 @@ end
 
     op = ∘(MatrixOperator.((A, B, C))...)
     op = cache_operator(op, u)
-    v=rand(N); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
-    v=copy(u); @test ldiv!(op, u)    ≈ (A * B * C) \ v
+    v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
+    v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
 end
 
 @testset "Adjoint, Transpose" begin
@@ -217,7 +217,7 @@ end
                               )
         A = rand(N,N)
         D = Bidiagonal(rand(N,N), :L)
-        u = rand(N)
+        u = rand(N,K)
         α = rand()
         β = rand()
         a = rand()
@@ -238,10 +238,10 @@ end
         @test op(u) * AAt ≈ op(A * u)
         @test op(u) / AAt ≈ op(A \ u)
 
-        v=rand(N); @test mul!(op(v), op(u), AAt) ≈ op(A * u)
-        v=rand(N); w=copy(v); @test mul!(op(v), op(u), AAt, α, β) ≈ α*op(A * u) + β*op(w)
+        v=rand(N,K); @test mul!(op(v), op(u), AAt) ≈ op(A * u)
+        v=rand(N,K); w=copy(v); @test mul!(op(v), op(u), AAt, α, β) ≈ α*op(A * u) + β*op(w)
 
-        v=rand(N); @test ldiv!(op(v), op(u), DDt) ≈ op(D \ u)
+        v=rand(N,K); @test ldiv!(op(v), op(u), DDt) ≈ op(D \ u)
         v=copy(u); @test ldiv!(op(u), DDt) ≈ op(D \ v)
     end
 end
