@@ -54,7 +54,8 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
     n  = size(u, 1)
     nk = length(u)
     uu = _reshape(u, (n, nk ÷ n))
-    cache_operator(L, uu)
+    L  = cache_operator(L, uu)
+    L
 end
 
 ###

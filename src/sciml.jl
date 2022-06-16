@@ -572,11 +572,11 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat) where{D}
     k = size(u, 2)
 
     uinner = _reshape(u, (ni, no*k))
-    uouter = _reshape(u, (no, mi*k))
+    uouter = _reshape(L.cache, (no, mi*k))
+    uouter = @views uouter[:,1:mi]
 
     @set! L.inner = cache_operator(L.inner, uinner)
     @set! L.outer = cache_operator(L.outer, uouter)
-
     L
 end
 
