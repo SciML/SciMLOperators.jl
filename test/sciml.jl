@@ -204,7 +204,7 @@ end
     C = rand(N,N)
     D = rand(N,N)
 
-    u = rand(N2)
+    u = rand(N2,K)
     α = rand()
     β = rand()
 
@@ -220,7 +220,7 @@ end
     op = TT' * DD * TT
     op = cache_operator(op, u)
 
-    v=rand(N2); @test mul!(v, op, u) ≈ op * u
-    v=rand(N2); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
+    v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
+    v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
 end
 #

@@ -524,6 +524,7 @@ has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
 # operator application
+# TODO - try permutedims!(dst,src,(2,1,...))
 for op in (
            :*, :\,
           )
