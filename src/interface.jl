@@ -38,16 +38,23 @@ Allocate caches for a SciMLOperator for fast evaluation
 
 arguments:
     L :: AbstractSciMLOperator
-    u :: AbstractArray argument to L
+    u :: AbstractVecOrMat argument to L
 """
 cache_operator(L, u) = L
-cache_self(L::AbstractSciMLOperator, u::AbstractArray) = L
-cache_internals(L::AbstractSciMLOperator, u::AbstractArray) = L
+cache_self(L::AbstractSciMLOperator, u::AbstractVecOrMat) = L
+cache_internals(L::AbstractSciMLOperator, u::AbstractVecOrMat) = L
 
-function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L = cache_self(L, u)
     L = cache_internals(L, u)
     L
+end
+
+function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
+    n  = size(u, 1)
+    nk = length(u)
+    uu = _reshape(u, (n, nk ÷ n))
+    cache_operator(L, uu)
 end
 
 ###

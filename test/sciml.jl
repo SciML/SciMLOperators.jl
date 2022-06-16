@@ -186,7 +186,7 @@ end
 
     N1 = 8
     N2 = 12
-    A = Bidiagonal(rand(N1,N1), :L)
+    A = Bidiagonal(rand(N1,N1), :L) # invertible
     B = Bidiagonal(rand(N2,N2), :L)
     u = rand(N1*N2)
 

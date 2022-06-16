@@ -79,7 +79,7 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
 """ Diagonal Operator """
-DiagonalOperator(u::AbstractArray) = MatrixOperator(Diagonal(_vec(u)))
+DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
 """
@@ -412,7 +412,7 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)
 
-function cache_self(L::FunctionOperator, u::AbstractArray)
+function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
     @set! L.cache = similar(u)
     L
 end
@@ -423,7 +423,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat, α, β)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
     copy!(L.cache, v)
     mul!(v, L, u)
     lmul!(α, v)
@@ -436,7 +436,7 @@ end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
     copy!(L.cache, u)
     ldiv!(u, L, L.cache)
 end
@@ -485,7 +485,7 @@ TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # TODO - overload Base.kron
-#Base.kron(ops::Union{AbstractArray,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
+#Base.kron(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # convert to matrix
 Base.kron(ops::AbstractSciMLOperator...) = kron(convert.(AbstractMatrix, ops)...)
@@ -553,7 +553,7 @@ for op in (
     end
 end
 
-function cache_self(L::TensorProductOperator, u::AbstractArray)
+function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     mi, _  = size(L.inner)
     _ , no = size(L.outer)
     k = size(u, 2)
@@ -562,7 +562,7 @@ function cache_self(L::TensorProductOperator, u::AbstractArray)
     L
 end
 
-function cache_internals(L::TensorProductOperator, u::AbstractArray)
+function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat) where{D}
     if !(L.isset)
         L = cache_self(L, u)
     end
@@ -571,8 +571,11 @@ function cache_internals(L::TensorProductOperator, u::AbstractArray)
     _ , no = size(L.outer)
     k = size(u, 2)
 
+    @show size(u)
+    @show ni, no, k
+
     uinner = _reshape(u, (ni, no*k))
-    uouter = _reshape(L.cache, (no, mi, k))
+    uouter = _reshape(L.cache, (no*mi, k))
 
     @set! L.inner = cache_operator(L.inner, uinner)
     @set! L.outer = cache_operator(L.outer, uouter)

@@ -319,7 +319,7 @@ has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
-function cache_internals(L::ScaledOperator, u::AbstractArray)
+function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     @set! L.λ = cache_operator(L.λ, u)
     L
@@ -437,7 +437,7 @@ getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
-function cache_internals(L::AddedOperator, u::AbstractArray)
+function cache_internals(L::AddedOperator, u::AbstractVecOrMat)
     for i=1:length(L.ops)
         @set! L.ops[i] = cache_operator(L.ops[i], u)
     end
@@ -552,7 +552,7 @@ end
 Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function cache_self(L::ComposedOperator, u::AbstractArray)
+function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
     vec = similar(u)
     cache = (vec,)
     for i in reverse(2:length(L.ops))
@@ -564,7 +564,7 @@ function cache_self(L::ComposedOperator, u::AbstractArray)
     L
 end
 
-function cache_internals(L::ComposedOperator, u::AbstractArray)
+function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
     if !(L.isset)
         L = cache_self(L, u)
     end
@@ -665,13 +665,13 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
 Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
-function cache_self(L::InvertedOperator, u::AbstractArray)
+function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
     cache = similar(u)
     @set! L.cache = cache
     L
 end
 
-function cache_internals(L::InvertedOperator, u::AbstractArray)
+function cache_internals(L::InvertedOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     L
 end
