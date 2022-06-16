@@ -182,7 +182,7 @@ end
     v3=rand(M3,K); @test mul!(v3, opABC, u3) ≈ ABC * u3
 
     v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
-#   v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
+    v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
 
     N1 = 8
     N2 = 12
