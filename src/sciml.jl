@@ -595,10 +595,9 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mo, no = size(L.outer)
     k = size(u, 2)
 
+    perm = (2, 1, 3)
     C1, C2, C3 = L.cache
     U = _reshape(u, (ni, no*k))
-
-    perm = (2, 1, 3)
 
     """
         v .= kron(B, A) * u
@@ -634,7 +633,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    C = L.cache
+    perm = (2, 1, 3)
+    C1, C2, C3 = L.cache
     U = _reshape(u, (ni, no*k))
 
     """
@@ -670,7 +670,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    C = L.cache
+    perm = (2, 1, 3)
+    C1, C2, C3 = L.cache
     U = _reshape(u, (ni, no*k))
 
     """
@@ -683,12 +684,13 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
 
     # V .= C / B' <===> V' .= B \ C'
     if k>1
-        C = _reshape(C, (mi, no, k))
-        V = _reshape(v, (mi, mo, k))
-
-        @views for i=1:k
-            ldiv!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]))
-        end
+        C1 = _reshape(C1, (mi, no, k))
+        permutedims!(C2, C1, perm)
+        C2 = _reshape(C2, (no, mi*k))
+        ldiv!(C3, L.outer, C2)
+        C3 = _reshape(C3, (mo, mi, k))
+        V  = _reshape(v , (mi, mo, k))
+        permutedims!(V, C3, perm)
     else
         V = _reshape(v, (mi, mo))
         C = _reshape(C, (mi, no))
