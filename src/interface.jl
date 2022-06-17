@@ -38,15 +38,23 @@ Allocate caches for a SciMLOperator for fast evaluation
 
 arguments:
     L :: AbstractSciMLOperator
-    u :: AbstractVector argument to L
+    u :: AbstractVecOrMat argument to L
 """
 cache_operator(L, u) = L
-cache_self(L, u) = L
-cache_internals(L, u) = L
+cache_self(L::AbstractSciMLOperator, u::AbstractVecOrMat) = L
+cache_internals(L::AbstractSciMLOperator, u::AbstractVecOrMat) = L
 
-function cache_operator(L::AbstractSciMLOperator, u::AbstractVector)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L = cache_self(L, u)
     L = cache_internals(L, u)
+    L
+end
+
+function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
+    n  = size(u, 1)
+    nk = length(u)
+    uu = _reshape(u, (n, nk ÷ n))
+    L  = cache_operator(L, uu)
     L
 end
 
@@ -116,7 +124,7 @@ has_mul(L) = true
 has_mul!(L) = false
 has_mul!(::Union{
                  # LinearAlgebra
-                 AbstractVector,
+                 AbstractVecOrMat,
                  AbstractMatrix,
                  UniformScaling,
 
@@ -167,26 +175,27 @@ issquare(::Union{
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
-###
-# default linear operator traits
-###
-
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
-function Base.conj(L::AbstractSciMLOperator)
-    isreal(L) && return L
-    convert(AbstractMatrix, L) |> conj
-end
-function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
-    size(L1) != size(L2) && return false
-    convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
-end
+Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
 
 LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
 has_exp(L::AbstractSciMLLinearOperator) = true
 expmv(L::AbstractSciMLLinearOperator,u,p,t) = exp(L,t)*u
 expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
 
-Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
+###
+# fallback implementations
+###
+
+function Base.conj(L::AbstractSciMLOperator)
+    isreal(L) && return L
+    convert(AbstractMatrix, L) |> conj
+end
+
+function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
+    size(L1) != size(L2) && return false
+    convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
+end
 
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N}
     convert(AbstractMatrix, L)[I...]
@@ -215,16 +224,19 @@ for op in (
 end
 
 for op in (
-           :*, :\,
+           :+, :-,
           )
-    @eval Base.$op(L::AbstractSciMLLinearOperator, x::AbstractVector) = $op(convert(AbstractMatrix,L), x)
+
+    @eval function Base.$op(L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
+        $op(convert(AbstractMatrix,L), u)
+    end
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
     mul!(v, convert(AbstractMatrix,L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVector, L::AbstractSciMLLinearOperator, u::AbstractVector, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
 end
 #
