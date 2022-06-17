@@ -194,7 +194,7 @@ end
     op = ⊗(A, B)
     op = cache_operator(op, u)
     v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
-#   v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
+    v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
 end
 
 @testset "Operator Algebra" begin
@@ -221,6 +221,6 @@ end
     op = cache_operator(op, u)
 
     v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
-#   v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
+    v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
 end
 #

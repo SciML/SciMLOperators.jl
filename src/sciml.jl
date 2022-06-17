@@ -562,10 +562,10 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    c1 = similar(u, (mi, no*k))
-    c2 = similar(u, (no, mi, k))
-    c3 = similar(u, (mo, mi*k))
-    c4 = similar(u, (mo*mi, k))
+    c1 = similar(u, (mi, no*k))  # c1 = L.inner * u
+    c2 = similar(u, (no, mi, k)) # permut (2, 1, 3)
+    c3 = similar(u, (mo, mi*k))  # c3 = L.outer * c2
+    c4 = similar(u, (mo*mi, k))  # 5 arg mul!
 
     @set! L.cache = (c1, c2, c3, c4,)
     L
@@ -708,10 +708,12 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    mi, ni = size(L.inner)
-    _ , no = size(L.outer)
-    k = size(u, 2)
+    ni = size(L.inner, 1)
+    no = size(L.outer, 1)
+    k  = size(u, 2)
 
+    perm = (2, 1, 3)
+    C = L.cache[1]
     U = _reshape(u, (ni, no*k))
 
     """
@@ -724,11 +726,11 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
 
     # U .= U / B' <===> U' .= B \ U'
     if k>1
-        U = _reshape(U, (mi, no, k))
-
-        @views for i=1:k
-            ldiv!(L.outer, transpose(U[:,:,i]))
-        end
+        U = _reshape(U, (ni, no, k))
+        C = _reshape(C, (no, ni, k))
+        permutedims!(C, U, perm)
+        ldiv!(L.outer, C)
+        permutedims!(U, C, perm)
     else
         ldiv!(L.outer, transpose(U))
     end
