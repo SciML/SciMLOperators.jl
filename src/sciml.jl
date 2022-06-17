@@ -565,8 +565,9 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     c1 = similar(u, (mi, no*k))
     c2 = similar(u, (no, mi, k))
     c3 = similar(u, (mo, mi*k))
+    c4 = similar(u, (mo*mi, k))
 
-    @set! L.cache = (c1, c2, c3,)
+    @set! L.cache = (c1, c2, c3, c4,)
     L
 end
 
@@ -596,7 +597,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     k = size(u, 2)
 
     perm = (2, 1, 3)
-    C1, C2, C3 = L.cache
+    C1, C2, C3, _ = L.cache
     U = _reshape(u, (ni, no*k))
 
     """
@@ -634,7 +635,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     k = size(u, 2)
 
     perm = (2, 1, 3)
-    C1, C2, C3 = L.cache
+    C1, C2, C3, c4 = L.cache
     U = _reshape(u, (ni, no*k))
 
     """
@@ -647,12 +648,15 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
 
     # V = α(C * B') + β(V)
     if k>1
-        V = _reshape(v, (mi, mo, k))
-        C = _reshape(C, (mi, no, k))
-
-        @views for i=1:k
-            mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]), α, β)
-        end
+        C1 = _reshape(C1, (mi, no, k))
+        permutedims!(C2, C1, perm)
+        C2 = _reshape(C2, (no, mi*k))
+        mul!(C3, L.outer, C2)
+        C3 = _reshape(C3, (mo, mi, k))
+        V  = _reshape(v , (mi, mo, k))
+        copy!(c4, v)
+        permutedims!(V, C3, perm)
+        axpby!(β, c4, α, v)
     else
         V  = _reshape(v , (mi, mo))
         C1 = _reshape(C1, (mi, no))
@@ -671,7 +675,7 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     k = size(u, 2)
 
     perm = (2, 1, 3)
-    C1, C2, C3 = L.cache
+    C1, C2, C3, _ = L.cache
     U = _reshape(u, (ni, no*k))
 
     """
