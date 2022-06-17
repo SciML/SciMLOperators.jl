@@ -102,7 +102,6 @@ function Base.zero(A::AbstractSciMLOperator)
     NullOperator{N}()
 end
 
-# TODO sparse diagonal
 Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
 
 # traits
@@ -230,7 +229,7 @@ end
 for op in (:-, :+)
     @eval Base.$op(α::ScalarOperator, x::Number) = $op(α.val, x)
     @eval Base.$op(x::Number, α::ScalarOperator) = $op(x, α.val)
-    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy compose instead?
+    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = $op(x.val, y.val) # TODO - lazy sum instead?
 end
 
 LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVecOrMat) = lmul!(α.val, u)
