@@ -181,8 +181,8 @@ end
     v2=rand(M2,K); @test mul!(v2, opAB , u2) ≈ AB  * u2
     v3=rand(M3,K); @test mul!(v3, opABC, u3) ≈ ABC * u3
 
-    v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
-    v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
+#   v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
+#   v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
 
     N1 = 8
     N2 = 12
@@ -194,7 +194,7 @@ end
     op = ⊗(A, B)
     op = cache_operator(op, u)
     v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
-    v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
+#   v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
 end
 
 @testset "Operator Algebra" begin
@@ -221,6 +221,6 @@ end
     op = cache_operator(op, u)
 
     v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
-    v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
+#   v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
 end
 #

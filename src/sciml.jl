@@ -618,7 +618,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
         permutedims!(V, C3, perm)
     else
         V  = _reshape(v, (mi, mo))
-        C1 = _reshape(C, (mi, no))
+        C1 = _reshape(C1, (mi, no))
         mul!(transpose(V), L.outer, transpose(C1))
     end
 
@@ -643,7 +643,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     """
 
     # C .= A * U
-    mul!(C, L.inner, U)
+    mul!(C1, L.inner, U)
 
     # V = α(C * B') + β(V)
     if k>1
@@ -654,8 +654,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
             mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]), α, β)
         end
     else
-        V = _reshape(v, (mi, mo))
-        C = _reshape(C, (mi, no))
+        V  = _reshape(v , (mi, mo))
+        C1 = _reshape(C1, (mi, no))
         mul!(transpose(V), L.outer, transpose(C), α, β)
     end
 
@@ -680,7 +680,7 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     """
 
     # C .= A \ U
-    ldiv!(C, L.inner, U)
+    ldiv!(C1, L.inner, U)
 
     # V .= C / B' <===> V' .= B \ C'
     if k>1
@@ -692,9 +692,9 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
         V  = _reshape(v , (mi, mo, k))
         permutedims!(V, C3, perm)
     else
-        V = _reshape(v, (mi, mo))
-        C = _reshape(C, (mi, no))
-        ldiv!(transpose(V), L.outer, transpose(C))
+        V  = _reshape(v , (mi, mo))
+        C1 = _reshape(C1, (mi, no))
+        ldiv!(transpose(V), L.outer, transpose(C1))
     end
 
     v
