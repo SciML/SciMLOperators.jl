@@ -534,16 +534,19 @@ for op in (
         m , n  = size(L)
         k = size(u, 2)
 
+        perm = (2, 1, 3)
+
         U = _reshape(u, (ni, no*k))
         C = $op(L.inner, U)
 
         V = if k > 1
             C = _reshape(C, (mi, no, k))
-            V = similar( u, (mi, mo, k))
+            C = permutedims(C, perm)
+            C = _reshape(C, (no, mi*k))
 
-            @views for i=1:k
-                V[:,:,i] = transpose($op(L.outer, transpose(C[:,:,i])))
-            end
+            V = $op(L.outer, C)
+            V = _reshape(V, (mo, mi, k))
+            V = permutedims(V, perm)
 
             V
         else
@@ -556,10 +559,14 @@ end
 
 function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     mi, _  = size(L.inner)
-    _ , no = size(L.outer)
+    mo, no = size(L.outer)
     k = size(u, 2)
 
-    @set! L.cache = similar(u, (mi, no*k))
+    c1 = similar(u, (mi, no*k))
+    c2 = similar(u, (no, mi, k))
+    c3 = similar(u, (mo, mi*k))
+
+    @set! L.cache = (c1, c2, c3,)
     L
 end
 
@@ -573,8 +580,7 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat) where{D}
     k = size(u, 2)
 
     uinner = _reshape(u, (ni, no*k))
-    uouter = _reshape(L.cache, (no, mi*k))
-    uouter = @views uouter[:,1:mi]
+    uouter = L.cache[2]
 
     @set! L.inner = cache_operator(L.inner, uinner)
     @set! L.outer = cache_operator(L.outer, uouter)
@@ -589,8 +595,10 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    C = L.cache
+    C1, C2, C3 = L.cache
     U = _reshape(u, (ni, no*k))
+
+    perm = (2, 1, 3)
 
     """
         v .= kron(B, A) * u
@@ -598,20 +606,21 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     """
 
     # C .= A * U
-    mul!(C, L.inner, U)
+    mul!(C1, L.inner, U)
 
     # V .= U * B' <===> V' .= B * C'
     if k>1
-        V = _reshape(v, (mi, mo, k))
-        C = _reshape(C, (mi, no, k))
-
-        @views for i=1:k
-            mul!(transpose(V[:,:,i]), L.outer, transpose(C[:,:,i]))
-        end
+        C1 = _reshape(C1, (mi, no, k))
+        permutedims!(C2, C1, perm)
+        C2 = _reshape(C2, (no, mi*k))
+        mul!(C3, L.outer, C2)
+        C3 = _reshape(C3, (mo, mi, k))
+        V  = _reshape(v , (mi, mo, k))
+        permutedims!(V, C3, perm)
     else
-        V = _reshape(v, (mi, mo))
-        C = _reshape(C, (mi, no))
-        mul!(transpose(V), L.outer, transpose(C))
+        V  = _reshape(v, (mi, mo))
+        C1 = _reshape(C, (mi, no))
+        mul!(transpose(V), L.outer, transpose(C1))
     end
 
     v
