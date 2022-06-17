@@ -219,7 +219,6 @@ end
     DD = Diagonal(AbstractSciMLOperator[D1, D2])
 
     op = TT' * DD * TT
-
     op = cache_operator(op, u)
 
     v=rand(N2); @test mul!(v, op, u) ≈ op * u
