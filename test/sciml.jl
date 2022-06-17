@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: AbstractSciMLOperator, InvertibleOperator, ⊗
+using SciMLOperators: InvertibleOperator, ⊗
 
 Random.seed!(0)
 N = 8
