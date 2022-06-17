@@ -214,8 +214,8 @@ end
     D1  = DiagonalOperator(rand(N2))
     D2  = DiagonalOperator(rand(N2))
 
-    TT = AbstractSciMLOperator[T1, T2]
-    DD = Diagonal(AbstractSciMLOperator[D1, D2])
+    TT = [T1, T2]
+    DD = Diagonal([D1, D2])
 
     op = TT' * DD * TT
     op = cache_operator(op, u)

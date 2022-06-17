@@ -200,8 +200,8 @@ function Base.adjoint(α::ScalarOperator) # TODO - test
     ScalarOperator(val; update_func=update_func)
 end
 Base.transpose(α::ScalarOperator) = α
-Base.one(::Type{AbstractSciMLOperator}) = ScalarOperator(true)
-Base.zero(::Type{AbstractSciMLOperator}) = ScalarOperator(false)
+Base.one(::Type{<:AbstractSciMLOperator}) = ScalarOperator(true)
+Base.zero(::Type{<:AbstractSciMLOperator}) = ScalarOperator(false)
 
 getops(α::ScalarOperator) = (α.val,)
 islinear(L::ScalarOperator) = true
