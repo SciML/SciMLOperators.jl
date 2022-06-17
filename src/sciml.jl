@@ -610,6 +610,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
 
     # V .= U * B' <===> V' .= B * C'
     if k>1
+        # TODO - avoid ops if L.outer is IdentityOperator
         C1 = _reshape(C1, (mi, no, k))
         permutedims!(C2, C1, perm)
         C2 = _reshape(C2, (no, mi*k))
