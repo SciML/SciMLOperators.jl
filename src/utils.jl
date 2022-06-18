@@ -12,15 +12,6 @@ _vec(a::AbstractVector) = a
 _vec(a::AbstractArray) = _reshape(a,(length(a),))
 _vec(a::ReshapedArray) = _vec(a.parent)
 
-function _view(a, dims::NTuple{D,Int}) where{D}
-    # just one Colon -> _vec
-    all(dim -> isa(dim, Colon), dims) && return a
-    dims == size(a) && return a
-    length(a) == prod(dims) && return a
-
-    view(a, dims...)
-end
-
 function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
 
     size_in = u isa AbstractVecOrMat ? size(u) : begin
