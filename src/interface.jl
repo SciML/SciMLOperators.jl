@@ -66,6 +66,9 @@ Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 Base.eltype(::Type{AbstractSciMLOperator{T}}) where T = T
 Base.eltype(::AbstractSciMLOperator{T}) where T = T
 
+Base.oneunit(L::AbstractSciMLOperator) = one(L)
+Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
+
 issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
 
 Base.iszero(::AbstractSciMLOperator) = false
