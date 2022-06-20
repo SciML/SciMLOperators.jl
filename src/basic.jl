@@ -6,9 +6,9 @@ struct IdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 # constructors
 IdentityOperator(u::AbstractArray) = IdentityOperator{size(u,1)}()
 
-function Base.one(A::AbstractSciMLOperator)
-    @assert issquare(A)
-    N = size(A, 1)
+function Base.one(L::AbstractSciMLOperator)
+    @assert issquare(L)
+    N = size(L, 1)
     IdentityOperator{N}()
 end
 
@@ -96,9 +96,9 @@ struct NullOperator{N} <: AbstractSciMLLinearOperator{Bool} end
 # constructors
 NullOperator(u::AbstractArray) = NullOperator{size(u,1)}()
 
-function Base.zero(A::AbstractSciMLOperator)
-    @assert issquare(A)
-    N = size(A, 1)
+function Base.zero(L::AbstractSciMLOperator)
+    @assert issquare(L)
+    N = size(L, 1)
     NullOperator{N}()
 end
 
@@ -305,7 +305,7 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.op))
+    @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
@@ -325,7 +325,7 @@ function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
 end
 
 # getindex
-Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.op[i]
+Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.L[i]
 Base.getindex(L::ScaledOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]
 for fact in (
              :lu, :lu!,
@@ -648,6 +648,9 @@ getops(L::InvertedOperator) = (L.L,)
 has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
 has_ldiv(L::InvertedOperator) = has_mul(L.L)
 has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
+
+Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
+Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 
 @forward InvertedOperator.L (
                              # LinearAlgebra
