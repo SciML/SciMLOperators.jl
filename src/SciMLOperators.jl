@@ -28,12 +28,13 @@ $(TYPEDEF)
 """
 abstract type AbstractSciMLLinearOperator{T} <: AbstractSciMLOperator{T} end
 
-include("interface.jl")
 include("utils.jl")
+include("interface.jl")
 include("left.jl")
 include("multidim.jl")
+
 include("basic.jl")
-include("sciml.jl")
+include("matrix.jl")
 include("func.jl")
 include("tensor.jl")
 
