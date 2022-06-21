@@ -83,7 +83,23 @@ has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
 # operator application
-# TODO - try permutedims!(dst,src,(2,1,...))
+
+# same for div
+function outer_mul(Louter::AbstractSciMLOperator, u::AbstractVecOrMat)
+end
+
+function outer_mul(Louter::IdentityOperator, u::AbstractVecOrMat)
+end
+
+function outer_mul(Louter::ScaledOperator, u::AbstractVecOrMat)
+end
+
+function outer_mul!(v::AbstractVecOrMat, Louter::AbstractSciMLOperator, u::AbstractVecOrMat)
+end
+
+function outer_mul!(v::AbstractVecOrMat, Louter::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
+end
+
 for op in (
            :*, :\,
           )
