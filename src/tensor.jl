@@ -249,7 +249,7 @@ function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
     if L.outer isa IdentityOperator
         return C
     elseif L.outer isa ScalarOperator
-        return L.outer.λ * outer_mul(L.outer.L, C)
+        return L.outer.λ * outer_mul(L.outer.L, u, C)
     end
 
     k = size(u, 2)
@@ -351,9 +351,9 @@ end
 
 function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
-        return c
+        return C
     elseif L.outer isa ScalarOperator
-        return L.outer.λ \ outer_div(L.outer.L, c)
+        return L.outer.λ \ outer_div(L.outer.L, u, C)
     end
 
     k = size(u, 2)
