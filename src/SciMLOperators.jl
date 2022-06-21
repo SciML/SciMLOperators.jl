@@ -33,6 +33,8 @@ include("left.jl")
 include("multidim.jl")
 include("basic.jl")
 include("sciml.jl")
+include("func.jl")
+include("tensor.jl")
 
 export ScalarOperator,
        MatrixOperator,
