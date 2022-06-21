@@ -2,6 +2,7 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 using SciMLOperators: InvertibleOperator, ⊗
+using FFTW
 
 Random.seed!(0)
 N = 8
@@ -140,6 +141,10 @@ end
 
     v = rand(N,K); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
     v = copy(u);   @test A \ v ≈ ldiv!(op2, u)
+end
+
+@testset "FunctionOperator FFTW Wrapper" begin
+    # f.jl
 end
 
 @testset "TensorProductOperator" begin
