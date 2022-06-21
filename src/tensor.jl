@@ -84,8 +84,8 @@ has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
 # operator application
 function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
+    _ , ni = size(L.inner)
+    _ , no = size(L.outer)
     m , n  = size(L)
     k = size(u, 2)
 
@@ -98,8 +98,8 @@ function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
 end
 
 function Base.:\(L::TensorProductOperator, u::AbstractVecOrMat)
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
+    _ , ni = size(L.inner)
+    _ , no = size(L.outer)
     m , n  = size(L)
     k = size(u, 2)
 
@@ -130,7 +130,7 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat) where{D}
         L = cache_self(L, u)
     end
 
-    mi, ni = size(L.inner)
+    _ , ni = size(L.inner)
     _ , no = size(L.outer)
     k = size(u, 2)
 
@@ -146,8 +146,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
+    _ , ni = size(L.inner)
+    _ , no = size(L.outer)
     k = size(u, 2)
 
     C1, C2, C3, _ = L.cache
@@ -171,8 +171,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
+    _ , ni = size(L.inner)
+    _ , no = size(L.outer)
     k = size(u, 2)
 
     C1, C2, C3, c4 = L.cache
@@ -196,8 +196,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
+    _ , ni = size(L.inner)
+    _ , no = size(L.outer)
     k = size(u, 2)
 
     C1, C2, C3, _ = L.cache
@@ -257,9 +257,9 @@ function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
         return transpose(L.outer * transpose(C))
     end
 
-    mi, ni = size(L.inner)
+    mi, _  = size(L.inner)
     mo, no = size(L.outer)
-    m , n  = size(L)
+#   m , n  = size(L)
 
     C = _reshape(C, (mi, no, k))
     C = permutedims(C, PERM)
@@ -284,9 +284,9 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         return v
     end
 
-    mi, ni = size(L.inner)
+    mi, _  = size(L.inner)
     mo, no = size(L.outer)
-    m , n  = size(L)
+#   m , n  = size(L)
     k = size(u, 2)
 
     if k == 1
@@ -312,6 +312,8 @@ end
 function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
     C1 = first(L.cache)
 
+    m, _ = size(L)
+
     if L.outer isa IdentityOperator
         c1 = _reshape(C1, (m, k))
         axpby!(α, c1, β, v)
@@ -322,9 +324,8 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
 #       return v
     end
 
-    mi, ni = size(L.inner)
+    mi, _  = size(L.inner)
     mo, no = size(L.outer)
-    m , n  = size(L)
     k = size(u, 2)
 
     if k == 1
@@ -361,9 +362,9 @@ function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
         return transpose(L.outer \ transpose(C))
     end
 
-    mi, ni = size(L.inner)
+    mi, _  = size(L.inner)
     mo, no = size(L.outer)
-    m , n  = size(L)
+#   m , n  = size(L)
 
     C = _reshape(C, (mi, no, k))
     C = permutedims(C, PERM)
@@ -388,9 +389,9 @@ function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         return v
     end
 
-    mi, ni = size(L.inner)
+    mi, _  = size(L.inner)
     mo, no = size(L.outer)
-    m , n  = size(L)
+#   m , n  = size(L)
     k = size(u, 2)
 
     if k == 1
@@ -422,9 +423,9 @@ function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
         return u
     end
 
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
-    m , n  = size(L)
+    _ , ni = size(L.inner)
+    _ , no = size(L.outer)
+#   m , n  = size(L)
     k = size(u, 2)
 
     U = _reshape(u, (ni, no*k))
