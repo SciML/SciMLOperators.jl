@@ -305,7 +305,7 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.op))
+    @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
