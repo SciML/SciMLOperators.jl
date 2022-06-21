@@ -87,17 +87,21 @@ has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 # mul
 const PERM = (2, 1, 3)
 
-function outer_mul(L::TensorProductOperator, c::AbstractVecOrMat)
+function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
-        return c
+        return C
     elseif L.outer isa ScalarOperator
-        return L.outer.λ * outer_mul(L.outer.L, c)
+        return L.outer.λ * outer_mul(L.outer.L, C)
+    end
+
+    k = size(u, 2)
+    if k == 1
+        return transpose(L.outer * transpose(C))
     end
 
     mi, ni = size(L.inner)
     mo, no = size(L.outer)
     m , n  = size(L)
-    k = size(u, 2)
 
     C = _reshape(C, (mi, no, k))
     C = permutedims(C, PERM)
@@ -120,17 +124,21 @@ end
 #end
 
 # div
-function outer_div(L::TensorProductOperator, c::AbstractVecOrMat)
+function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return c
     elseif L.outer isa ScalarOperator
         return L.outer.λ \ outer_div(L.outer.L, c)
     end
 
+    k = size(u, 2)
+    if k == 1
+        return transpose(\(L.outer, transpose(C)))
+    end
+
     mi, ni = size(L.inner)
     mo, no = size(L.outer)
     m , n  = size(L)
-    k = size(u, 2)
 
     C = _reshape(C, (mi, no, k))
     C = permutedims(C, PERM)
@@ -154,18 +162,10 @@ function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
     m , n  = size(L)
     k = size(u, 2)
 
-    perm = (2, 1, 3)
-
     U = _reshape(u, (ni, no*k))
-    C = L.inner * u
+    C = L.inner * U
 
     V = outer_mul(L, u, C)
-
-    V = if k > 1
-        V = outer_mul(L, C)
-    else
-        transpose(*(L.outer, transpose(C)))
-    end
 
     u isa AbstractMatrix ? _reshape(V, (m, k)) : _reshape(V, (m,))
 end
@@ -179,54 +179,12 @@ function Base.:\(L::TensorProductOperator, u::AbstractVecOrMat)
     perm = (2, 1, 3)
 
     U = _reshape(u, (ni, no*k))
-    C = \(L.inner, U)
+    C = L.inner \ U
 
-    V = if k > 1
-        V = outer_div(L, C)
-    else
-        transpose(\(L.outer, transpose(C)))
-    end
+    V = outer_div(L, u, C)
 
     u isa AbstractMatrix ? _reshape(V, (m, k)) : _reshape(V, (m,))
 end
-
-#for op in (
-#           :*, :\,
-#          )
-#    @eval function Base.$op(L::TensorProductOperator, u::AbstractVecOrMat)
-#        mi, ni = size(L.inner)
-#        mo, no = size(L.outer)
-#        m , n  = size(L)
-#        k = size(u, 2)
-#
-#        perm = (2, 1, 3)
-#
-#        U = _reshape(u, (ni, no*k))
-#        C = $op(L.inner, U)
-#
-#        V = if k > 1
-##           V = outer_mul(L.outer, C)
-#            V = if L.outer isa IdentityOperator
-#                copy(C)
-#            else
-#                C = _reshape(C, (mi, no, k))
-#                C = permutedims(C, perm)
-#                C = _reshape(C, (no, mi*k))
-#
-#                V = $op(L.outer, C)
-#                V = _reshape(V, (mo, mi, k))
-#                V = permutedims(V, perm)
-#                V
-#            end
-#
-#            V
-#        else
-#            transpose($op(L.outer, transpose(C)))
-#        end
-#
-#        u isa AbstractMatrix ? _reshape(V, (m, k)) : _reshape(V, (m,))
-#    end
-#end
 
 function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     mi, _  = size(L.inner)
