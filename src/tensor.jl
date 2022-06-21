@@ -123,7 +123,6 @@ end
 #function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator{<:Any,<:ScalarOperator}, u::AbstractVecOrMat)
 #end
 
-# div
 function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return c
