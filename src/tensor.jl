@@ -83,78 +83,6 @@ has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
 # operator application
-
-# mul
-const PERM = (2, 1, 3)
-
-function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
-    if L.outer isa IdentityOperator
-        return C
-    elseif L.outer isa ScalarOperator
-        return L.outer.λ * outer_mul(L.outer.L, C)
-    end
-
-    k = size(u, 2)
-    if k == 1
-        return transpose(L.outer * transpose(C))
-    end
-
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
-    m , n  = size(L)
-
-    C = _reshape(C, (mi, no, k))
-    C = permutedims(C, PERM)
-    C = _reshape(C, (no, mi*k))
-
-    V = L.outer * C
-    V = _reshape(V, (mo, mi, k))
-    V = permutedims(V, PERM)
-    V
-end
-
-#function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, c::AbstractVecOrMat)
-#end
-#
-#function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator{<:Any,<:IdentityOperator}, c::AbstractVecOrMat)
-#    copyto!(v, u)
-#end
-#
-#function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator{<:Any,<:ScalarOperator}, u::AbstractVecOrMat)
-#end
-
-function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
-    if L.outer isa IdentityOperator
-        return c
-    elseif L.outer isa ScalarOperator
-        return L.outer.λ \ outer_div(L.outer.L, c)
-    end
-
-    k = size(u, 2)
-    if k == 1
-        return transpose(\(L.outer, transpose(C)))
-    end
-
-    mi, ni = size(L.inner)
-    mo, no = size(L.outer)
-    m , n  = size(L)
-
-    C = _reshape(C, (mi, no, k))
-    C = permutedims(C, PERM)
-    C = _reshape(C, (no, mi*k))
-
-    V = L.outer \ C
-    V = _reshape(V, (mo, mi, k))
-    V = permutedims(V, PERM)
-    V
-end
-
-#function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator{<:Any,<:AbstractSciMLOperator}, u::AbstractVecOrMat)
-#end
-#
-#function outer_div!(L::TensorProductOperator{<:Any,<:AbstractSciMLOperator}, u::AbstractVecOrMat)
-#end
-
 function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
     mi, ni = size(L.inner)
     mo, no = size(L.outer)
@@ -174,8 +102,6 @@ function Base.:\(L::TensorProductOperator, u::AbstractVecOrMat)
     mo, no = size(L.outer)
     m , n  = size(L)
     k = size(u, 2)
-
-    perm = (2, 1, 3)
 
     U = _reshape(u, (ni, no*k))
     C = L.inner \ U
@@ -224,7 +150,6 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    perm = (2, 1, 3)
     C1, C2, C3, _ = L.cache
     U = _reshape(u, (ni, no*k))
 
@@ -237,23 +162,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mul!(C1, L.inner, U)
 
     # V .= U * B' <===> V' .= B * C'
-    if k>1
-        if L.outer isa IdentityOperator
-            copyto!(v, C1)
-        else
-            C1 = _reshape(C1, (mi, no, k))
-            permutedims!(C2, C1, perm)
-            C2 = _reshape(C2, (no, mi*k))
-            mul!(C3, L.outer, C2)
-            C3 = _reshape(C3, (mo, mi, k))
-            V  = _reshape(v , (mi, mo, k))
-            permutedims!(V, C3, perm)
-        end
-    else
-        V  = _reshape(v, (mi, mo))
-        C1 = _reshape(C1, (mi, no))
-        mul!(transpose(V), L.outer, transpose(C1))
-    end
+    outer_mul!(v, L, u)
 
     v
 end
@@ -266,7 +175,6 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    perm = (2, 1, 3)
     C1, C2, C3, c4 = L.cache
     U = _reshape(u, (ni, no*k))
 
@@ -279,26 +187,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mul!(C1, L.inner, U)
 
     # V = α(C * B') + β(V)
-    if k>1
-        if L.outer isa IdentityOperator
-            c1 = _reshape(C1, (m, k))
-            axpby!(α, c1, β, v)
-        else
-            C1 = _reshape(C1, (mi, no, k))
-            permutedims!(C2, C1, perm)
-            C2 = _reshape(C2, (no, mi*k))
-            mul!(C3, L.outer, C2)
-            C3 = _reshape(C3, (mo, mi, k))
-            V  = _reshape(v , (mi, mo, k))
-            copy!(c4, v)
-            permutedims!(V, C3, perm)
-            axpby!(β, c4, α, v)
-        end
-    else
-        V  = _reshape(v , (mi, mo))
-        C1 = _reshape(C1, (mi, no))
-        mul!(transpose(V), L.outer, transpose(C), α, β)
-    end
+    outer_mul!(v, L, u, α, β)
 
     v
 end
@@ -311,7 +200,6 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    perm = (2, 1, 3)
     C1, C2, C3, _ = L.cache
     U = _reshape(u, (ni, no*k))
 
@@ -324,23 +212,7 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     ldiv!(C1, L.inner, U)
 
     # V .= C / B' <===> V' .= B \ C'
-    if k>1
-        if L.outer isa IdentityOperator
-            copyto!(v, C1)
-        else
-            C1 = _reshape(C1, (mi, no, k))
-            permutedims!(C2, C1, perm)
-            C2 = _reshape(C2, (no, mi*k))
-            ldiv!(C3, L.outer, C2)
-            C3 = _reshape(C3, (mo, mi, k))
-            V  = _reshape(v , (mi, mo, k))
-            permutedims!(V, C3, perm)
-        end
-    else
-        V  = _reshape(v , (mi, mo))
-        C1 = _reshape(C1, (mi, no))
-        ldiv!(transpose(V), L.outer, transpose(C1))
-    end
+    outer_div!(v, L, u)
 
     v
 end
@@ -353,8 +225,6 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     no = size(L.outer, 1)
     k  = size(u, 2)
 
-    perm = (2, 1, 3)
-    C = L.cache[1]
     U = _reshape(u, (ni, no*k))
 
     """
@@ -366,15 +236,211 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     ldiv!(L.inner, U)
 
     # U .= U / B' <===> U' .= B \ U'
-    if k>1 & !(L.outer isa IdentityOperator)
-        U = _reshape(U, (ni, no, k))
-        C = _reshape(C, (no, ni, k))
-        permutedims!(C, U, perm)
-        ldiv!(L.outer, C)
-        permutedims!(U, C, perm)
-    else
-        ldiv!(L.outer, transpose(U))
+    outer_div!(L, u)
+
+    u
+end
+
+
+# helper functions
+const PERM = (2, 1, 3)
+
+function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
+    if L.outer isa IdentityOperator
+        return C
+    elseif L.outer isa ScalarOperator
+        return L.outer.λ * outer_mul(L.outer.L, C)
     end
+
+    k = size(u, 2)
+    if k == 1
+        return transpose(L.outer * transpose(C))
+    end
+
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
+    m , n  = size(L)
+
+    C = _reshape(C, (mi, no, k))
+    C = permutedims(C, PERM)
+    C = _reshape(C, (no, mi*k))
+
+    V = L.outer * C
+    V = _reshape(V, (mo, mi, k))
+    V = permutedims(V, PERM)
+
+    V
+end
+
+function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
+    C1 = first(L.cache)
+
+    if L.outer isa IdentityOperator
+        copyto!(v, C1)
+        return v
+    elseif L.outer isa ScalarOperator
+        outer_mul!(v, L.outer.L, u)
+        lmul!(L.outer.λ, v)
+        return v
+    end
+
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
+    m , n  = size(L)
+    k = size(u, 2)
+
+    if k == 1
+        V  = _reshape(v, (mi, mo))
+        C1 = _reshape(C1, (mi, no))
+        mul!(transpose(V), L.outer, transpose(C1))
+        return v
+    end
+
+    _, C2, C3, _ = L.cache
+
+    C1 = _reshape(C1, (mi, no, k))
+    permutedims!(C2, C1, PERM)
+    C2 = _reshape(C2, (no, mi*k))
+    mul!(C3, L.outer, C2)
+    C3 = _reshape(C3, (mo, mi, k))
+    V  = _reshape(v , (mi, mo, k))
+    permutedims!(V, C3, PERM)
+
+    v
+end
+
+function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
+    C1 = first(L.cache)
+
+    if L.outer isa IdentityOperator
+        c1 = _reshape(C1, (m, k))
+        axpby!(α, c1, β, v)
+        return v
+#   elseif L.outer isa ScalarOperator
+#       outer_mul!(v, L.outer.L, u, α, β) # <- figure out which cache is still unused
+#       lmul!(L.outer.λ, v)
+#       return v
+    end
+
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
+    m , n  = size(L)
+    k = size(u, 2)
+
+    if k == 1
+        V  = _reshape(v, (mi, mo))
+        C1 = _reshape(C1, (mi, no))
+        mul!(transpose(V), L.outer, transpose(C1), α, β)
+        return v
+    end
+
+    _, C2, C3, c4 = L.cache
+
+    C1 = _reshape(C1, (mi, no, k))
+    permutedims!(C2, C1, PERM)
+    C2 = _reshape(C2, (no, mi*k))
+    mul!(C3, L.outer, C2)
+    C3 = _reshape(C3, (mo, mi, k))
+    V  = _reshape(v , (mi, mo, k))
+    copy!(c4, v)
+    permutedims!(V, C3, PERM)
+    axpby!(β, c4, α, v)
+
+    v
+end
+
+function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
+    if L.outer isa IdentityOperator
+        return c
+    elseif L.outer isa ScalarOperator
+        return L.outer.λ \ outer_div(L.outer.L, c)
+    end
+
+    k = size(u, 2)
+    if k == 1
+        return transpose(L.outer \ transpose(C))
+    end
+
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
+    m , n  = size(L)
+
+    C = _reshape(C, (mi, no, k))
+    C = permutedims(C, PERM)
+    C = _reshape(C, (no, mi*k))
+
+    V = L.outer \ C
+    V = _reshape(V, (mo, mi, k))
+    V = permutedims(V, PERM)
+
+    V
+end
+
+function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
+    C1 = first(L.cache)
+
+    if L.outer isa IdentityOperator
+        copyto!(v, C1)
+        return v
+    elseif L.outer isa ScalarOperator
+        outer_div!(v, L.outer.L, u)
+        ldiv!(L.outer.λ, v)
+        return v
+    end
+
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
+    m , n  = size(L)
+    k = size(u, 2)
+
+    if k == 1
+        V  = _reshape(v, (mi, mo))
+        C1 = _reshape(C1, (mi, no))
+        ldiv!(transpose(V), L.outer, transpose(C1))
+        return v
+    end
+
+    _, C2, C3, _ = L.cache
+
+    C1 = _reshape(C1, (mi, no, k))
+    permutedims!(C2, C1, PERM)
+    C2 = _reshape(C2, (no, mi*k))
+    ldiv!(C3, L.outer, C2)
+    C3 = _reshape(C3, (mo, mi, k))
+    V  = _reshape(v , (mi, mo, k))
+    permutedims!(V, C3, PERM)
+
+    v
+end
+
+function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
+    if L.outer isa IdentityOperator
+        return u
+    elseif L.outer isa ScalarOperator
+        outer_div!(L.outer.L, u)
+        ldiv!(L.outer.λ, u)
+        return u
+    end
+
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
+    m , n  = size(L)
+    k = size(u, 2)
+
+    U = _reshape(u, (ni, no*k))
+
+    if k == 1
+        ldiv!(L.outer, transpose(U))
+        return u
+    end
+
+    C = first(L.cache)
+
+    U = _reshape(U, (ni, no, k))
+    C = _reshape(C, (no, ni, k))
+    permutedims!(C, U, PERM)
+    ldiv!(L.outer, C)
+    permutedims!(U, C, PERM)
 
     u
 end
