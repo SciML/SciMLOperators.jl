@@ -203,21 +203,21 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)
 
-## TODO - FunctionOperator caching broken for inplace
-#function Base.:*(L::FunctionOperator{true}, u::AbstractVecOrMat)
-#    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-#    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
-#
-#    L.op(du, u, L.p, L.t)
-#end
+# TODO - FunctionOperator caching broken for inplace
+function Base.:*(L::FunctionOperator{true}, u::AbstractVecOrMat)
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
 
-## TODO
-#function Base.:\(L::FunctionOperator{true}, u::AbstractVecOrMat)
-#    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-#    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
-#
-#    L.op_inverse(du, u, L.p, L.t)
-#end
+    L.op(du, u, L.p, L.t)
+end
+
+# TODO
+function Base.:\(L::FunctionOperator{true}, u::AbstractVecOrMat)
+    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
+
+    L.op_inverse(du, u, L.p, L.t)
+end
 
 function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
     @set! L.cache = similar(u)

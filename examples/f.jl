@@ -3,9 +3,9 @@ pkgpath = dirname(dirname(@__FILE__))
 tstpath = joinpath(pkgpath, "test")
 !(tstpath in LOAD_PATH) && push!(LOAD_PATH, tstpath)
 
-using SciMLOperators, FFTW, Test
+using SciMLOperators, LinearAlgebra, FFTW, Test, Plots
 
-n = 32
+n = 256
 L = 2π
 
 dx = L / n
@@ -24,22 +24,37 @@ else
     ComplexF64
 end
 
-transform = FunctionOperator(
-                             (du,u,p,t) -> mul!(du, tr, u);
-                             isinplace=true,
-                             T=ComplexT,
-                             size=(length(k),n),
+tr_iip = FunctionOperator(
+                          (du,u,p,t) -> mul!(du, tr, u);
+                          isinplace=true,
+                          T=ComplexT,
+                          size=(length(k),n),
 
-#                            op_adjoint = 
-                             op_inverse = (du,u,p,t) -> ldiv!(du, tr, u)
-                            )
+#                         op_adjoint = 
+                          op_inverse = (du,u,p,t) -> ldiv!(du, tr, u)
+                         )
+
+tr_oop = FunctionOperator(
+                          (u,p,t) -> tr * u;
+                          isinplace=false,
+                          T=ComplexT,
+                          size=(length(k),n),
+
+                          op_inverse = (u,p,t) -> tr \ u,
+                         )
 
 ik = im * DiagonalOperator(k)
-D = transform \ ik * transform
 
-u0 = @. sin(5x); du0 = @. 5cos(5x);
-u1 = @. exp(2x); du0 = @. 2u1
+D_iip = tr_iip \ ik * tr_iip
+D_oop = tr_oop \ ik * tr_oop
 
-@test D * u0 ≈ du0
-@test D * u1 ≈ du1
+u = @. sin(5x)cos(7x);
+du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
+D = D_oop
+#D = D_iip
+
+v = D * u
+
+@test ≈(v, du; atol=1e-8)
+#
