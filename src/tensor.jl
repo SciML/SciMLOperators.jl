@@ -84,20 +84,28 @@ has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
 # operator application
 
-# same for div
+# mul
 function outer_mul(Louter::AbstractSciMLOperator, u::AbstractVecOrMat)
-end
 
-function outer_mul(Louter::IdentityOperator, u::AbstractVecOrMat)
 end
-
-function outer_mul(Louter::ScaledOperator, u::AbstractVecOrMat)
-end
+outer_mul(Louter::IdentityOperator, u::AbstractVecOrMat) = Louter * u
+outer_mul(Louter::ScaledOperator, u::AbstractVecOrMat) = Louter.λ * outer_mul(Louter.L, u)
 
 function outer_mul!(v::AbstractVecOrMat, Louter::AbstractSciMLOperator, u::AbstractVecOrMat)
 end
-
 function outer_mul!(v::AbstractVecOrMat, Louter::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
+end
+
+# div
+function outer_div(Louter::AbstractSciMLOperator, u::AbstractVecOrMat)
+end
+outer_div(Louter::IdentityOperator, u::AbstractVecOrMat) = Louter \ u
+outer_div(Louter::ScaledOperator, u::AbstractVecOrMat) = Louter.λ \ outer_div(Louter.L, u)
+
+function outer_div!(v::AbstractVecOrMat, Louter::AbstractSciMLOperator, u::AbstractVecOrMat; cache=nothing)
+end
+
+function outer_div!(Louter::AbstractSciMLOperator, u::AbstractVecOrMat; cache=nothing)
 end
 
 for op in (
