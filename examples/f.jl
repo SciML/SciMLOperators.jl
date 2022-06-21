@@ -43,6 +43,9 @@ tr_oop = FunctionOperator(
                           T=ComplexT,
                           size=(length(k),n),
 
+                          input_prototype=x,
+                          output_prototype=im*k,
+
                           op_inverse = (u,p,t) -> tr \ u,
                          )
 
@@ -51,10 +54,13 @@ ik = im * DiagonalOperator(k)
 D_iip = tr_iip \ ik * tr_iip
 D_oop = tr_oop \ ik * tr_oop
 
+D_iip = cache_operator(D_iip, x)
+
 u  = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-v = D_oop * u
+@test ≈(D_oop * u, du; atol=1e-8)
+@test ≈(D_iip * u, du; atol=1e-8)
 
-@test ≈(v, du; atol=1e-8)
+v = copy(u); @test ≈(mul!(v, D_iip, u), du; atol=1e-8)
 #

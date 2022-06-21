@@ -217,7 +217,8 @@ function Base.:*(L::FunctionOperator{true}, u::AbstractVecOrMat)
 end
 
 function Base.:\(L::FunctionOperator{true}, u::AbstractVecOrMat)
-    du = copy(u)
+    ci, _ = L.cache
+    du = copy(ci)
     L.op_inverse(du, u, L.p, L.t)
 end
 
