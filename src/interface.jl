@@ -51,10 +51,14 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
 end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
-    n  = size(u, 1)
-    nk = length(u)
-    uu = _reshape(u, (n, nk ÷ n))
-    L  = cache_operator(L, uu)
+    n = size(L, 2)
+    s = size(u)
+    k = prod(s[2:end])
+
+    @assert s[1] == n "Dimension mismatch"
+
+    U = _reshape(u, (n, k))
+    L = cache_operator(L, U)
     L
 end
 
