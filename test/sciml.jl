@@ -70,7 +70,6 @@ end
 end
 
 @testset "FunctionOperator" begin
-
     u = rand(N,K)
     p = nothing
     t = 0.0
@@ -94,6 +93,9 @@ end
                            T=Float64,
                            size=(N,N),
 
+                           input_prototype=u,
+                           output_prototype=A*u,
+
                            op_inverse=f1i,
 
                            opnorm=true,
@@ -108,6 +110,9 @@ end
                            isinplace=true,
                            T=Float64,
                            size=(N,N),
+
+                           input_prototype=u,
+                           output_prototype=A*u,
 
                            op_inverse=f2i,
 

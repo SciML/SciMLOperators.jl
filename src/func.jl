@@ -69,6 +69,9 @@ function FunctionOperator(op;
                           T=nothing,
                           size=nothing,
 
+                          input_prototype=nothing,
+                          output_prototype=nothing,
+
                           # optional
                           op_adjoint=nothing,
                           op_inverse=nothing,
@@ -76,8 +79,6 @@ function FunctionOperator(op;
 
                           p=nothing,
                           t=nothing,
-
-                          cache=nothing,
 
                           # traits
                           opnorm=nothing,
@@ -94,6 +95,9 @@ function FunctionOperator(op;
     when called in-place"
     T isa Nothing  && @error "Please provide a Number type for the Operator"
     size isa Nothing  && @error "Please provide a size (m, n)"
+    if (input_prototype isa Nothing) | (output_prototype isa Nothing)
+        @error "Please provide input/out prototypes vectors/arrays."
+    end
 
     isreal = T <: Real
     adjointable = ishermitian | (isreal & issymmetric)
@@ -120,7 +124,11 @@ function FunctionOperator(op;
               size = size,
              )
 
-    isset = cache !== nothing
+    cache = (
+             similar(input_prototype),
+             similar(output_prototype),
+            )
+    isset = cache === nothing
 
     FunctionOperator(
                      op,
@@ -163,9 +171,8 @@ function Base.adjoint(L::FunctionOperator)
     p = L.p
     t = L.t
 
-    cache = issquare(L) ? cache : nothing
+    cache = reverse(L.cache)
     isset = cache !== nothing
-
 
     FuncitonOperator(op,
                      op_adjoint,
@@ -203,38 +210,36 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 Base.:*(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)
 
-# TODO - FunctionOperator caching broken for inplace
 function Base.:*(L::FunctionOperator{true}, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
-
+    _, co = L.cache
+    du = copy(co)
     L.op(du, u, L.p, L.t)
 end
 
-# TODO
 function Base.:\(L::FunctionOperator{true}, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
-
+    du = copy(u)
     L.op_inverse(du, u, L.p, L.t)
 end
 
-function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
-    @set! L.cache = similar(u)
-    L
-end
-
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
     L.op(v, u, L.p, L.t)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat, α, β)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
-    copy!(L.cache, v)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat)
+    @error "3-argument is mul! not defined for out-of-place FunctionOperators"
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
+    _, co = L.cache
+
+    copy!(co, v)
     mul!(v, L, u)
     lmul!(α, v)
-    axpy!(β, L.cache, v)
+    axpy!(β, co, v)
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, α, β)
+    @error "5-argument is mul! not defined for out-of-place FunctionOperators"
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat)
@@ -242,9 +247,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator, u::Abstra
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)"
-    copy!(L.cache, u)
-    ldiv!(u, L, L.cache)
+    ci, _ = L.cache
+    copy!(ci, u)
+    ldiv!(u, L, ci)
 end
 #

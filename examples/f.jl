@@ -30,6 +30,9 @@ tr_iip = FunctionOperator(
                           T=ComplexT,
                           size=(length(k),n),
 
+                          input_prototype=x,
+                          output_prototype=im*k,
+
 #                         op_adjoint = 
                           op_inverse = (du,u,p,t) -> ldiv!(du, tr, u)
                          )
@@ -48,13 +51,10 @@ ik = im * DiagonalOperator(k)
 D_iip = tr_iip \ ik * tr_iip
 D_oop = tr_oop \ ik * tr_oop
 
-u = @. sin(5x)cos(7x);
+u  = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-D = D_oop
-#D = D_iip
-
-v = D * u
+v = D_oop * u
 
 @test ≈(v, du; atol=1e-8)
 #
