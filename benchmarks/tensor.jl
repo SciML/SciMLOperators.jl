@@ -1,61 +1,70 @@
 using SciMLOperators, LinearAlgebra, BenchmarkTools
+using SciMLOperators: IdentityOperator, ⊗
+
+Id = IdentityOperator{12}()
+A = rand(12,12)
+B = rand(12,12)
+C = rand(12,12)
 
 println("#===============================#")
-println("TensorProduct(A, B)")
+println("2D Tensor Products")
 println("#===============================#")
+
+println("⊗(A, B)")
 
 u = rand(12^2, 100)
 v = rand(12^2, 100)
 
-A = rand(12, 12) # outer
-B = rand(12, 12) # inner
-
-T = TensorProductOperator(A, B)
+T = ⊗(A, B)
 T = cache_operator(T, u)
 
+@btime mul!($v, $T, $u)
+
+println("⊗(I, B)")
+
+u = rand(12^2, 100)
+v = rand(12^2, 100)
+
+T = ⊗(Id, B)
+T = cache_operator(T, u)
+
+@btime mul!($v, $T, $u)
+
+println("⊗(A, I)")
+
+u = rand(12^2, 100)
+v = rand(12^2, 100)
+
+T = ⊗(A, Id)
+T = cache_operator(T, u)
+
+@btime mul!($v, $T, $u)
+
+println("#===============================#")
+println("3D Tensor Products")
+println("#===============================#")
+
+println("⊗(⊗(A, B), C)")
+
+u = rand(12^3, 100)
+v = rand(12^3, 100)
+
+T = ⊗(⊗(A, B), C)
+T = cache_operator(T, u)
+
+mul!(v, T, u) # dunny
 @btime mul!($v, $T, $u); #
 
-#println("#===============================#")
-#println("TensorProduct(A, B, C)")
-#println("#===============================#")
-#
-#A = TensorProductOperator(rand(12,12), rand(12,12), rand(12,12))
-#
-#u = rand(12^3, 100)
-#v = rand(12^3, 100)
-#
-#A = cache_operator(A, u)
-#
-#mul!(v, A, u) # dunny
-#@btime mul!($v, $A, $u); #
-
-println("#===============================#")
-println("TensorProduct(TensorProduct(A, B), C)")
-println("#===============================#")
-
-A = TensorProductOperator(TensorProductOperator(rand(12,12), rand(12,12)), rand(12,12))
+println("⊗(A, ⊗(B, C))")
 
 u = rand(12^3, 100)
 v = rand(12^3, 100)
 
-A = cache_operator(A, u)
+T = ⊗(A, ⊗(B, C))
+T = cache_operator(T, u)
 
-mul!(v, A, u) # dunny
-@btime mul!($v, $A, $u); #
-
-println("#===============================#")
-println("TensorProduct(A, TensorProduct(B, C))")
-println("#===============================#")
-
-A = TensorProductOperator(rand(12,12), TensorProductOperator(rand(12,12), rand(12,12)))
-
-u = rand(12^3, 100)
-v = rand(12^3, 100)
-
-A = cache_operator(A, u)
-
-mul!(v, A, u) # dunny
-@btime mul!($v, $A, $u); #
+mul!(v, T, u) # dunny
+@btime mul!($v, $T, $u); #
 
 println("#===============================#")
 nothing

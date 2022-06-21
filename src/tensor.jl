@@ -316,10 +316,10 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         c1 = _reshape(C1, (m, k))
         axpby!(α, c1, β, v)
         return v
-    elseif L.outer isa ScalarOperator
-        outer_mul!(v, L.outer.L, u, α, β) # <- figure out which cache is still unused
-        lmul!(L.outer.λ, v)
-        return v
+#   elseif L.outer isa ScalarOperator
+#       outer_mul!(v, L.outer.L, u, α, β) # <- figure out which cache is still unused
+#       lmul!(L.outer.λ, v)
+#       return v
     end
 
     mi, ni = size(L.inner)
