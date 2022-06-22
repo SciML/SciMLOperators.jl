@@ -512,6 +512,22 @@ Base.:*(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
 Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
 Base.:*(A::ComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
 Base.:*(A::AbstractSciMLOperator, B::ComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
+Base.:*(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
+
+for op in (
+           :*, :∘,
+          )
+    # identity
+    @eval function Base.$op(::IdentityOperator{N}, A::ComposedOperator) where{N}
+        @assert size(A, 1) == N
+        A
+    end
+
+    @eval function Base.$op(A::ComposedOperator, ::IdentityOperator{N}) where{N}
+        @assert size(A, 2) == N
+        A
+    end
+end
 
 Base.convert(::Type{AbstractMatrix}, L::ComposedOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
 SparseArrays.sparse(L::ComposedOperator) = prod(_sparse, L.ops)
