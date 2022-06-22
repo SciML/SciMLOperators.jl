@@ -2,6 +2,7 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 using SciMLOperators: InvertibleOperator, ⊗
+using FFTW
 
 Random.seed!(0)
 N = 8
@@ -69,7 +70,6 @@ end
 end
 
 @testset "FunctionOperator" begin
-
     u = rand(N,K)
     p = nothing
     t = 0.0
@@ -93,6 +93,9 @@ end
                            T=Float64,
                            size=(N,N),
 
+                           input_prototype=u,
+                           output_prototype=A*u,
+
                            op_inverse=f1i,
 
                            opnorm=true,
@@ -107,6 +110,9 @@ end
                            isinplace=true,
                            T=Float64,
                            size=(N,N),
+
+                           input_prototype=u,
+                           output_prototype=A*u,
 
                            op_inverse=f2i,
 
@@ -140,6 +146,40 @@ end
 
     v = rand(N,K); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
     v = copy(u);   @test A \ v ≈ ldiv!(op2, u)
+end
+
+@testset "FunctionOperator FFTW test" begin
+    n = 256
+    L = 2π
+    
+    dx = L / n
+    x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
+    
+    k  = rfftfreq(n, 2π*n/L) |> Array
+    tr = plan_rfft(x)
+    
+    transform = FunctionOperator(
+                                 (du,u,p,t) -> mul!(du, tr, u);
+                                 isinplace=true,
+                                 T=ComplexF64,
+                                 size=(length(k),n),
+    
+                                 input_prototype=x,
+                                 output_prototype=im*k,
+    
+                                 op_inverse = (du,u,p,t) -> ldiv!(du, tr, u)
+                                )
+    
+    ik = im * DiagonalOperator(k)
+    Dx = transform \ ik * transform
+    
+    Dx = cache_operator(Dx, x)
+    
+    u  = @. sin(5x)cos(7x);
+    du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+    
+    @test ≈(Dx * u, du; atol=1e-8)
+    v = copy(u); @test ≈(mul!(v, Dx, u), du; atol=1e-8)
 end
 
 @testset "TensorProductOperator" begin
