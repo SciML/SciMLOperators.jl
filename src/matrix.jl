@@ -184,6 +184,11 @@ has_mul!(L::AffineOperator) = has_mul!(L.A)
 has_ldiv(L::AffineOperator) = has_ldiv(L.A)
 has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
+function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
+    @set! L.A = cache_operator(L.A, u)
+    @set! L.b = cache_operator(L.b, u)
+    L
+end
 
 Base.:*(L::AffineOperator, u::AbstractVecOrMat) = L.A * u + L.b
 Base.:\(L::AffineOperator, u::AbstractVecOrMat) = L.A \ (u - L.b)
