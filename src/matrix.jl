@@ -225,6 +225,8 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 Base.size(L::AffineOperator) = size(L.A)
 
+update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); L)
+
 islinear(::AffineOperator) = false
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
 has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
