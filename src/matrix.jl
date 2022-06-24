@@ -216,7 +216,7 @@ function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
     N = size(B, 1)
     Z = NullOperator{N}()
 
-    AffineOperator(Z, Id, b; update_func=update_func)
+    AffineOperator(Z, B, b; update_func=update_func)
 end
 
 getops(L::AffineOperator) = (L.A, L.B, L.b)
