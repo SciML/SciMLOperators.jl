@@ -178,14 +178,18 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     cache::cType
     update_func::F
 
-    function AffineOperator(A::AbstractSciMLOperator,
-                            B::AbstractSciMLOperator,
+    function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
+                            B::Union{AbstractMatrix,AbstractSciMLOperator},
                             b::AbstractVecOrMat;
                             update_func=DEFAULT_UPDATE_FUNC,
                            )
+        A = A isa AbstractMatrix ? MatrixOperator(A) : A
+        B = B isa AbstractMatrix ? MatrixOperator(A) : B
+
         @assert size(A, 1) == size(B, 1)
         @assert size(B, 2) == size(b, 1)
         T = promote_type(eltype.((A,B,b))...)
+
         cache = B * b
 
         new{T,
@@ -195,16 +199,24 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
             typeof(cache),
             typeof(update_func),
            }(
-             A, B, b, cache
+             A, B, b, cache,
             )
     end
 end
 
-function AddOp(B, b; update_func=DEFAULT_UPDATE_FUNC) # TODO - name change
+function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+    N = size(b, 1)
+    Z  = NullOperator{N}()
+    Id = IdentityOperator{N}()
+
+    AffineOperator(Id, B, b; update_func=update_func)
+end
+
+function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
     N = size(B, 1)
     Z = NullOperator{N}()
 
-    AffineOperator(Z, B, b; update_func=update_func)
+    AffineOperator(Z, Id, b; update_func=update_func)
 end
 
 getops(L::AffineOperator) = (L.A, L.B, L.b)

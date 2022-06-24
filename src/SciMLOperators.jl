@@ -42,6 +42,7 @@ export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
        AffineOperator,
+       AddVector,
        FunctionOperator,
        TensorProductOperator
 
