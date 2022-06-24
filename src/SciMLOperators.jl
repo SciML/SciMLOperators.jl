@@ -9,7 +9,7 @@ import ArrayInterfaceCore
 import Base: ReshapedArray
 import Lazy: @forward
 import Setfield: @set!
-import ChainRulesCore
+using ChainRulesCore
 
 # overload
 import Base: zero, one, oneunit
