@@ -241,8 +241,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractV
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat, α, β)
-    mul!(v, L.A, u, α, β)
     mul!(L.cache, L.B, L.b)
+    mul!(v, L.A, u, α, β)
     axpy!(α, L.cache, v)
 end
 

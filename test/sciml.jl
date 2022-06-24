@@ -60,11 +60,11 @@ end
 
     L = AffineOperator(MatrixOperator(A), MatrixOperator(B), b)
 
-    @test L * u ≈ A * u + b
-    v=rand(N,K); @test mul!(v, L, u) ≈ A * u + B * b
+    @test L * u ≈ A * u + B*b
+    v=rand(N,K); @test mul!(v, L, u) ≈ A*u + B*b
     v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + B*b) + β*w
 
-    L = AffineOperator(MatrixOperator(D), b)
+    L = AffineOperator(MatrixOperator(D), MatrixOperator(B), b)
     @test L \ u ≈ D \ (u - B * b)
     v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-B*b)
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
