@@ -199,6 +199,10 @@ function Base.adjoint(α::ScalarOperator) # TODO - test
     ScalarOperator(val; update_func=update_func)
 end
 Base.transpose(α::ScalarOperator) = α
+
+Base.one(::ScalarOperator{T}) where{T} = ScalarOperator(one(T))
+Base.zero(::ScalarOperator{T}) where{T} = ScalarOperator(zero(T))
+
 Base.one(::Type{<:AbstractSciMLOperator}) = ScalarOperator(true)
 Base.zero(::Type{<:AbstractSciMLOperator}) = ScalarOperator(false)
 
@@ -526,6 +530,26 @@ for op in (
     @eval function Base.$op(A::ComposedOperator, ::IdentityOperator{N}) where{N}
         @assert size(A, 2) == N
         A
+    end
+
+    # null operator
+    @eval function Base.$op(::NullOperator{N}, A::ComposedOperator) where{N}
+        @assert size(A, 1) == N
+        zero(A)
+    end
+
+    @eval function Base.$op(A::ComposedOperator, ::NullOperator{N}) where{N}
+        @assert size(A, 2) == N
+        zero(A)
+    end
+
+    # scalar operator
+    @eval function Base.$op(λ::ScalarOperator, L::ComposedOperator)
+        ScaledOperator(λ, L)
+    end
+
+    @eval function Base.$op(L::ComposedOperator, λ::ScalarOperator)
+        ScaledOperator(λ, L)
     end
 end
 

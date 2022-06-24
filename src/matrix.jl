@@ -79,7 +79,13 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
 """ Diagonal Operator """
-DiagonalOperator(u::AbstractVector) = MatrixOperator(Diagonal(u))
+function DiagonalOperator(u::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
+    function diag_update_func(A, u, p, t)
+        update_func(A.diag, u, p, t)
+        A
+    end
+    MatrixOperator(Diagonal(u); update_func=diag_update_func)
+end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
 """
