@@ -75,8 +75,14 @@ end
 #
 #function ChainRulesCore.rrule(typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
 #    v = L * u
+#    function pullback(vbar)
+#        Lbar = NoTangent()
+#        # TODO - tanget WRT getops(L)
 #
-#    v, v̄ -> L' * v̄
+#        NoTangent(), Lbar, L' * vbar
+#    end
+#
+#    v, pullback
 #end
 
 ###
