@@ -205,7 +205,7 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
 end
 
 function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
-    N = size(b, 1)
+    N  = size(b, 1)
     Z  = NullOperator{N}()
     Id = IdentityOperator{N}()
 
