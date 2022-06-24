@@ -167,20 +167,38 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, b)
-    L(u) = A*u + b
+    L = AffineOperator(A, B, b)
+    L(u) = A*u + B*b
 """
-struct AffineOperator{T,AType,bType} <: AbstractSciMLOperator{T}
+struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     A::AType
+    B::BType
     b::bType
 
-    function AffineOperator(A::AbstractSciMLOperator, b::AbstractVecOrMat)
-        T = promote_type(eltype.((A,b))...)
-        new{T,typeof(A),typeof(b)}(A, b)
+    cache::cType
+    update_func::F
+
+    function AffineOperator(A::AbstractSciMLOperator,
+                            B::AbstractSciMLOperator,
+                            b::AbstractVecOrMat;
+                            update_func=DEFAULT_UPDATE_FUNC,
+                           )
+        @assert size(A, 1) == size(B, 1)
+        @assert size(B, 2) == size(b, 1)
+        T = promote_type(eltype.((A,B,b))...)
+        cache = B * b
+        new{T,typeof(A),typeof(b)}(A, B, b, cache)
     end
 end
 
-getops(L::AffineOperator) = (L.A, L.b)
+function AddOp(B, b; update_func=DEFAULT_UPDATE_FUNC) # TODO - name change
+    N = size(B, 1)
+    Z = NullOperator{N}()
+
+    AffineOperator(Z, B, b; update_func=update_func)
+end
+
+getops(L::AffineOperator) = (L.A, L.B, L.b)
 Base.size(L::AffineOperator) = size(L.A)
 
 islinear(::AffineOperator) = false
@@ -192,12 +210,20 @@ has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
     @set! L.A = cache_operator(L.A, u)
+    @set! L.B = cache_operator(L.B, u)
     @set! L.b = cache_operator(L.b, u)
     L
 end
 
-Base.:*(L::AffineOperator, u::AbstractVecOrMat) = L.A * u + L.b
-Base.:\(L::AffineOperator, u::AbstractVecOrMat) = L.A \ (u - L.b)
+function Base.:*(L::AffineOperator, u::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(u, 2)
+    (L.A * u) + (L.B * L.b)
+end
+
+function Base.:\(L::AffineOperator, u::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(u, 2)
+    L.A \ (u - (L.B * L.b))
+end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
     mul!(v, L.A, u)
