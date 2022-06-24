@@ -9,6 +9,7 @@ import ArrayInterfaceCore
 import Base: ReshapedArray
 import Lazy: @forward
 import Setfield: @set!
+import ChainRulesCore
 
 # overload
 import Base: zero, one, oneunit
@@ -17,6 +18,7 @@ import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
 import SparseArrays: sparse
+import ChainRulesCore: frule, rrule
 
 """
 $(TYPEDEF)
