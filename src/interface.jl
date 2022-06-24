@@ -63,23 +63,6 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
 end
 
 ###
-# automatic differentiation interface
-###
-
-#function ChainRulesCore.frule((_,_,Δu), typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
-#    v  = L * u
-#    Δv = L * Δu
-#
-#    v, Δv
-#end
-#
-#function ChainRulesCore.rrule(typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
-#    v = L * u
-#
-#    v, v̄ -> L' * v̄
-#end
-
-###
 # Operator Traits
 ###
 

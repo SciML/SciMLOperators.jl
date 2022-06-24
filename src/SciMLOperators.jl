@@ -39,8 +39,9 @@ include("basic.jl")
 include("matrix.jl")
 include("func.jl")
 include("tensor.jl")
+include("rules.jl")
 
-#include("rules.jl")
+include("rules.jl")
 
 export ScalarOperator,
        MatrixOperator,
