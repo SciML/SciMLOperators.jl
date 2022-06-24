@@ -187,7 +187,16 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
         @assert size(B, 2) == size(b, 1)
         T = promote_type(eltype.((A,B,b))...)
         cache = B * b
-        new{T,typeof(A),typeof(b)}(A, B, b, cache)
+
+        new{T,
+            typeof(A),
+            typeof(B),
+            typeof(b),
+            typeof(cache),
+            typeof(update_func),
+           }(
+             A, B, b, cache
+            )
     end
 end
 
@@ -227,12 +236,14 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
     mul!(v, L.A, u)
-    axpy!(true, L.b, v)
+    mul!(L.cache, L.B, L.b)
+    axpy!(true, L.cache, v)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat, α, β)
     mul!(v, L.A, u, α, β)
-    axpy!(α, L.b, v)
+    mul!(L.cache, L.B, L.b)
+    axpy!(α, L.cache, v)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
@@ -241,7 +252,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::Abstract
 end
 
 function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
-    axpy!(-true, L.b, u)
+    mul!(L.cache, L.B, L.b)
+    axpy!(-true, L.cache, u)
     ldiv!(L.A, u)
 end
 #
