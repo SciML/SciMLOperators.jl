@@ -178,19 +178,8 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     cache::cType
     update_func::F
 
-    function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
-                            B::Union{AbstractMatrix,AbstractSciMLOperator},
-                            b::AbstractVecOrMat;
-                            update_func=DEFAULT_UPDATE_FUNC,
-                           )
-        A = A isa AbstractMatrix ? MatrixOperator(A) : A
-        B = B isa AbstractMatrix ? MatrixOperator(A) : B
-
-        @assert size(A, 1) == size(B, 1)
-        @assert size(B, 2) == size(b, 1)
+    function AffineOperator(A, B, b, cache, update_func)
         T = promote_type(eltype.((A,B,b))...)
-
-        cache = B * b
 
         new{T,
             typeof(A),
@@ -202,6 +191,20 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
              A, B, b, cache,
             )
     end
+end
+
+function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
+                        B::Union{AbstractMatrix,AbstractSciMLOperator},
+                        b::AbstractVecOrMat;
+                        update_func=DEFAULT_UPDATE_FUNC,
+                       )
+    @assert size(A, 1) == size(B, 1) "size mismatch: A, B don't output vectors of same size"
+
+    A = A isa AbstractMatrix ? MatrixOperator(A) : A
+    B = B isa AbstractMatrix ? MatrixOperator(B) : B
+    cache = B * b
+
+    AffineOperator(A, B, b, cache, update_func)
 end
 
 function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
