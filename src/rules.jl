@@ -45,6 +45,7 @@ function ChainRulesCore.frule(
     Δ = muladd(ΔL, u, L * Δu)
 end
 
+# overly typed case so i can see whats happening
 function ChainRulesCore.frule(
                               (_,ΔL,Δu),
                               ::typeof(Base.:*),
