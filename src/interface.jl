@@ -66,26 +66,30 @@ end
 # automatic differentiation interface
 ###
 
-# https://juliadiff.org/ChainRulesCore.jl/dev/rule_author/intro.html
+# TODO - specialize for each type ? Or leaf nodes?
+# or do we just need it for special cases?
+#   - tensor product, functionoperator, etc
+function ChainRulesCore.rrule(
+                              ::typeof(Base.:*),
+                              L::AbstractSciMLOperator,
+                              u::AbstractVecOrMat,
+                             )
+    v = L * u
 
-#function ChainRulesCore.frule((_,_,Δu), typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
-#    v  = L * u
-#    Δv = L * Δu
-#
-#    v, Δv
-#end
-#
-#function ChainRulesCore.rrule(typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
-#    v = L * u
-#    function pullback(vbar)
-#        Lbar = NoTangent()
-#        # TODO - tanget WRT getops(L)
-#
-#        NoTangent(), Lbar, L' * vbar
-#    end
-#
-#    v, pullback
-#end
+    project_L = ProjectTo(L)
+    project_u = ProjectTo(u)
+
+    function times_pullback(vbar)
+        vbar = unthunk(vbar)
+
+        dL = @thunk(project_L(vbar * u'))
+        du = @thunk(project_u(L' * vbar))
+
+        NoTangent(), dL, du
+    end
+
+    v, times_pullback
+end
 
 ###
 # Operator Traits
