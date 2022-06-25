@@ -167,21 +167,65 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, b)
-    L(u) = A*u + b
+    L = AffineOperator(A, B, b)
+    L(u) = A*u + B*b
 """
-struct AffineOperator{T,AType,bType} <: AbstractSciMLOperator{T}
+struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     A::AType
+    B::BType
     b::bType
 
-    function AffineOperator(A::AbstractSciMLOperator, b::AbstractVecOrMat)
-        T = promote_type(eltype.((A,b))...)
-        new{T,typeof(A),typeof(b)}(A, b)
+    cache::cType
+    update_func::F
+
+    function AffineOperator(A, B, b, cache, update_func)
+        T = promote_type(eltype.((A,B,b))...)
+
+        new{T,
+            typeof(A),
+            typeof(B),
+            typeof(b),
+            typeof(cache),
+            typeof(update_func),
+           }(
+             A, B, b, cache,
+            )
     end
 end
 
-getops(L::AffineOperator) = (L.A, L.b)
+function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
+                        B::Union{AbstractMatrix,AbstractSciMLOperator},
+                        b::AbstractVecOrMat;
+                        update_func=DEFAULT_UPDATE_FUNC,
+                       )
+    @assert size(A, 1) == size(B, 1) "size mismatch: A, B don't output vectors of same size"
+
+    A = A isa AbstractMatrix ? MatrixOperator(A) : A
+    B = B isa AbstractMatrix ? MatrixOperator(B) : B
+    cache = B * b
+
+    AffineOperator(A, B, b, cache, update_func)
+end
+
+function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+    N  = size(b, 1)
+    Z  = NullOperator{N}()
+    Id = IdentityOperator{N}()
+
+    AffineOperator(Id, B, b; update_func=update_func)
+end
+
+function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+    N = size(B, 1)
+    Z = NullOperator{N}()
+
+    AffineOperator(Z, B, b; update_func=update_func)
+end
+
+getops(L::AffineOperator) = (L.A, L.B, L.b)
 Base.size(L::AffineOperator) = size(L.A)
+
+update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); L)
 
 islinear(::AffineOperator) = false
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
@@ -192,21 +236,31 @@ has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
     @set! L.A = cache_operator(L.A, u)
+    @set! L.B = cache_operator(L.B, u)
     @set! L.b = cache_operator(L.b, u)
     L
 end
 
-Base.:*(L::AffineOperator, u::AbstractVecOrMat) = L.A * u + L.b
-Base.:\(L::AffineOperator, u::AbstractVecOrMat) = L.A \ (u - L.b)
+function Base.:*(L::AffineOperator, u::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(u, 2)
+    (L.A * u) + (L.B * L.b)
+end
+
+function Base.:\(L::AffineOperator, u::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(u, 2)
+    L.A \ (u - (L.B * L.b))
+end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
     mul!(v, L.A, u)
-    axpy!(true, L.b, v)
+    mul!(L.cache, L.B, L.b)
+    axpy!(true, L.cache, v)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat, α, β)
+    mul!(L.cache, L.B, L.b)
     mul!(v, L.A, u, α, β)
-    axpy!(α, L.b, v)
+    axpy!(α, L.cache, v)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
@@ -215,7 +269,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::Abstract
 end
 
 function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
-    axpy!(-true, L.b, u)
+    mul!(L.cache, L.B, L.b)
+    axpy!(-true, L.cache, u)
     ldiv!(L.A, u)
 end
 #

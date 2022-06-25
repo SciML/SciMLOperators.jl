@@ -52,21 +52,22 @@ end
 @testset "AffineOperator" begin
     u = rand(N,K)
     A = rand(N,N)
+    B = rand(N,N)
     D = Diagonal(A)
     b = rand(N,K)
     α = rand()
     β = rand()
 
-    L = AffineOperator(MatrixOperator(A), b)
+    L = AffineOperator(MatrixOperator(A), MatrixOperator(B), b)
 
-    @test L * u ≈ A * u + b
-    v=rand(N,K); @test mul!(v, L, u) ≈ A * u + b
-    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + b) + β*w
+    @test L * u ≈ A * u + B*b
+    v=rand(N,K); @test mul!(v, L, u) ≈ A*u + B*b
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + B*b) + β*w
 
-    L = AffineOperator(MatrixOperator(D), b)
-    @test L \ u ≈ D \ (u - b)
-    v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-b)
-    v=copy(u); @test ldiv!(L, u) ≈ D \ (v-b)
+    L = AffineOperator(MatrixOperator(D), MatrixOperator(B), b)
+    @test L \ u ≈ D \ (u - B * b)
+    v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-B*b)
+    v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
 end
 
 @testset "FunctionOperator" begin
