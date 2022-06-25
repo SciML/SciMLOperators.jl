@@ -18,7 +18,7 @@ import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
 import SparseArrays: sparse
-import ChainRulesCore: frule, rrule
+import ChainRulesCore: frule, rrule, Tangent
 
 """
 $(TYPEDEF)
@@ -40,7 +40,7 @@ include("matrix.jl")
 include("func.jl")
 include("tensor.jl")
 
-#include("rrules.jl")
+include("rules.jl")
 
 export ScalarOperator,
        MatrixOperator,
