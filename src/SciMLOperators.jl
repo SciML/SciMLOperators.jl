@@ -40,6 +40,8 @@ include("matrix.jl")
 include("func.jl")
 include("tensor.jl")
 
+#include("rrules.jl")
+
 export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
