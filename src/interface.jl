@@ -63,35 +63,6 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
 end
 
 ###
-# automatic differentiation interface
-###
-
-# TODO - specialize for each type ? Or leaf nodes?
-# or do we just need it for special cases?
-#   - tensor product, functionoperator, etc
-function ChainRulesCore.rrule(
-                              ::typeof(Base.:*),
-                              L::AbstractSciMLOperator,
-                              u::AbstractVecOrMat,
-                             )
-    v = L * u
-
-    project_L = ProjectTo(L)
-    project_u = ProjectTo(u)
-
-    function times_pullback(vbar)
-        vbar = unthunk(vbar)
-
-        dL = @thunk(project_L(vbar * u'))
-        du = @thunk(project_u(L' * vbar))
-
-        NoTangent(), dL, du
-    end
-
-    v, times_pullback
-end
-
-###
 # Operator Traits
 ###
 
