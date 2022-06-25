@@ -237,8 +237,7 @@ has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
     @set! L.A = cache_operator(L.A, u)
-    @set! L.B = cache_operator(L.B, u)
-    @set! L.b = cache_operator(L.b, u)
+    @set! L.B = cache_operator(L.B, L.b)
     L
 end
 
