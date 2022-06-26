@@ -166,7 +166,10 @@ function Base.adjoint(L::FunctionOperator)
     op_inverse = L.op_adjoint_inverse
     op_adjoint_inverse = L.op_inverse
 
-    traits = (L.traits[1:end-1]..., size=reverse(size(L)))
+#   traits = (L.traits[1:end-1]..., size=reverse(size(L)))
+#   traits = deepcopy(L.traits)
+    traits = L.traits
+    @set! traits.size = reverse(size(L))
 
     p = L.p
     t = L.t
