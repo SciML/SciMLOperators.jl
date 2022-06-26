@@ -63,31 +63,6 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
 end
 
 ###
-# automatic differentiation interface
-###
-
-# https://juliadiff.org/ChainRulesCore.jl/dev/rule_author/intro.html
-
-#function ChainRulesCore.frule((_,_,Δu), typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
-#    v  = L * u
-#    Δv = L * Δu
-#
-#    v, Δv
-#end
-#
-#function ChainRulesCore.rrule(typeof(Base.:*), L::AbstractSciMLOperator, u::AbstractVecOrMat)
-#    v = L * u
-#    function pullback(vbar)
-#        Lbar = NoTangent()
-#        # TODO - tanget WRT getops(L)
-#
-#        NoTangent(), Lbar, L' * vbar
-#    end
-#
-#    v, pullback
-#end
-
-###
 # Operator Traits
 ###
 
