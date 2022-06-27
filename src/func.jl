@@ -227,8 +227,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::A
     L.op(v, u, L.p, L.t)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat)
-    @error "3-argument is mul! not defined for out-of-place FunctionOperators"
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, args...)
+    @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
@@ -238,10 +238,6 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::A
     mul!(v, L, u)
     lmul!(α, v)
     axpy!(β, co, v)
-end
-
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, α, β)
-    @error "5-argument is mul! not defined for out-of-place FunctionOperators"
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat)
