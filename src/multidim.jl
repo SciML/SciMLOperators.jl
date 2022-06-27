@@ -7,6 +7,8 @@ for op in (
            :*, :\,
           )
     @eval function Base.$op(L::AbstractSciMLOperator, u::AbstractArray)
+        u isa AbstractVecOrMat && @error "Base.$op not defined for $(typeof(L)), $(typeof(u))."
+
         sizes = _mat_sizes(L, u)
         sizev = issquare(L) ? size(u) : begin
             (size(L, 1), size(u)[2:end]...,)
@@ -20,6 +22,8 @@ for op in (
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
+    u isa AbstractVecOrMat && @error "Base.$op not defined for $(typeof(L)), $(typeof(u))."
+
     sizes = _mat_sizes(L, u)
 
     uu = _reshape(u, sizes[1])
@@ -31,6 +35,8 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u:
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray, α, β)
+    u isa AbstractVecOrMat && @error "Base.$op not defined for $(typeof(L)), $(typeof(u))."
+
     sizes = _mat_sizes(L, u)
 
     uu = _reshape(u, sizes[1])
@@ -42,6 +48,8 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u:
 end
 
 function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
+    u isa AbstractVecOrMat && @error "Base.$op not defined for $(typeof(L)), $(typeof(u))."
+
     sizes = _mat_sizes(L, u)
 
     uu = _reshape(u, sizes[1])
@@ -53,6 +61,8 @@ function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLLinearOperator, u
 end
 
 function LinearAlgebra.ldiv!(L::AbstractSciMLLinearOperator, u::AbstractArray)
+    u isa AbstractVecOrMat && @error "Base.$op not defined for $(typeof(L)), $(typeof(u))."
+
     sizes = _mat_sizes(L, u)
 
     uu = _reshape(u, sizes[1])
