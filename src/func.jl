@@ -177,7 +177,7 @@ function Base.adjoint(L::FunctionOperator)
     cache = reverse(L.cache)
     isset = cache !== nothing
 
-    FuncitonOperator(op,
+    FunctionOperator(op,
                      op_adjoint,
                      op_inverse,
                      op_adjoint_inverse,
