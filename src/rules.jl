@@ -3,11 +3,67 @@
 # automatic differentiation interface
 ###
 
-# TODO - specialize for each type ? Or leaf nodes?
-# or do we just need it for special cases?
-#   - tensor product, functionoperator, etc
+# ChainRulesCore.frule
+
+# - tensor product, functionoperator, etc
+
+# TODO overwrite ProjectTo
+#function ChainRulesCore.ProjectTo(L::MatrixOperator{<:Any,<:Diagonal})
+#end
+
+###
+# frule
+###
+
+#function Base.:*(ΔL::Tangent{P<:AbstractSciMLOperator,T}, u::AbstractVecOrMat) where{P,T}
+##   P(ΔL.backing...) * u
+#end
 
 
+
+# look at ProjectTo{Diagonal} for ref
+function ChainRulesCore.ProjectTo(L::MatrixOperator)
+    info = (;
+            A = ProjectTo(L.A),
+            update_func = ProjectTo(L.update_func),
+           )
+    ProjectTo{MatrixOperator}(info)
+end
+
+function (project::ChainRulesCore.ProjectTo{MatrixOperator})(dx::AbstractMatrix)
+end
+
+function ChainRulesCore.frule(
+                              (_,ΔL,Δu),
+                              ::typeof(Base.:*),
+                              L::AbstractSciMLOperator,
+                              u::AbstractVecOrMat,
+                             )
+    @show typeof(ΔL) # <-- 
+    @show typeof(Δu)
+    v = L * u
+    Δ = muladd(ΔL, u, L * Δu)
+end
+
+function ChainRulesCore.frule(
+                              (_,ΔL,Δu),
+                              ::typeof(Base.:*),
+                              L::Diagonal,
+                              u::AbstractVecOrMat,
+                             )
+    @show typeof(ΔL)
+    @show typeof(Δu)
+    v = L * u
+    Δ = muladd(ΔL, u, L * Δu)
+
+    v, Δ
+end
+
+###
+# rrule
+###
+
+#=
 function ChainRulesCore.rrule(
                               ::typeof(Base.:*),
                               L::AbstractSciMLOperator,
@@ -31,8 +87,7 @@ function ChainRulesCore.rrule(
     v, times_pullback
 end
 
-#function get_adjoint(L::AbstractSciMLOperator, dv)
-#end
+#overload Tangent{L::MatrixOperator}(dv)
 
 function ChainRulesCore.rrule(
                               ::typeof(Base.:*),
@@ -80,4 +135,5 @@ function ChainRulesCore.rrule(
 
     v, times_pullback
 end
+=#
 #
