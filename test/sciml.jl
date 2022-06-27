@@ -157,22 +157,29 @@ end
     x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
     
     k  = rfftfreq(n, 2π*n/L) |> Array
+    m  = length(k)
     tr = plan_rfft(x)
     
-    transform = FunctionOperator(
-                                 (du,u,p,t) -> mul!(du, tr, u);
-                                 isinplace=true,
-                                 T=ComplexF64,
-                                 size=(length(k),n),
+    ftr = FunctionOperator(
+                           (du,u,p,t) -> mul!(du, tr, u);
+                           isinplace=true,
+                           T=ComplexF64,
+                           size=(m,n),
     
-                                 input_prototype=x,
-                                 output_prototype=im*k,
-    
-                                 op_inverse = (du,u,p,t) -> ldiv!(du, tr, u)
-                                )
+                           input_prototype=x,
+                           output_prototype=im*k,
+
+                           op_adjoint = (du,u,p,t) -> ldiv!(du, tr, u),
+                           op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
+                          )
     
     ik = im * DiagonalOperator(k)
-    Dx = transform \ ik * transform
+
+    @test size(ftr)      == (m, n)
+    @test size(ftr')     == (n, m)
+    @test size(inv(ftr)) == (n, m)
+
+    Dx = ftr \ ik * ftr
     
     Dx = cache_operator(Dx, x)
     
