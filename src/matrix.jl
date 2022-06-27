@@ -198,7 +198,8 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         b::AbstractVecOrMat;
                         update_func=DEFAULT_UPDATE_FUNC,
                        )
-    @assert size(A, 1) == size(B, 1) "size mismatch: A, B don't output vectors of same size"
+    @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
+    of same size"
 
     A = A isa AbstractMatrix ? MatrixOperator(A) : A
     B = B isa AbstractMatrix ? MatrixOperator(B) : B

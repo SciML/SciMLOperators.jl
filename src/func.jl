@@ -100,14 +100,15 @@ function FunctionOperator(op;
     end
 
     isreal = T <: Real
-    adjointable = ishermitian | (isreal & issymmetric)
+    selfadjoint = ishermitian | (isreal & issymmetric)
+    adjointable = !(op_adjoint isa Nothing) | selfadjoint
     invertible  = !(op_inverse isa Nothing)
 
-    if adjointable & (op_adjoint isa Nothing) 
+    if selfadjoint & (op_adjoint isa Nothing)
         op_adjoint = op
     end
 
-    if invertible & (op_adjoint_inverse isa Nothing)
+    if selfadjoint & invertible & (op_adjoint_inverse isa Nothing)
         op_adjoint_inverse = op_inverse
     end
 
@@ -166,15 +167,20 @@ function Base.adjoint(L::FunctionOperator)
     op_inverse = L.op_adjoint_inverse
     op_adjoint_inverse = L.op_inverse
 
-    traits = (L.traits[1:end-1]..., size=reverse(size(L)))
+    traits = L.traits
+    @set! traits.size = reverse(size(L))
 
     p = L.p
     t = L.t
 
-    cache = reverse(L.cache)
-    isset = cache !== nothing
+    isset = L.isset
+    cache = if isset
+        cache = reverse(L.cache)
+    else
+        nothing
+    end
 
-    FuncitonOperator(op,
+    FunctionOperator(op,
                      op_adjoint,
                      op_inverse,
                      op_adjoint_inverse,
@@ -182,7 +188,51 @@ function Base.adjoint(L::FunctionOperator)
                      p,
                      t,
                      isset,
-                     cache
+                     cache,
+                    )
+end
+
+function Base.inv(L::FunctionOperator)
+    if !(has_ldiv(L))
+        return InvertedOperator(L)
+    end
+
+    op = L.op_inverse
+    op_inverse = L.op
+
+    op_adjoint = L.op_adjoint_inverse
+    op_adjoint_inverse = L.op_adjoint
+
+    traits = L.traits
+    @set! traits.size = reverse(size(L))
+
+    @set! traits.opnorm = if traits.opnorm isa Number
+        1 / traits.opnorm
+    elseif traits.opnorm isa Nothing
+        nothing
+    else
+        (p::Real) -> 1 / traits.opnorm(p)
+    end
+
+    p = L.p
+    t = L.t
+
+    isset = L.cache !== nothing
+    cache = if isset
+        cache = reverse(L.cache)
+    else
+        nothing
+    end
+
+    FunctionOperator(op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     traits,
+                     p,
+                     t,
+                     isset,
+                     cache,
                     )
 end
 
@@ -193,7 +243,7 @@ function LinearAlgebra.opnorm(L::FunctionOperator, p)
       defined")`
     """)
     opn = L.opnorm
-    return opn isa Number ? opn : M.opnorm(p)
+    return opn isa Number ? opn : L.opnorm(p)
 end
 LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
@@ -201,9 +251,9 @@ LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
 getops(::FunctionOperator) = ()
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
-has_mul(L::FunctionOperator{iip}) where{iip} = !iip
+has_mul(L::FunctionOperator{iip}) where{iip} = true
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
-has_ldiv(L::FunctionOperator{iip}) where{iip} = !iip & !(L.op_inverse isa Nothing)
+has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 # operator application
@@ -226,8 +276,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::A
     L.op(v, u, L.p, L.t)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat)
-    @error "3-argument is mul! not defined for out-of-place FunctionOperators"
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, args...)
+    @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
@@ -239,17 +289,21 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::A
     axpy!(β, co, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, α, β)
-    @error "5-argument is mul! not defined for out-of-place FunctionOperators"
-end
-
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
     L.op_inverse(v, u, L.p, L.t)
 end
 
-function LinearAlgebra.ldiv!(L::FunctionOperator, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractVecOrMat)
     ci, _ = L.cache
     copy!(ci, u)
     ldiv!(u, L, ci)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat)
+    @error "LinearAlgebra.ldiv! not defined for out-of-place FunctionOperators"
+end
+
+function LinearAlgebra.ldiv!(L::FunctionOperator{false}, u::AbstractVecOrMat)
+    @error "LinearAlgebra.ldiv! not defined for out-of-place FunctionOperators"
 end
 #

@@ -388,7 +388,8 @@ end
 function AddedOperator(ops::AbstractSciMLOperator...)
     sz = size(first(ops))
     for op in ops[2:end]
-        @assert size(op) == sz "Size mismatich in operators $ops"
+        @assert size(op) == sz "Dimension mismatch: cannot add operators of
+        sizes $(sz), and $(size(op))."
     end
     AddedOperator(ops)
 end
@@ -492,7 +493,8 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
-            @assert size(opcurr, 1) == size(opnext, 2) "Cannot $opnext ∘ $opcurr. Size mismatich"
+            @assert size(opcurr, 1) == size(opnext, 2) "Dimension mismatch: cannot compose
+            operators of sizes $(size(opnext)), and $(size(opcurr))."
         end
 
         T = promote_type(eltype.(ops)...)
