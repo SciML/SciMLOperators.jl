@@ -180,12 +180,12 @@ end
     @test size(inv(ftr)) == (n, m)
 
     Dx = ftr \ ik * ftr
-    
+
     Dx = cache_operator(Dx, x)
-    
+
     u  = @. sin(5x)cos(7x);
     du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
-    
+
     @test ≈(Dx * u, du; atol=1e-8)
     v = copy(u); @test ≈(mul!(v, Dx, u), du; atol=1e-8)
 end
