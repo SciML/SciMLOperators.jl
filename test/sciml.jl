@@ -186,10 +186,6 @@ end
     @test ≈(Dx * u, du; atol=1e-8)
     v = copy(u); @test ≈(mul!(v, Dx, u), du; atol=1e-8)
 
-    # adjoint, inverse, adjoint-inverse tests
-    u = rand(Float64,    size(x)...)
-    û = rand(ComplexF64, size(k)...)
-
     itr = inv(ftr)
     ftt = ftr'
     itt = itr'
