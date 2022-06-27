@@ -100,14 +100,15 @@ function FunctionOperator(op;
     end
 
     isreal = T <: Real
-    adjointable = ishermitian | (isreal & issymmetric)
+    selfadjoint = ishermitian | (isreal & issymmetric)
+    adjointable = !(op_adjoint isa Nothing) | selfadjoint
     invertible  = !(op_inverse isa Nothing)
 
-    if adjointable & (op_adjoint isa Nothing) 
+    if selfadjoint & (op_adjoint isa Nothing)
         op_adjoint = op
     end
 
-    if invertible & (op_adjoint_inverse isa Nothing)
+    if selfadjoint & invertible & (op_adjoint_inverse isa Nothing)
         op_adjoint_inverse = op_inverse
     end
 
