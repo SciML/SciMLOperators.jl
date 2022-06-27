@@ -194,6 +194,10 @@ end
     ftt = ftr'
     itt = itr'
 
+    @test itr isa FunctionOperator
+    @test ftt isa FunctionOperator
+    @test itt isa FunctionOperator
+
     @test size(ftr) == (m, n)
     @test size(itr) == (n, m)
     @test size(ftt) == (n, m)
@@ -203,6 +207,16 @@ end
     @test ftt.op_adjoint == ftr.op
     @test ftt.op_inverse == ftr.op_adjoint_inverse
     @test ftt.op_adjoint_inverse == ftr.op_inverse
+
+    @test itr.op == ftr.op_inverse
+    @test itr.op_adjoint == ftr.op_adjoint_inverse
+    @test itr.op_inverse == ftr.op
+    @test itr.op_adjoint_inverse == ftr.op_adjoint
+
+    @test itt.op == ftr.op_adjoint_inverse
+    @test itt.op_adjoint == ftr.op_inverse
+    @test itt.op_inverse == ftr.op_adjoint
+    @test itt.op_adjoint_inverse == ftr.op
 
 end
 
