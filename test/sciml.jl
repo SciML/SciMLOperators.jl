@@ -174,14 +174,9 @@ end
                            op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
                           )
     
+    # derivative test
     ik = im * DiagonalOperator(k)
-
-    @test size(ftr)      == (m, n)
-    @test size(ftr')     == (n, m)
-    @test size(inv(ftr)) == (n, m)
-
     Dx = ftr \ ik * ftr
-
     Dx = cache_operator(Dx, x)
 
     u  = @. sin(5x)cos(7x);
@@ -189,6 +184,20 @@ end
 
     @test ≈(Dx * u, du; atol=1e-8)
     v = copy(u); @test ≈(mul!(v, Dx, u), du; atol=1e-8)
+
+    # misc tests
+    u = rand(Float64,    size(x)...)
+    û = rand(ComplexF64, size(k)...)
+
+    itr = inv(ftr)
+    ftt = ftr'
+    itt = itr'
+
+    @test size(ftr) == (m, n)
+    @test size(itr) == (n, m)
+    @test size(ftt) == (n, m)
+    @test size(itt) == (m, n)
+
 end
 
 @testset "TensorProductOperator" begin
