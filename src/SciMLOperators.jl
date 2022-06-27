@@ -9,11 +9,7 @@ import ArrayInterfaceCore
 import Base: ReshapedArray
 import Lazy: @forward
 import Setfield: @set!
-<<<<<<< HEAD
 using ChainRulesCore
-=======
-import ChainRulesCore
->>>>>>> 22462b2 (chainrules)
 
 # overload
 import Base: zero, one, oneunit
@@ -22,11 +18,7 @@ import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
 import SparseArrays: sparse
-<<<<<<< HEAD
-import ChainRulesCore: frule, rrule, Tangent
-=======
-import ChainRulesCore: frule, rrule
->>>>>>> 22462b2 (chainrules)
+import ChainRulesCore: frule, rrule, Tangent, ProjectTo
 
 """
 $(TYPEDEF)
