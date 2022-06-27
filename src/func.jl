@@ -188,11 +188,10 @@ function Base.adjoint(L::FunctionOperator)
                      p,
                      t,
                      isset,
-                     cache
+                     cache,
                     )
 end
 
-#=
 function Base.inv(L::FunctionOperator)
     if !(has_ldiv(L))
         return InvertedOperator(L)
@@ -207,17 +206,35 @@ function Base.inv(L::FunctionOperator)
     traits = L.traits
     @set! traits.size = reverse(size(L))
 
+    @set! traits.opnorm = if traits.opnorm isa Number
+        1 / traits.opnorm
+    elseif traits.opnorm isa Nothing
+        nothing
+    else
+        (p::Real) -> 1 / traits.opnorm(p)
+    end
+
     p = L.p
     t = L.t
 
-    isset = cache !== nothing
+    isset = L.cache !== nothing
     cache = if isset
         cache = reverse(L.cache)
     else
         nothing
     end
+
+    FunctionOperator(op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     traits,
+                     p,
+                     t,
+                     isset,
+                     cache,
+                    )
 end
-=#
 
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
     L.traits.opnorm === nothing && error("""
@@ -226,7 +243,7 @@ function LinearAlgebra.opnorm(L::FunctionOperator, p)
       defined")`
     """)
     opn = L.opnorm
-    return opn isa Number ? opn : M.opnorm(p)
+    return opn isa Number ? opn : L.opnorm(p)
 end
 LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
