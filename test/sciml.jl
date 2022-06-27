@@ -86,7 +86,7 @@ end
     f2(du, u, p, t)  = mul!(du, A, u)
     f2i(du, u, p, t) = ldiv!(du, F, u)
 
-    # nonallocating
+    # out of place
     op1 = FunctionOperator(
                            f1;
 
@@ -105,6 +105,7 @@ end
                            isposdef=true,
                           )
 
+    # in place
     op2 = FunctionOperator(
                            f2;
 
@@ -134,9 +135,9 @@ end
 
     @test size(op2) == (N,N)
     @test has_adjoint(op2)
-    @test !has_mul(op2)
+    @test has_mul(op2)
     @test has_mul!(op2)
-    @test !has_ldiv(op2)
+    @test has_ldiv(op2)
     @test has_ldiv!(op2)
 
     op2 = cache_operator(op2, u)
