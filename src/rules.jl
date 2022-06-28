@@ -3,25 +3,37 @@
 # automatic differentiation interface
 ###
 
-# ChainRulesCore.frule
+function ChainRulesCore.rrule(
+                              ::typeof(Base.:*),
+                              L::FunctionOperator,
+                              u::AbstractVecOrMat,
+                             )
+    v = L * u
 
-# - tensor product, functionoperator, etc
+    # overwrite projectto for functionoperator.
+    # only gradient holding field in FunctionOperator is `p`, `t`
+    # collect derivative WRT p
+    project_L = ProjectTo(L)
+    project_u = ProjectTo(u)
 
-# TODO overwrite ProjectTo
-#function ChainRulesCore.ProjectTo(L::MatrixOperator{<:Any,<:Diagonal})
-#end
+    function times_pullback(dv)
+        dv = unthunk(dv)
+
+#       dL = @thunk(project_L(dv * u'))
+#       dL = Tangent{L}(...)
+        du = @thunk(project_u(L' * dv))
+
+        NoTangent(), NoTangent(), du
+    end
+
+    v, times_pullback
+end
 
 ###
 # frule
 ###
 
-#function Base.:*(ΔL::Tangent{P<:AbstractSciMLOperator,T}, u::AbstractVecOrMat) where{P,T}
-##   P(ΔL.backing...) * u
-#end
-
-
-
-# look at ProjectTo{Diagonal} for ref
+#=
 function ChainRulesCore.ProjectTo(L::MatrixOperator)
     info = (;
             A = ProjectTo(L.A),
@@ -30,7 +42,7 @@ function ChainRulesCore.ProjectTo(L::MatrixOperator)
     ProjectTo{MatrixOperator}(info)
 end
 
-function (project::ChainRulesCore.ProjectTo{MatrixOperator})(dx::AbstractMatrix)
+function (p::ChainRulesCore.ProjectTo{MatrixOperator})(dx::AbstractMatrix)
 end
 
 function ChainRulesCore.frule(
@@ -44,21 +56,7 @@ function ChainRulesCore.frule(
     v = L * u
     Δ = muladd(ΔL, u, L * Δu)
 end
-
-# overly typed case so i can see whats happening
-function ChainRulesCore.frule(
-                              (_,ΔL,Δu),
-                              ::typeof(Base.:*),
-                              L::Diagonal,
-                              u::AbstractVecOrMat,
-                             )
-    @show typeof(ΔL)
-    @show typeof(Δu)
-    v = L * u
-    Δ = muladd(ΔL, u, L * Δu)
-
-    v, Δ
-end
+=#
 
 ###
 # rrule
