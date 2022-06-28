@@ -12,14 +12,14 @@ function ChainRulesCore.rrule(
 
     # overwrite projectto for functionoperator.
     # only gradient holding field in FunctionOperator is `p`, `t`
-    # collect derivative WRT p
+    # accumulate gradient WRT p
     project_L = ProjectTo(L)
     project_u = ProjectTo(u)
 
     function times_pullback(dv)
         dv = unthunk(dv)
 
-#       dL = @thunk(project_L(dv * u'))
+#       dL = @thunk(project_L(dv * u')) 
 #       dL = Tangent{L}(...)
         du = @thunk(project_u(L' * dv))
 

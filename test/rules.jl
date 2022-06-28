@@ -9,6 +9,14 @@ N = 8
 @testset "MatrixOperator" begin
     A = MatrixOperator(rand(N,N))
     u = rand(N)
+
+    f = M -> sum(M * u);
+
+    @test Zygote.gradient(f, MatrixOperator(rand(4,4)))[1] isa Matrix
+    @test Zygote.gradient(f, DiagonalOperator(rand(4)))[1] isa Diagonal
+
+    F=AffineOperator(rand(4,4), rand(4,4), rand(4))
+    Zygote.gradient(rand(4,4), rand(4,4), rand(4))
 end
 
 @testset "Function Operator" begin
@@ -63,6 +71,6 @@ end
     f = (A, u) -> sum(A * u)
 
     grad = Zygote.gradient(f, op1, u)
-    grad = Zygote.gradient(f, op2, u) # error?
+    grad = Zygote.gradient(f, op2, u) # was getting error
 end
 #
