@@ -29,9 +29,8 @@ end
 """
 _copy!(dst, src) = copy!(dst, src)
 function _copy!(dst::AbstractGPUArray{<:Any,1}, src::AbstractGPUArray{<:Any,1})
-    @assert axes(dst) == axes(src)
+    axes(dst) == axes(src) || throw(ArgumentError(
+    "arrays must have the same axes for copy! (consider using `copyto!`)"))
     copyto!(dst, src)
-
-    dst
 end
 #
