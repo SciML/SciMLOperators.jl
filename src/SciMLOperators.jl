@@ -6,6 +6,7 @@ using LinearAlgebra
 import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
+import GPUArraysCore: AbstractGPUArray
 import Base: ReshapedArray
 import Lazy: @forward
 import Setfield: @set!

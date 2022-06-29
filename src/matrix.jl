@@ -265,7 +265,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractV
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
-    copy!(v, u)
+    _copy!(v, u)
     ldiv!(L, v)
 end
 

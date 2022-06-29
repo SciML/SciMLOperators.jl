@@ -343,7 +343,7 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     mul!(C3, L.outer, C2)
     C3 = _reshape(C3, (mo, mi, k))
     V  = _reshape(v , (mi, mo, k))
-    copy!(c4, v)
+    _copy!(c4, v)
     permutedims!(V, C3, PERM)
     axpby!(β, c4, α, v)
 

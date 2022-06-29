@@ -1,6 +1,8 @@
 #
 """ use Base.ReshapedArray """
 _reshape(a, dims::NTuple{D,Int}) where{D} = reshape(a,dims)
+_reshape(a::ReshapedArray, dims::NTuple{D,Int}) where{D} = _reshape(a.parent, dims)
+
 function _reshape(a::AbstractArray, dims::NTuple{D,Int}) where{D}
     @assert prod(dims) == length(a) "cannot reshape array of size $(size(a)) to size $dims"
     dims == size(a) && return a
@@ -21,4 +23,16 @@ function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
 
     size_in, size_out
 end
+
+"""
+`Base.copy!` will error when scalar indexing is disallowed.
+"""
+_copy!(dst, src) = copy!(dst, src)
+function _copy!(dst::AbstractGPUArray, src::AbstractGPUArray)
+    @assert size(dst) == size(src)
+    mul!(_vec(dst), I, _vec(src))
+
+    dst
+end
+# alternatively import ArrayInterfaceGPUArrays, and then branch on fast_scalar_indexing?
 #

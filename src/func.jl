@@ -283,7 +283,7 @@ end
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
     _, co = L.cache
 
-    copy!(co, v)
+    _copy!(co, v)
     mul!(v, L, u)
     lmul!(α, v)
     axpy!(β, co, v)
@@ -295,7 +295,7 @@ end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractVecOrMat)
     ci, _ = L.cache
-    copy!(ci, u)
+    _copy!(ci, u)
     ldiv!(u, L, ci)
 end
 

@@ -45,7 +45,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
     @assert size(u, 1) == N
-    copy!(v, u)
+    _copy!(v, u)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat, α, β) where{N}
@@ -55,7 +55,7 @@ end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
     @assert size(u, 1) == N
-    copy!(v, u)
+    _copy!(v, u)
 end
 
 function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
@@ -634,7 +634,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     cache = L.cache[end]
-    copy!(cache, v)
+    _copy!(cache, v)
 
     mul!(v, L, u)
     lmul!(α, v)
@@ -728,7 +728,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstrac
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    copy!(L.cache, v)
+    _copy!(L.cache, v)
     ldiv!(v, L.L, u)
     lmul!(α, v)
     axpy!(β, L.cache, v)
@@ -742,7 +742,7 @@ function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    copy!(L.cache, u)
+    _copy!(L.cache, u)
     mul!(u, L.L, L.cache)
 end
 #
