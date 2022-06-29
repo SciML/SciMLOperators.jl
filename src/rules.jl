@@ -60,33 +60,4 @@ function ChainRulesCore.frule(
 end
 =#
 
-###
-# rrule
-###
-
-#=
-function ChainRulesCore.rrule(
-                              ::typeof(Base.:*),
-                              L::AbstractSciMLOperator,
-                              u::AbstractVecOrMat,
-                             )
-    v = L * u
-
-    project_L = ProjectTo(L)
-    project_u = ProjectTo(u)
-
-    function times_pullback(dv)
-        dv = unthunk(dv)
-
-        dL = @thunk(project_L(dv * u'))
-        dL = Tangent{L}(...)
-        du = @thunk(project_u(L' * dv))
-
-        NoTangent(), dL, du
-    end
-
-    v, times_pullback
-end
-
-=#
 #

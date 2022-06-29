@@ -49,7 +49,6 @@ end
                         )
 
     grad = Zygote.gradient(f, F, u)
-
 #   test_rrule(*, F, u)
 end
 #
