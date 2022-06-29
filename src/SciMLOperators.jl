@@ -43,6 +43,8 @@ include("rules.jl")
 
 include("rules.jl")
 
+include("rules.jl")
+
 export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
