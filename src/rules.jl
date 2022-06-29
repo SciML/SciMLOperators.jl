@@ -10,9 +10,6 @@ function ChainRulesCore.rrule(
                              )
     v = L * u
 
-    # overwrite projectto for functionoperator.
-    # only gradient holding field in FunctionOperator is `p`, `t`
-    # accumulate gradient WRT p
     project_L = ProjectTo(L)
     project_u = ProjectTo(u)
 
@@ -20,6 +17,9 @@ function ChainRulesCore.rrule(
         @assert has_adjoint(L) "Adjoint not defined for in-place operator of
         type $(typeof(L)). To do reverse pass, either define the adjoint to the
         operator via the `op_adjoint` kwarg, or use an out-of-place version."
+
+        # how to accumulate gradient WRT `p`, `t` ??
+        # overwrite ProjectTo for functionoperator ??
 
 #       dL = @thunk(project_L(dv * u')) 
 #       dL = Tangent{L}(...)
