@@ -5,7 +5,7 @@
 
 function ChainRulesCore.rrule(
                               ::typeof(Base.:*),
-                              L::FunctionOperator,
+                              L::FunctionOperator{true},
                               u::AbstractVecOrMat,
                              )
     v = L * u
@@ -17,11 +17,13 @@ function ChainRulesCore.rrule(
     project_u = ProjectTo(u)
 
     function times_pullback(dv)
-        dv = unthunk(dv)
+        @assert has_adjoint(L) "Adjoint not defined for in-place operator of
+        type $(typeof(L)). To do reverse pass, either define the adjoint to the
+        operator via the `op_adjoint` kwarg, or use an out-of-place version."
 
 #       dL = @thunk(project_L(dv * u')) 
 #       dL = Tangent{L}(...)
-        du = @thunk(project_u(L' * dv))
+        du = @thunk(project_u(L' * unthunk(dv)))
 
         NoTangent(), NoTangent(), du
     end
@@ -86,53 +88,5 @@ function ChainRulesCore.rrule(
     v, times_pullback
 end
 
-#overload Tangent{L::MatrixOperator}(dv)
-
-function ChainRulesCore.rrule(
-                              ::typeof(Base.:*),
-                              L::AffineOperator,
-                              u::AbstractVecOrMat
-                             )
-    v = L * u
-
-    project_u = ProjectTo(u)
-
-    function times_pullback(dv)
-        dv = unthunk(dv)
-
-        dA = @thunk(dv * u')
-        dB = @thunk()
-        db = copy(dv)
-
-        dL = Tangent{L}(; A=dA, B=dB, b=db)
-
-        du = @thunk(project_u(L' * dv))
-
-        NoTangent(), dL, du
-    end
-
-    v, times_pullback
-end
-
-function ChainRulesCore.rrule(
-                              ::typeof(Base.:*),
-                              L::FunctionOperator{true},
-                              u::AbstractVecOrMat
-                             )
-    v = L * u
-
-    project_u = ProjectTo(u)
-
-    function times_pullback(dv)
-
-#       dL = Tangent{L}()
-        dL = NoTangent()
-        du = @thunk(project_u(L' * dv))
-
-        NoTangent(), dL, du
-    end
-
-    v, times_pullback
-end
 =#
 #
