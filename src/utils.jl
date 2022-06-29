@@ -28,11 +28,10 @@ end
 `Base.copy!` will error when scalar indexing is disallowed.
 """
 _copy!(dst, src) = copy!(dst, src)
-function _copy!(dst::AbstractGPUArray, src::AbstractGPUArray)
-    @assert size(dst) == size(src)
-    mul!(_vec(dst), I, _vec(src))
+function _copy!(dst::AbstractGPUArray{<:Any,1}, src::AbstractGPUArray{<:Any,1})
+    @assert axes(dst) == axes(src)
+    copyto!(dst, src)
 
     dst
 end
-# alternatively import ArrayInterfaceGPUArrays, and then branch on fast_scalar_indexing?
 #
