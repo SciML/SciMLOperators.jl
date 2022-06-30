@@ -24,9 +24,8 @@ function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
     size_in, size_out
 end
 
-"""
-`Base.copy!` will error when scalar indexing is disallowed.
-"""
+# `Base.copy!` will error when scalar indexing is disallowed.
+# https://github.com/SciML/SciMLOperators.jl/pull/80
 _copy!(dst, src) = copy!(dst, src)
 function _copy!(dst::AbstractGPUArray{<:Any,1}, src::AbstractGPUArray{<:Any,1})
     axes(dst) == axes(src) || throw(ArgumentError(
