@@ -4,7 +4,7 @@ struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
     update_func::F
 
     function BatchedDiagonalOperator(
-                                     diag::AbstractVecOrMat;
+                                     diag::AbstractMatrix;
                                      update_func=DEFAULT_UPDATE_FUNC
                                     )
         new{
@@ -12,13 +12,13 @@ struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
             typeof(diag),
             typeof(update_func)
            }(
-             D, update_func,
+             diag, update_func,
             )
     end
 end
 
-function DiagonalOperator(u::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
-    BatchedDiagonalOperator(u; update_func=diag_update_func)
+function DiagonalOperator(u::AbstractMatrix; update_func=DEFAULT_UPDATE_FUNC)
+    BatchedDiagonalOperator(u; update_func=update_func)
 end
 
 # traits

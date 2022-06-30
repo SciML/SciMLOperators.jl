@@ -35,9 +35,9 @@ include("multidim.jl")
 
 include("basic.jl")
 include("matrix.jl")
+include("batch.jl")
 include("func.jl")
 include("tensor.jl")
-include("batch.jl")
 
 export ScalarOperator,
        MatrixOperator,

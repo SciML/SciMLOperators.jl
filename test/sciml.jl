@@ -70,6 +70,23 @@ end
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
 end
 
+@testset "Batched Diagonal Operator" begin
+    u = rand(N,K)
+    d = rand(N,K)
+    α = rand()
+    β = rand()
+
+    L = DiagonalOperator(d)
+
+    @test L * u ≈ d .* u
+    v=rand(N,K); @test mul!(v, L, u) ≈ d .* u
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(d .* u) + β*w
+
+    @test L \ u ≈ d .\ u
+    v=rand(N,K); @test ldiv!(v, L, u) ≈ d .\ u
+    v=copy(u); @test ldiv!(L, u) ≈ d .\ v
+end
+
 @testset "FunctionOperator" begin
     u = rand(N,K)
     p = nothing
