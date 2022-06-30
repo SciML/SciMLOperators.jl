@@ -1,5 +1,5 @@
 #
-struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator
+struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
     diag::D
     update_func::F
 
@@ -23,7 +23,7 @@ end
 
 # traits
 Base.size(L::BatchedDiagonalOperator) = (N = size(L.diag, 1); (N, N))
-Base.iszero(L::MatrixOperator) = iszero(L.diag)
+Base.iszero(L::BatchedDiagonalOperator) = iszero(L.diag)
 Base.transpose(L::BatchedDiagonalOperator) = L
 Base.adjoint(L::BatchedDiagonalOperator) = conj(L)
 function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
@@ -34,13 +34,15 @@ end
 
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
 LinearAlgebra.ishermitian(L::BatchedDiagonalOperator) = true
-LinearAlgebra.isposdef(isposdef(Diagonal(_vec(L.diag))))
+LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(_vec(L.diag)))
 
 isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 issquare(L::BatchedDiagonalOperator) = true
 has_adjoint(L::BatchedDiagonalOperator) = true
 has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
 has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
+
+getops(L::BatchedDiagonalOperator) = (L.diag,)
 
 update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func(L.diag,u,p,t); L)
 
