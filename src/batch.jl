@@ -28,12 +28,24 @@ Base.transpose(L::BatchedDiagonalOperator) = L
 Base.adjoint(L::BatchedDiagonalOperator) = conj(L)
 function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     diag = conj(L.diag)
-    update_func = (L,u,p,t) -> conj(L.update_func(conj(L.diag),u,p,t))
+    update_func = if isreal(L)
+        L.update_func
+    else
+        (L,u,p,t) -> conj(L.update_func(conj(L.diag),u,p,t))
+    end
     BatchedDiagonalOperator(diag; update_func=update_func)
 end
 
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
-LinearAlgebra.ishermitian(L::BatchedDiagonalOperator) = true
+function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
+    if isreal(L)
+        true
+    else
+        d = _vec(L.diag)
+        D = Diagonal(d)
+        ishermitian(d)
+    end
+end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(_vec(L.diag)))
 
 isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
