@@ -193,7 +193,7 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
 Base.size(α::ScalarOperator) = ()
-function Base.adjoint(α::ScalarOperator) # TODO - test
+function Base.adjoint(α::ScalarOperator) # TODO - test this thoroughly
     val = α.val'
     update_func =  (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
     ScalarOperator(val; update_func=update_func)
