@@ -21,25 +21,28 @@ function DiagonalOperator(u::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
     BatchedDiagonalOperator(u; update_func=diag_update_func)
 end
 
+# traits
 Base.size(L::BatchedDiagonalOperator) = (N = size(L.diag, 1); (N, N))
+Base.iszero(L::MatrixOperator) = iszero(L.diag)
 Base.transpose(L::BatchedDiagonalOperator) = L
-Base.transpose(L::BatchedDiagonalOperator) = conj(L)
+Base.adjoint(L::BatchedDiagonalOperator) = conj(L)
 function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     diag = conj(L.diag)
     update_func = (L,u,p,t) -> conj(L.update_func(conj(L.diag),u,p,t))
     BatchedDiagonalOperator(diag; update_func=update_func)
 end
 
-update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func(L.diag,u,p,t); L)
-#
-# traits
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
 LinearAlgebra.ishermitian(L::BatchedDiagonalOperator) = true
 LinearAlgebra.isposdef(isposdef(Diagonal(_vec(L.diag))))
 
+isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 issquare(L::BatchedDiagonalOperator) = true
+has_adjoint(L::BatchedDiagonalOperator) = true
 has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
 has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
+
+update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func(L.diag,u,p,t); L)
 
 # operator application
 Base.:*(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .* u
