@@ -63,7 +63,7 @@ has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
 
 getops(L::BatchedDiagonalOperator) = (L.diag,)
 
-update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func(L.diag,u,p,t); L)
+update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func(L.diag,u,p,t); nothing)
 
 # operator application
 Base.:*(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .* u
