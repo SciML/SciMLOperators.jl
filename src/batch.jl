@@ -4,7 +4,7 @@ struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLLinearOperator{T}
     update_func::F
 
     function BatchedDiagonalOperator(
-                                     diag::Abstractarray;
+                                     diag::AbstractArray;
                                      update_func=DEFAULT_UPDATE_FUNC
                                     )
         new{
