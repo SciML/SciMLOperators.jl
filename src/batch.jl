@@ -1,10 +1,10 @@
 #
-struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
+struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLLinearOperator{T}
     diag::D
     update_func::F
 
     function BatchedDiagonalOperator(
-                                     diag::AbstractMatrix;
+                                     diag::Abstractarray;
                                      update_func=DEFAULT_UPDATE_FUNC
                                     )
         new{
@@ -17,6 +17,13 @@ struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
     end
 end
 
+"""
+When `diag` is a multidimensional array, `L = DiagonalOperator(diag, ...)` forms
+an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of `diag`.
+`L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
+with leading length `size(u, 1) = N`. Note that `L` in this case doesn't act independently
+on coumn-vectors of its input.
+"""
 function DiagonalOperator(u::AbstractMatrix; update_func=DEFAULT_UPDATE_FUNC)
     BatchedDiagonalOperator(u; update_func=update_func)
 end
