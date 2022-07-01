@@ -9,6 +9,9 @@ for it to work in the solvers.
    being `AbstractArray`s. Specifically, a SciMLOperator, `L`, of size `(M,N)` accepts
    input argument `u` with leading length `N`, i.e. `size(u, 1) == N`, and returns an
    `AbstractArray` of the same dimension with leading length `M`, i.e. `size(L * u, 1) == M`.
+   Internally, `L` lazily reshapes `u` to a matrix of size `(N, length(u) \div N)` and
+   independently acts on the column-vectors. The reshape operation is skipped for
+   `AbstractVecOrMat` arguments.
 2. SciMLOperators can be applied to an `AbstractArray` via overloaded `Base.*`, or
    the in-place `LinearAlgebra.mul!`. Additionally, operators are allowed to be time,
    or parameter dependent. The state of a SciMLOperator can be updated by calling
@@ -18,7 +21,8 @@ for it to work in the solvers.
 3. To support the update functionality, we have lazily implemented a comprehensive operator
    algebra. That means a user can add, subtract, scale, compose and invert SciMLOperators,
    and the state of the resultant operator would be updated as expected upon calling
-   `L(du, u, p, t)` or `L(u, p, t)`.
+   `L(du, u, p, t)` or `L(u, p, t)` so long as an update function is provided for the
+   component operators.
 4. Out of place `L = update_coefficients(L, u, p, t)`
    
 
