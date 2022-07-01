@@ -38,6 +38,7 @@ include("interface.jl")
 include("left.jl")
 include("multidim.jl")
 
+include("scalar.jl")
 include("basic.jl")
 include("matrix.jl")
 include("func.jl")

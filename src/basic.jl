@@ -172,15 +172,15 @@ end
     (λ L)*(u) = λ * L(u)
 """
 struct ScaledOperator{T,
-                      λType<:ScalarOperator,
-                      LType<:AbstractSciMLOperator,
+                      λType,
+                      LType,
                       C,
                      } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
-    cache::C # <-- is scalar cache necessary for ScalarOperator? TODO
+    cache::C # <-- is scalar cache necessary for AbstractScalarOperator? TODO
 
-    function ScaledOperator(λ::ScalarOperator{Tλ},
+    function ScaledOperator(λ::AbstractScalarOperator{Tλ},
                             L::AbstractSciMLOperator{TL},
                             cache = zeros(promote_type(Tλ,TL), 1),
                            ) where{Tλ,TL}
@@ -190,7 +190,7 @@ struct ScaledOperator{T,
 end
 
 ScalingNumberTypes = (
-                      :ScalarOperator,
+                      :AbstractScalarOperator, # TODO - AbstractScalarOperator
                       :Number,
                       :UniformScaling,
                      )
@@ -465,11 +465,11 @@ for op in (
     end
 
     # scalar operator
-    @eval function Base.$op(λ::ScalarOperator, L::ComposedOperator)
+    @eval function Base.$op(λ::AbstractScalarOperator, L::ComposedOperator)
         ScaledOperator(λ, L)
     end
 
-    @eval function Base.$op(L::ComposedOperator, λ::ScalarOperator)
+    @eval function Base.$op(L::ComposedOperator, λ::AbstractScalarOperator)
         ScaledOperator(λ, L)
     end
 end
