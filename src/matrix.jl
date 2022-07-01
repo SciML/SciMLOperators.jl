@@ -87,7 +87,9 @@ the following signature:
 
     update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
 
-When `diag` is an `AbstractVector` of length N, `DiagonalOperator` has size `(N, N)`.
+When `diag` is an `AbstractVector` of length N, `L=DiagonalOpeator(diag, ...)`
+can be applied to `AbstractArray`s with `size(u, 1) == N`. Each column of the `u`
+will be scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
 """
 function DiagonalOperator(diag::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
     function diag_update_func(A, u, p, t)
