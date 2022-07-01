@@ -24,7 +24,7 @@ an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of 
 with leading length `size(u, 1) = N`. Note that `L` in this case doesn't act independently
 on coumn-vectors of its input.
 """
-function DiagonalOperator(u::AbstractMatrix; update_func=DEFAULT_UPDATE_FUNC)
+function DiagonalOperator(u::AbstractArray; update_func=DEFAULT_UPDATE_FUNC)
     BatchedDiagonalOperator(u; update_func=update_func)
 end
 
