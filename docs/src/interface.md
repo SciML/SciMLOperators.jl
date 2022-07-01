@@ -1,22 +1,31 @@
 # The AbstractSciMLOperator Interface
 
-## Formal Properties of DiffEqOperators
+## Formal Properties of SciMLOperators
 
 These are the formal properties that an `AbstractSciMLOperator` should obey
 for it to work in the solvers.
 
-## AbstractDiffEqOperator Interface Description
+1. An `AbstractSciMLOperator` represents a linear or nonlinear operator with input/output
+   being `AbstractArray`s. Specifically, a SciMLOperator, `L`, of size `(M,N)` accepts
+   input argument `u` with leading length `N`, i.e. `size(u, 1) == N`, and returns an
+   `AbstractArray` of the same dimension with leading length `M`, i.e. `size(L * u, 1) == M`.
+2. SciMLOperators can be applied to an `AbstractArray` via overloaded `Base.*`, or
+   the in-place `LinearAlgebra.mul!`. Additionally, operators are allowed to be time,
+   or parameter dependent. The state of a SciMLOperator can be updated by calling
+   the mutating function `update_coefficients!(L, u, p, t)` where `p` representes
+   parameters, and `t`, time.  Calling a SciMLOperator as `L(du, u, p, t)` or out-of-place
+   `L(u, p, t)` will automatically update the state of `L` before applying it to `u`.
+3. To support the update functionality, we have lazily implemented a comprehensive operator
+   algebra. That means a user can add, subtract, scale, compose and invert SciMLOperators,
+   and the state of the resultant operator would be updated as expected upon calling
+   `L(du, u, p, t)` or `L(u, p, t)`.
+4. Out of place `L = update_coefficients(L, u, p, t)`
+   
 
-1. Function call and multiplication: `L(du,u,p,t)` for inplace and `du = L(u,p,t)` for
-   out-of-place, meaning `L*u` and `mul!`.
-2. If the operator is not a constant, update it with `(u,p,t)`. A mutating form, i.e.
-   `update_coefficients!(A,u,p,t)` that changes the internal coefficients, and a
-   out-of-place form `B = update_coefficients(A,u,p,t)`.
+## AbstractSciMLOperator Interface Description
+
 3. `isconstant(A)` trait for whether the operator is constant or not.
 
-## AbstractDiffEqLinearOperator Interface Description
-
-1. `AbstractSciMLLinearOperator <: AbstractSciMLOperator`
 2. Can absorb under multiplication by a scalar. In all algorithms things like
    `dt*L` show up all the time, so the linear operator must be able to absorb
    such constants.
@@ -28,6 +37,7 @@ for it to work in the solvers.
 8. Optional: factorizations. `ldiv!`, `factorize` et. al. This is only required
    for algorithms which use the factorization of the operator (Crank-Nicolson),
    and only for when the default linear solve is used.
+1. `AbstractSciMLLinearOperator <: AbstractSciMLOperator`
 
 ## Note About Affine Operators
 
