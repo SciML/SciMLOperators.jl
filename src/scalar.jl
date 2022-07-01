@@ -1,28 +1,60 @@
 #
-Base.size(α::AbstractScalarOperator) = ()
-Base.adjoint(α::AbstractScalarOperator) = conj(α)
-Base.transpose(α::AbstractScalarOperator) = α
+###
+# AbstractSciMLScalarOperator interface
+###
 
-has_mul!(::AbstractScalarOperator) = true
-issquare(L::AbstractScalarOperator) = true
-has_adjoint(::AbstractScalarOperator) = true
+Base.size(α::AbstractSciMLScalarOperator) = ()
+Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
+Base.transpose(α::AbstractSciMLScalarOperator) = α
 
-## AbstractScalarOperators can also be `a, b` or `α, β` in axpby!, or mul!
-## write methods for that
+has_mul!(::AbstractSciMLScalarOperator) = true
+issquare(L::AbstractSciMLScalarOperator) = true
+has_adjoint(::AbstractSciMLScalarOperator) = true
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractScalarOperator, u::AbstractVecOrMat)
-    copy!(v, u)
-    lmul!(α, v)
+Base.:*(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) * u
+Base.:\(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) \ u
+
+LinearAlgebra.lmul!(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = lmul!(convert(Number, α), u)
+LinearAlgebra.rmul!(u::AbstractSciMLScalarOperator, α::AbstractVecOrMat) = rmul!(u, convert(Number, α))
+LinearAlgebra.ldiv!(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = ldiv!(convert(Number, α), u)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat)
+    ldiv!(convert(Number, α), u)
 end
 
-#function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractScalarOperator, u::AbstractVecOrMat, a::AbstractScalarOperator, b::AbstractScalarOperator)
-#    axpby!(a*α, u, β, v)
-#end
+function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat)
+    x = convert(Number, α)
+    mul!(v, x, u)
+end
 
-#function LinearAlgebra.axpy!(α::AbstractScalarOperator, x::AbstractVecOrMat, y::AbstractVecOrMat) = axpy!(α.val, x, y)
-#end
-#function LinearAlgebra.axpby!(α::AbstractScalarOperator, x::AbstractVecOrMat, β::AbstractScalarOperator, y::AbstractVecOrMat) = axpby!(α.val, x, β.val, y)
-#end
+function LinearAlgebra.mul!(v::AbstractVecOrMat,
+                            α::AbstractSciMLScalarOperator,
+                            u::AbstractVecOrMat,
+                            a::AbstractSciMLScalarOperator,
+                            b::AbstractSciMLScalarOperator)
+    α = convert(Number, α)
+    a = convert(Number, a)
+    b = convert(Number, b)
+    mul!(v, α, u, a, b)
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat, a, b)
+    α = convert(Number, α)
+    mul!(v, α, u, a, b)
+end
+
+function LinearAlgebra.axpy!(α::AbstractSciMLScalarOperator, x::AbstractVecOrMat, y::AbstractVecOrMat)
+    α = convert(Number, α)
+    axpy!(α, x, y)
+end
+
+function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
+                              x::AbstractVecOrMat,
+                              β::AbstractSciMLScalarOperator,
+                              y::AbstractVecOrMat)
+    α = convert(Number, α)
+    β = convert(Number, β)
+    axpby!(α, x, β, y)
+end
 
 """
     ScalarOperator(val[; update_func])
@@ -47,10 +79,11 @@ end
 Base.convert(::Type{Number}, α::ScalarOperator) = α.val
 Base.convert(::Type{ScalarOperator}, α::Number) = ScalarOperator(α)
 
-ScalarOperator(α::AbstractScalarOperator) = α
+ScalarOperator(α::AbstractSciMLScalarOperator) = α
 ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
+Base.:+(α::ScalarOperator) = α
 function Base.:-(α::ScalarOperator) # TODO - test
     val = -α.val
     update_func = (oldval,u,p,t) -> -α.update_func(-oldval,u,p,t)
@@ -63,11 +96,11 @@ function Base.conj(α::ScalarOperator) # TODO - test
     ScalarOperator(val; update_func=update_func)
 end
 
-Base.one(::AbstractScalarOperator{T}) where{T} = ScalarOperator(one(T))
-Base.zero(::AbstractScalarOperator{T}) where{T} = ScalarOperator(zero(T))
+Base.one(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(one(T))
+Base.zero(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(zero(T))
 
-Base.one(::Type{<:AbstractSciMLOperator}) = ScalarOperator(true)
-Base.zero(::Type{<:AbstractSciMLOperator}) = ScalarOperator(false)
+Base.one(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(true)
+Base.zero(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(false)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
 Base.iszero(α::ScalarOperator) = iszero(α.val)
@@ -79,25 +112,16 @@ has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
 update_coefficients!(L::ScalarOperator,u,p,t) = (L.update_func(L.val,u,p,t); nothing)
 
-# operator application
-Base.:*(α::ScalarOperator, u::Union{Number,AbstractVecOrMat}) = α.val * u
-Base.:\(α::ScalarOperator, u::Union{Number,AbstractVecOrMat}) = α.val \ u
-
-LinearAlgebra.lmul!(α::ScalarOperator, u::AbstractVecOrMat) = lmul!(α.val, u)
-LinearAlgebra.rmul!(u::AbstractVecOrMat, α::ScalarOperator) = rmul!(u, α.val)
-LinearAlgebra.mul!(v::AbstractVecOrMat, α::ScalarOperator, u::AbstractVecOrMat) = mul!(v, α.val, u)
-LinearAlgebra.mul!(v::AbstractVecOrMat, α::ScalarOperator, u::AbstractVecOrMat, a, b) = mul!(v, α.val, u, a, b)
-LinearAlgebra.axpy!(α::ScalarOperator, x::AbstractVecOrMat, y::AbstractVecOrMat) = axpy!(α.val, x, y)
-LinearAlgebra.axpby!(α::ScalarOperator, x::AbstractVecOrMat, β::ScalarOperator, y::AbstractVecOrMat) = axpby!(α.val, x, β.val, y)
-
-LinearAlgebra.ldiv!(v::AbstractVecOrMat, α::ScalarOperator, u::AbstractVecOrMat) = ldiv!(v, α.val, u)
-LinearAlgebra.ldiv!(α::ScalarOperator, u::AbstractVecOrMat) = ldiv!(α.val, u)
-
 """
 Lazy addition of Scalar Operators
 """
-struct AddedScalarOperator{T} <: AbstractSciMLScalarOperator{T}
-    ops
+struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
+    ops::O
+
+    function AddedScalarOperator(ops::NTuple{<:Integer,AbstractSciMLScalarOperator})
+        T = promote_type(eltype.(ops)...)
+        new{T,typeof(ops)}(ops)
+    end
 end
 
 for op in (
@@ -112,34 +136,19 @@ end
 
 getops(α::AddedScalarOperator) = α.ops
 
-# operator application
-
-function LinearAlgebra.lmul!(α::ComposedScalarOperator, u::AbstractVecOrMat)
-    for i=1:length(α.ops)
-        lmul!(α.ops[i], u)
-    end
-end
-
-function LinearAlgebra.rmul!(u::AbstractVecOrMat, α::ComposedScalarOperator)
-    for i=1:length(α.ops)
-        rmul!(u, α.ops[i])
-    end
+function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
+    reduce((op1, op2) -> convert(Number, op1) + convert(Number, op2), α.ops; init = zero(T))
 end
 
 """
 Lazy composition of Scalar Operators
 """
-struct ComposedScalarOperator{T} <: AbstractSciMLScalarOperator{T}
-    ops
+struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
+    ops::O
 
     function ComposedScalarOperator(ops::NTuple{<:Integer,AbstractSciMLScalarOperator})
         T = promote_type(eltype.(ops)...)
-        new{
-            T,
-            typeof(ops)
-           }(
-             ops, cache, isset,
-            )
+        new{T,typeof(ops)}(ops)
     end
 end
 
@@ -147,37 +156,14 @@ function ComposedScalarOperator(ops::AbstractSciMLScalarOperator...)
     ComposedScalarOperator(ops)
 end
 
+function Base.convert(::Type{Number}, α::ComposedScalarOperator{T}) where{T}
+    iszero(α) && return zero(T)
+    reduce((op1, op2) -> convert(Number, op1) * convert(Number, op2), α.ops; init = zero(T))
+end
+
 getops(α::ComposedScalarOperator) = α.ops
 Base.convert(::Type{Number}, α::ComposedScalarOperator)
 
-Base.*(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x.val, y.val)
-Base.∘(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x.val, y.val)
-
-# operator application
-Base.*(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x.val, y.val)
-
-function LinearAlgebra.lmul!(α::ComposedScalarOperator, u::AbstractVecOrMat)
-    for i=1:length(α.ops)
-        lmul!(α.ops[i], u)
-    end
-end
-
-function LinearAlgebra.rmul!(u::AbstractVecOrMat, α::ComposedScalarOperator)
-    for i=1:length(α.ops)
-        rmul!(u, α.ops[i])
-    end
-end
-
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, α::ComposedScalarOperator, u::AbstractVecOrMat)
-    ldiv!(v, α.ops[1], u)
-    for i=1:length(α.ops)
-        ldiv!(α.ops[i], v)
-    end
-end
-
-function LinearAlgebra.ldiv!(α::ComposedScalarOperator, u::AbstractVecOrMat)
-    for i=1:length(α.ops)
-        ldiv!(α.ops[i], u)
-    end
-end
+Base.:*(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x, y)
+Base.:∘(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x, y)
 #
