@@ -217,6 +217,8 @@ has_mul!(::ScalarOperator) = true
 has_ldiv(α::ScalarOperator) = iszero(α.val)
 has_ldiv!(α::ScalarOperator) = iszero(α.val)
 
+update_coefficients!(L::ScalarOperator,u,p,t) = (L.update_func(L.val,u,p,t); L)
+
 for op in (
            :*, :/, :\,
           )

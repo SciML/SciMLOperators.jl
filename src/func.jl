@@ -145,8 +145,8 @@ function FunctionOperator(op;
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t)
-    @set! L.p = p
-    @set! L.t = t
+    L.p = p
+    L.t = t
     L
 end
 

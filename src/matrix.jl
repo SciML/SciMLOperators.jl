@@ -95,7 +95,6 @@ Like MatrixOperator, but stores a Factorization instead.
 
 Supports left division and `ldiv!` when applied to an array.
 """
-# diagonal, bidiagonal, adjoint(factorization)
 struct InvertibleOperator{T,FType} <: AbstractSciMLLinearOperator{T}
     F::FType
 
@@ -167,8 +166,13 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, B, b)
+    L = AffineOperator(A, B, b[; update_func])
     L(u) = A*u + B*b
+
+Represents a time-dependent affine operator. The update function is called
+by `update_coefficients!` and is assumed to have the following signature:
+
+    update_func(b::AbstractArray,u,p,t) -> [modifies b]
 """
 struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     A::AType
