@@ -28,6 +28,11 @@ $(TYPEDEF)
 """
 abstract type AbstractSciMLLinearOperator{T} <: AbstractSciMLOperator{T} end
 
+"""
+$(TYPEDEF)
+"""
+abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLLinearOperator{T} end
+
 include("utils.jl")
 include("interface.jl")
 include("left.jl")

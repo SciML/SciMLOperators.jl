@@ -41,7 +41,7 @@ for op in (
 end
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
-update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
+update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); nothing)
 
 isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::MatrixOperator) = iszero(L.A)
@@ -230,7 +230,7 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 Base.size(L::AffineOperator) = size(L.A)
 
-update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); L)
+update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); nothing)
 
 islinear(::AffineOperator) = false
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))

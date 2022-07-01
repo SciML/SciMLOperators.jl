@@ -147,7 +147,8 @@ end
 function update_coefficients!(L::FunctionOperator, u, p, t)
     L.p = p
     L.t = t
-    L
+
+    nothing
 end
 
 Base.size(L::FunctionOperator) = L.traits.size
