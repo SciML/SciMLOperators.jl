@@ -23,7 +23,7 @@ function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
     for op in getops(L)
         update_coefficients!(op, u, p, t)
     end
-    L
+    nothing
 end
 
 (L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
