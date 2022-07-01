@@ -207,7 +207,7 @@ end
 
 function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         B::Union{AbstractMatrix,AbstractSciMLOperator},
-                        b::AbstractVecOrMat;
+                        b::AbstractArray;
                         update_func=DEFAULT_UPDATE_FUNC,
                        )
     @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
