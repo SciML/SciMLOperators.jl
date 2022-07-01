@@ -29,9 +29,15 @@ struct TensorProductOperator{T,O,I,C} <: AbstractSciMLOperator{T}
     end
 end
 
-function TensorProductOperator(out, in; cache = nothing)
+function TensorProductOperator(outer::Union{AbstractMatrix,AbstractSciMLOperator},
+                               inner::Union{AbstractMatrix,AbstractSciMLOperator};
+                               cache = nothing
+                              )
+    outer = outer isa AbstractMatrix ? MatrixOperator(outer) : outer
+    inner = inner isa AbstractMatrix ? MatrixOperator(inner) : inner
     isset = cache !== nothing
-    TensorProductOperator(out, in, cache, isset)
+
+    TensorProductOperator(outer, inner, cache, isset)
 end
 
 # constructors
