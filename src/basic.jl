@@ -174,23 +174,20 @@ end
 struct ScaledOperator{T,
                       λType,
                       LType,
-                      C,
                      } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
-    cache::C # <-- is scalar cache necessary for AbstractScalarOperator? TODO
 
     function ScaledOperator(λ::AbstractScalarOperator{Tλ},
                             L::AbstractSciMLOperator{TL},
-                            cache = zeros(promote_type(Tλ,TL), 1),
                            ) where{Tλ,TL}
         T = promote_type(Tλ, TL)
-        new{T,typeof(λ),typeof(L),typeof(cache)}(λ, L, cache)
+        new{T,typeof(λ),typeof(L)}(λ, L)
     end
 end
 
 ScalingNumberTypes = (
-                      :AbstractScalarOperator, # TODO - AbstractScalarOperator
+                      :AbstractScalarOperator,
                       :Number,
                       :UniformScaling,
                      )
@@ -263,19 +260,17 @@ for fact in (
 end
 
 # operator application, inversion
-for op in (
-           :*, :\,
-          )
-    @eval Base.$op(L::ScaledOperator, x::AbstractVecOrMat) = $op(L.λ, $op(L.L, x))
-end
+Base.*(L::ScaledOperator, x::AbstractVecOrMat) = *(L.λ, *(L.L, x))
+Base.\(L::ScaledOperator, x::AbstractVecOrMat) = \(L.λ, \(L.L, x))
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
+    iszero(L) && return lmul!(false, v)
     mul!(v, L.L, u, L.λ.val, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
-    mul!(L.cache, [L.λ.val,], [α,])
-    mul!(v, L.L, u, first(L.cache), β)
+    iszero(L) && return lmul!(β, v)
+    mul!(v, L.L, u, L.λ*α, β)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)

@@ -137,7 +137,14 @@ end
 getops(α::AddedScalarOperator) = α.ops
 
 function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-    reduce((op1, op2) -> convert(Number, op1) + convert(Number, op2), α.ops; init = zero(T))
+    sum( op -> convert(Number, op), α.ops; init=zero(T))
+end
+
+function cache_internals(α::AddedScalarOperator, u::AbstractVecOrMat)
+    for i=1:length(α.ops)
+        @set! α.ops[i] = cache_operator(α.ops[i], u)
+    end
+    α
 end
 
 """
@@ -152,18 +159,33 @@ struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     end
 end
 
+# constructor
 function ComposedScalarOperator(ops::AbstractSciMLScalarOperator...)
     ComposedScalarOperator(ops)
 end
 
+Base.:∘(ops::AbstractSciMLScalarOperator...) = ComposedScalarOperator(ops...)
+Base.:∘(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
+Base.:∘(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
+Base.:∘(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
+
+Base.:*(ops::AbstractSciMLScalarOperator...) = ComposedScalarOperator(ops...)
+Base.:*(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ∘(A, B)
+Base.:*(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
+Base.:*(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
+Base.:*(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
+
 function Base.convert(::Type{Number}, α::ComposedScalarOperator{T}) where{T}
     iszero(α) && return zero(T)
-    reduce((op1, op2) -> convert(Number, op1) * convert(Number, op2), α.ops; init = zero(T))
+    prod( op -> convert(Number, op), α.ops; init=one(T))
 end
 
 getops(α::ComposedScalarOperator) = α.ops
-Base.convert(::Type{Number}, α::ComposedScalarOperator)
 
-Base.:*(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x, y)
-Base.:∘(x::ScalarOperator, y::ScalarOperator) = ComposedScalarOperator(x, y)
+function cache_internals(α::ComposedScalarOperator, u::AbstractVecOrMat)
+    for i=1:length(α.ops)
+        @set! α.ops[i] = cache_operator(α.ops[i], u)
+    end
+    α
+end
 #
