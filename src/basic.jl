@@ -177,7 +177,7 @@ signature:
 
     update_func(oldval,u,p,t) -> newval
 """
-struct ScalarOperator{T<:Number,F} <: AbstractSciMLLinearOperator{T}
+mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLLinearOperator{T}
     val::T
     update_func::F
     ScalarOperator(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
@@ -259,7 +259,7 @@ struct ScaledOperator{T,
                      } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
-    cache::C
+    cache::C # <-- is scalar cache necessary for ScalarOperator? TODO
 
     function ScaledOperator(λ::ScalarOperator{Tλ},
                             L::AbstractSciMLOperator{TL},
