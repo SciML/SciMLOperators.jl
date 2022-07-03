@@ -3,6 +3,12 @@
 # AbstractSciMLScalarOperator interface
 ###
 
+ScalingNumberTypes = (
+                      :AbstractSciMLScalarOperator,
+                      :Number,
+                      :UniformScaling,
+                     )
+
 Base.size(α::AbstractSciMLScalarOperator) = ()
 Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
 Base.transpose(α::AbstractSciMLScalarOperator) = α
@@ -14,11 +20,11 @@ has_adjoint(::AbstractSciMLScalarOperator) = true
 Base.:*(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) * u
 Base.:\(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) \ u
 
+LinearAlgebra.rmul!(u::AbstractVecOrMat, α::AbstractSciMLScalarOperator) = rmul!(u, convert(Number, α))
 LinearAlgebra.lmul!(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = lmul!(convert(Number, α), u)
-LinearAlgebra.rmul!(u::AbstractSciMLScalarOperator, α::AbstractVecOrMat) = rmul!(u, convert(Number, α))
 LinearAlgebra.ldiv!(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = ldiv!(convert(Number, α), u)
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat)
-    ldiv!(convert(Number, α), u)
+    ldiv!(v, convert(Number, α), u)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat)
@@ -115,22 +121,33 @@ Lazy addition of Scalar Operators
 struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
-    function AddedScalarOperator(ops::NTuple{<:Integer,AbstractSciMLScalarOperator})
+    function AddedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
 end
 
+# constructors
+function AddedScalarOperator(ops::AbstractSciMLScalarOperator...)
+    AddedScalarOperator(ops)
+end
+
+Base.:+(ops::AbstractSciMLScalarOperator...) = AddedScalarOperator(ops...)
+Base.:+(A::AddedScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A.ops..., B.ops...)
+Base.:+(A::AbstractSciMLScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A, B.ops...)
+Base.:+(A::AddedScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A.ops..., B)
+
 for op in (
            :-, :+,
           )
-    @eval Base.$op(α::ScalarOperator, x::Number) = AddedScalarOperator(α, ScalarOperator($op(x)))
-    @eval Base.$op(x::Number, α::ScalarOperator) = AddedScalarOperator(ScalarOperator(x), $op(α))
-    @eval Base.$op(α::ScalarOperator, β::ScalarOperator) = AddedScalarOperator(α, $op(β))
+    for T in ScalingNumberTypes
+        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = AddedScalarOperator(α, ScalarOperator($op(x)))
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = AddedScalarOperator(ScalarOperator(x), $op(α))
+    end
 end
 
 function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-    sum( op -> convert(Number, op), α.ops; init=zero(T))
+    sum(op -> convert(Number, op), α.ops; init=zero(T))
 end
 
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
@@ -143,7 +160,7 @@ Lazy composition of Scalar Operators
 struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
-    function ComposedScalarOperator(ops::NTuple{<:Integer,AbstractSciMLScalarOperator})
+    function ComposedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
@@ -161,6 +178,11 @@ for op in (
     @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
     @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
     @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
+
+    for T in ScalingNumberTypes
+        @eval Base.$op(α::ComposedScalarOperator, x::$T) = ComposedScalarOperator(α, ScalarOperator($op(x)))
+        @eval Base.$op(x::$T, α::ComposedScalarOperator) = ComposedScalarOperator(ScalarOperator(x), $op(α))
+    end
 end
 
 function Base.convert(::Type{Number}, α::ComposedScalarOperator{T}) where{T}

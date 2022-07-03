@@ -100,26 +100,17 @@ end
 
     @test size(α) == ()
 
-    for op in (
-               *, /, \, +, -,
-              )
-        @test op(α, a) ≈ op(x, a)
-        @test op(a, α) ≈ op(a, x)
-    end
+    v=copy(u); @test lmul!(α, u) ≈ v * x
+    v=copy(u); @test rmul!(u, α) ≈ x * v
 
-    v=copy(u); @test lmul!(α, u) == v * x
-    v=copy(u); @test rmul!(u, α) == x * v
-
-    v=rand(N,K); @test mul!(v, α, u) == u * x
+    v=rand(N,K); @test mul!(v, α, u) ≈ u * x
     v=rand(N,K); w=copy(v); @test mul!(v, α, u, a, b) ≈ a*(x*u) + b*w
 
-    v=rand(N,K); @test ldiv!(v, α, u) == u / x
-    w=copy(u);   @test ldiv!(α, u) == w / x
+    v=rand(N,K); @test ldiv!(v, α, u) ≈ u / x
+    w=copy(u);   @test ldiv!(α, u) ≈ w / x
 
     X=rand(N,K); Y=rand(N,K); Z=copy(Y); a=rand(); aa=ScalarOperator(a);
     @test axpy!(aa,X,Y) ≈ a*X+Z
-
-    @test abs(ScalarOperator(-x)) == x
 end
 
 @testset "ScaledOperator" begin

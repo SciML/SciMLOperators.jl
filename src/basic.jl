@@ -186,12 +186,6 @@ struct ScaledOperator{T,
     end
 end
 
-ScalingNumberTypes = (
-                      :AbstractSciMLScalarOperator,
-                      :Number,
-                      :UniformScaling,
-                     )
-
 # constructors
 for T in ScalingNumberTypes[2:end]
     @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(ScalarOperator(λ), L)
@@ -266,12 +260,17 @@ Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
 #   iszero(L) && return lmul!(false, v) TODO
-    mul!(v, L.L, u, L.λ.val, false)
+    a = convert(Number, L.λ)
+    mul!(v, L.L, u, a, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
 #   iszero(L) && return lmul!(β, v) TODO
-    mul!(v, L.L, u, L.λ*α, β)
+    @show typeof(α)
+    @show typeof(L.λ)
+    @show typeof(L.λ*α)
+    a = convert(Number, L.λ*α)
+    mul!(v, L.L, u, a, β)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
