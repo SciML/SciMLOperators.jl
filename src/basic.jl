@@ -178,7 +178,7 @@ struct ScaledOperator{T,
     λ::λType
     L::LType
 
-    function ScaledOperator(λ::AbstractScalarOperator{Tλ},
+    function ScaledOperator(λ::AbstractSciMLScalarOperator{Tλ},
                             L::AbstractSciMLOperator{TL},
                            ) where{Tλ,TL}
         T = promote_type(Tλ, TL)
@@ -187,7 +187,7 @@ struct ScaledOperator{T,
 end
 
 ScalingNumberTypes = (
-                      :AbstractScalarOperator,
+                      :AbstractSciMLScalarOperator,
                       :Number,
                       :UniformScaling,
                      )
@@ -227,6 +227,7 @@ for op in (
           )
     @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
+Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledOperator) = (L.λ, L.L,)
@@ -260,16 +261,16 @@ for fact in (
 end
 
 # operator application, inversion
-Base.*(L::ScaledOperator, x::AbstractVecOrMat) = *(L.λ, *(L.L, x))
-Base.\(L::ScaledOperator, x::AbstractVecOrMat) = \(L.λ, \(L.L, x))
+Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
+Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
-    iszero(L) && return lmul!(false, v)
+#   iszero(L) && return lmul!(false, v) TODO
     mul!(v, L.L, u, L.λ.val, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
-    iszero(L) && return lmul!(β, v)
+#   iszero(L) && return lmul!(β, v) TODO
     mul!(v, L.L, u, L.λ*α, β)
 end
 
@@ -350,6 +351,7 @@ for op in (
           )
     @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
 end
+Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
 
 getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -460,11 +462,11 @@ for op in (
     end
 
     # scalar operator
-    @eval function Base.$op(λ::AbstractScalarOperator, L::ComposedOperator)
+    @eval function Base.$op(λ::AbstractSciMLScalarOperator, L::ComposedOperator)
         ScaledOperator(λ, L)
     end
 
-    @eval function Base.$op(L::ComposedOperator, λ::AbstractScalarOperator)
+    @eval function Base.$op(L::ComposedOperator, λ::AbstractSciMLScalarOperator)
         ScaledOperator(λ, L)
     end
 end
@@ -478,8 +480,13 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...)
+    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...) # TODO
+#   @eval Base.$op(L::ComposedOperator) = ComposedOperator(
+#                                                          $op.(reverse(L.ops))...;
+#                                                          cache=L.isset ? reverse(L.cache) : nothing,
+#                                                         )
 end
+Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 getops(L::ComposedOperator) = L.ops
@@ -597,7 +604,9 @@ Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
 Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
 
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
+Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L)) # TODO - test
 Base.adjoint(L::InvertedOperator) = InvertedOperator(L.L')
+Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L)) # TODO - test
 
 getops(L::InvertedOperator) = (L.L,)
 

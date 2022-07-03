@@ -29,16 +29,11 @@ end
 function LinearAlgebra.mul!(v::AbstractVecOrMat,
                             α::AbstractSciMLScalarOperator,
                             u::AbstractVecOrMat,
-                            a::AbstractSciMLScalarOperator,
-                            b::AbstractSciMLScalarOperator)
+                            a::Union{Number,AbstractSciMLScalarOperator},
+                            b::Union{Number,AbstractSciMLScalarOperator})
     α = convert(Number, α)
     a = convert(Number, a)
     b = convert(Number, b)
-    mul!(v, α, u, a, b)
-end
-
-function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat, a, b)
-    α = convert(Number, α)
     mul!(v, α, u, a, b)
 end
 
@@ -47,14 +42,16 @@ function LinearAlgebra.axpy!(α::AbstractSciMLScalarOperator, x::AbstractVecOrMa
     axpy!(α, x, y)
 end
 
-function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
+function LinearAlgebra.axpby!(α::Union{Number,AbstractSciMLScalarOperator},
                               x::AbstractVecOrMat,
-                              β::AbstractSciMLScalarOperator,
+                              β::Union{Number,AbstractSciMLScalarOperator},
                               y::AbstractVecOrMat)
     α = convert(Number, α)
     β = convert(Number, β)
     axpby!(α, x, β, y)
 end
+
+Base.:+(α::AbstractSciMLScalarOperator) = α
 
 """
     ScalarOperator(val[; update_func])
@@ -83,8 +80,8 @@ ScalarOperator(α::AbstractSciMLScalarOperator) = α
 ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
-Base.:+(α::ScalarOperator) = α
 function Base.:-(α::ScalarOperator) # TODO - test
+    # can also just form ScalarOperator(-1) * α
     val = -α.val
     update_func = (oldval,u,p,t) -> -α.update_func(-oldval,u,p,t)
     ScalarOperator(val; update_func=update_func)
@@ -127,25 +124,18 @@ end
 for op in (
            :-, :+,
           )
-    @eval Base.$op(α::ScalarOperator, x::Number) = AddedScalarOperator(α.val, ScalarOperator(x))
-    @eval Base.$op(x::Number, α::ScalarOperator) = AddedScalarOperator(ScalarOperator(x), α.val)
-    @eval Base.$op(x::ScalarOperator, y::ScalarOperator) = AddedScalarOperator(x, y)
+    @eval Base.$op(α::ScalarOperator, x::Number) = AddedScalarOperator(α, ScalarOperator($op(x)))
+    @eval Base.$op(x::Number, α::ScalarOperator) = AddedScalarOperator(ScalarOperator(x), $op(α))
+    @eval Base.$op(α::ScalarOperator, β::ScalarOperator) = AddedScalarOperator(α, $op(β))
 end
-
-# overload +, -
-
-getops(α::AddedScalarOperator) = α.ops
 
 function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
     sum( op -> convert(Number, op), α.ops; init=zero(T))
 end
 
-function cache_internals(α::AddedScalarOperator, u::AbstractVecOrMat)
-    for i=1:length(α.ops)
-        @set! α.ops[i] = cache_operator(α.ops[i], u)
-    end
-    α
-end
+Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
+
+getops(α::AddedScalarOperator) = α.ops
 
 """
 Lazy composition of Scalar Operators
@@ -164,28 +154,22 @@ function ComposedScalarOperator(ops::AbstractSciMLScalarOperator...)
     ComposedScalarOperator(ops)
 end
 
-Base.:∘(ops::AbstractSciMLScalarOperator...) = ComposedScalarOperator(ops...)
-Base.:∘(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
-Base.:∘(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
-Base.:∘(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
-
-Base.:*(ops::AbstractSciMLScalarOperator...) = ComposedScalarOperator(ops...)
-Base.:*(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ∘(A, B)
-Base.:*(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
-Base.:*(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
-Base.:*(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
+for op in (
+           :*, :∘,
+          )
+    @eval Base.$op(ops::AbstractSciMLScalarOperator...) = ComposedScalarOperator(ops...)
+    @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
+    @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
+    @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
+end
 
 function Base.convert(::Type{Number}, α::ComposedScalarOperator{T}) where{T}
     iszero(α) && return zero(T)
     prod( op -> convert(Number, op), α.ops; init=one(T))
 end
 
-getops(α::ComposedScalarOperator) = α.ops
+Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
+Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
 
-function cache_internals(α::ComposedScalarOperator, u::AbstractVecOrMat)
-    for i=1:length(α.ops)
-        @set! α.ops[i] = cache_operator(α.ops[i], u)
-    end
-    α
-end
+getops(α::ComposedScalarOperator) = α.ops
 #

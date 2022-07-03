@@ -257,6 +257,8 @@ has_mul!(L::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
+# TODO - FunctionOperator, Base.conj, transpose
+
 # operator application
 Base.:*(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
 Base.:\(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)

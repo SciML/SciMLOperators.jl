@@ -35,10 +35,14 @@ for op in (
     @eval function Base.$op(L::MatrixOperator)
         MatrixOperator(
                        $op(L.A);
-                       update_func = (A,u,p,t) -> $op(L.update_func(L.A,u,p,t))
+                       update_func= (A,u,p,t) -> $op(L.update_func($op(L.A),u,p,t)) # TODO - test
                       )
     end
 end
+Base.conj(L::MatrixOperator) = MatrixOperator(
+                                              conj(L.A);
+                                              update_func= (A,u,b,t) -> conj(L.update_func(conj(L.A),u,p,t))
+                                             )
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
 update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); nothing)
@@ -136,7 +140,9 @@ end
 
 # traits
 Base.size(L::InvertibleOperator) = size(L.F)
+Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F)) # TODO - test
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
+Base.conj(L::InvertibleOperator) = InvertibelOperator(conj(L.F)) # TODO - test
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 

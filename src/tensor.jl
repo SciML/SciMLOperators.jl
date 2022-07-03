@@ -79,6 +79,7 @@ for op in (
                              )
     end
 end
+Base.conj(L::TensorProductOperator) = TensorProductOperator(conj(L.outer), conj(L.inner); cache=L.cache)
 
 getops(L::TensorProductOperator) = (L.outer, L.inner)
 islinear(L::TensorProductOperator) = islinear(L.outer) & islinear(L.inner)
