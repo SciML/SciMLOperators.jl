@@ -95,6 +95,11 @@ the following signature:
 When `diag` is an `AbstractVector` of length N, `L=DiagonalOpeator(diag, ...)`
 can be applied to `AbstractArray`s with `size(u, 1) == N`. Each column of the `u`
 will be scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
+
+When `diag` is a multidimensional array, `L = DiagonalOperator(diag, ...)` forms
+an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of `diag`.
+`L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
+with leading length `size(u, 1) = N`.
 """
 function DiagonalOperator(diag::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
     function diag_update_func(A, u, p, t)
