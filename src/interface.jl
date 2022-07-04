@@ -89,24 +89,8 @@ has_mul!(L::AbstractSciMLOperator) = false # mul!(du, L, u)
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
-### AbstractSciMLLinearOperator Interface
+### Extra standard assumptions
 
-#=
-1. AbstractSciMLLinearOperator <: AbstractSciMLOperator
-2. Can absorb under multiplication by a scalar. In all algorithms things like
-   dt*L show up all the time, so the linear operator must be able to absorb
-   such constants.
-4. isconstant(A) trait for whether the operator is constant or not.
-5. Optional: diagonal, symmetric, etc traits from LinearMaps.jl.
-6. Optional: exp(A). Required for simple exponential integration.
-7. Optional: expmv(A,u,p,t) = exp(t*A)*u and expmv!(v,A::SciMLOperator,u,p,t)
-   Required for sparse-saving exponential integration.
-8. Optional: factorizations. A_ldiv_B, factorize et. al. This is only required
-   for algorithms which use the factorization of the operator (Crank-Nicholson),
-   and only for when the default linear solve is used.
-=#
-
-# Extra standard assumptions
 isconstant(L) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 #isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC

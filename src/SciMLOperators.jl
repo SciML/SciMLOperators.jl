@@ -41,6 +41,7 @@ include("multidim.jl")
 include("scalar.jl")
 include("basic.jl")
 include("matrix.jl")
+include("batch.jl")
 include("func.jl")
 include("tensor.jl")
 

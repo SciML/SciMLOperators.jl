@@ -1,3 +1,4 @@
+#
 """
     MatrixOperator(A[; update_func])
 
@@ -32,7 +33,7 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval function Base.$op(L::MatrixOperator)
+    @eval function Base.$op(L::MatrixOperator) # TODO - test this thoroughly
         MatrixOperator(
                        $op(L.A);
                        update_func= (A,u,p,t) -> $op(L.update_func($op(L.A),u,p,t)) # TODO - test
@@ -82,13 +83,30 @@ LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat, 
 LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(v, L.A, u)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
-""" Diagonal Operator """
-function DiagonalOperator(u::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
+"""
+    DiagonalOperator(diag, [; update_func])
+
+Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
+The update function is called by `update_coefficients!` and is assumed to have
+the following signature:
+
+    update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
+
+When `diag` is an `AbstractVector` of length N, `L=DiagonalOpeator(diag, ...)`
+can be applied to `AbstractArray`s with `size(u, 1) == N`. Each column of the `u`
+will be scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
+
+When `diag` is a multidimensional array, `L = DiagonalOperator(diag, ...)` forms
+an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of `diag`.
+`L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
+with leading length `size(u, 1) = N`.
+"""
+function DiagonalOperator(diag::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
     function diag_update_func(A, u, p, t)
         update_func(A.diag, u, p, t)
         A
     end
-    MatrixOperator(Diagonal(u); update_func=diag_update_func)
+    MatrixOperator(Diagonal(diag); update_func=diag_update_func)
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
@@ -205,7 +223,7 @@ end
 
 function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         B::Union{AbstractMatrix,AbstractSciMLOperator},
-                        b::AbstractVecOrMat;
+                        b::AbstractArray;
                         update_func=DEFAULT_UPDATE_FUNC,
                        )
     @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
