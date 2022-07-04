@@ -129,8 +129,8 @@ Base.:+(ops::AbstractSciMLScalarOperator...) = AddedScalarOperator(ops...)
 Base.:+(A::AddedScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A.ops..., B.ops...)
 Base.:+(A::AbstractSciMLScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A, B.ops...)
 Base.:+(A::AddedScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A.ops..., B)
-
 Base.:-(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A, -B)
+
 for op in (
            :-, :+,
           )

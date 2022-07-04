@@ -49,7 +49,7 @@ TensorProductOperator(Io::IdentityOperator{No}, Ii::IdentityOperator{Ni}) where{
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
-# TODO - overload Base.kron
+# TODO - overload Base.kron for tensor product operators
 #Base.kron(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # convert to matrix

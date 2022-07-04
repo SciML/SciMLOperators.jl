@@ -266,9 +266,6 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
 #   iszero(L) && return lmul!(β, v) TODO
-    @show typeof(α)
-    @show typeof(L.λ)
-    @show typeof(L.λ*α)
     a = convert(Number, L.λ*α)
     mul!(v, L.L, u, a, β)
 end
@@ -479,11 +476,10 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...) # TODO
-#   @eval Base.$op(L::ComposedOperator) = ComposedOperator(
-#                                                          $op.(reverse(L.ops))...;
-#                                                          cache=L.isset ? reverse(L.cache) : nothing,
-#                                                         )
+    @eval Base.$op(L::ComposedOperator) = ComposedOperator(
+                                                           $op.(reverse(L.ops))...;
+                                                           cache=L.isset ? reverse(L.cache) : nothing,
+                                                          )
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
