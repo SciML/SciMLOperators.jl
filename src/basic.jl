@@ -18,6 +18,7 @@ Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(
 Base.size(::IdentityOperator{N}) where{N} = (N, N)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
+Base.conj(A::IdentityOperator) = A
 LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
              :issymmetric, :ishermitian, :isposdef,
@@ -108,6 +109,7 @@ Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zero
 Base.size(::NullOperator{N}) where{N} = (N, N)
 Base.adjoint(A::NullOperator) = A
 Base.transpose(A::NullOperator) = A
+Base.conj(A::NullOperator) = A
 LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
 for pred in (
              :issymmetric, :ishermitian,
@@ -259,13 +261,13 @@ Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
 Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
-#   iszero(L) && return lmul!(false, v) TODO
+    iszero(L) && return lmul!(false, v)
     a = convert(Number, L.λ)
     mul!(v, L.L, u, a, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
-#   iszero(L) && return lmul!(β, v) TODO
+    iszero(L) && return lmul!(β, v)
     a = convert(Number, L.λ*α)
     mul!(v, L.L, u, a, β)
 end
@@ -596,21 +598,22 @@ function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
 end
 
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
+
+Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
+Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
+
 Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
 
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
-Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L)) # TODO - test
-Base.adjoint(L::InvertedOperator) = InvertedOperator(L.L')
-Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L)) # TODO - test
+Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = L.isset ? L.cache' : nothing)
+Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = L.isset ? L.cache' : nothing)
+Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
 
 getops(L::InvertedOperator) = (L.L,)
 
 has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
 has_ldiv(L::InvertedOperator) = has_mul(L.L)
 has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
-
-Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
-Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 
 @forward InvertedOperator.L (
                              # LinearAlgebra

@@ -44,7 +44,7 @@ end
 TensorProductOperator(op::AbstractSciMLOperator) = op
 TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
-TensorProductOperator(Io::IdentityOperator{No}, Ii::IdentityOperator{Ni}) where{No,Ni} = IdentityOperator{No*Ni}()
+TensorProductOperator(::IdentityOperator{No}, ::IdentityOperator{Ni}) where{No,Ni} = IdentityOperator{No*Ni}()
 
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
@@ -255,7 +255,7 @@ const PERM = (2, 1, 3)
 function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return C
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         return L.outer.λ * outer_mul(L.outer.L, u, C)
     end
 
@@ -285,7 +285,7 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     if L.outer isa IdentityOperator
         copyto!(v, C1)
         return v
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         outer_mul!(v, L.outer.L, u)
         lmul!(L.outer.λ, v)
         return v
@@ -325,10 +325,10 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         c1 = _reshape(C1, (m, k))
         axpby!(α, c1, β, v)
         return v
-#   elseif L.outer isa ScalarOperator
-#       outer_mul!(v, L.outer.L, u, α, β) # <- figure out which cache is still unused
-#       lmul!(L.outer.λ, v)
-#       return v
+    elseif L.outer isa ScaledOperator
+        a = convert(Number, α*L.outer.λ)
+        outer_mul!(v, L.outer.L, u, a, β)
+        return v
     end
 
     mi, _  = size(L.inner)
@@ -360,7 +360,7 @@ end
 function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return C
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         return L.outer.λ \ outer_div(L.outer.L, u, C)
     end
 
@@ -390,7 +390,7 @@ function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     if L.outer isa IdentityOperator
         copyto!(v, C1)
         return v
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         outer_div!(v, L.outer.L, u)
         ldiv!(L.outer.λ, v)
         return v
@@ -424,7 +424,7 @@ end
 function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return u
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         outer_div!(L.outer.L, u)
         ldiv!(L.outer.λ, u)
         return u

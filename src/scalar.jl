@@ -87,7 +87,7 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
 function Base.conj(α::ScalarOperator) # TODO - test
-    val = α.val'
+    val = conj(α.val)
     update_func = (oldval,u,p,t) -> α.update_func(oldval |> conj,u,p,t) |> conj
     ScalarOperator(val; update_func=update_func)
 end

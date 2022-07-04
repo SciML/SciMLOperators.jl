@@ -140,9 +140,9 @@ end
 
 # traits
 Base.size(L::InvertibleOperator) = size(L.F)
-Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F)) # TODO - test
+Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F))
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
-Base.conj(L::InvertibleOperator) = InvertibelOperator(conj(L.F)) # TODO - test
+Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.F))
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 

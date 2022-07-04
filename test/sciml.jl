@@ -213,7 +213,6 @@ end
     @test itt.op_adjoint == ftr.op_inverse
     @test itt.op_inverse == ftr.op_adjoint
     @test itt.op_adjoint_inverse == ftr.op
-
 end
 
 @testset "TensorProductOperator" begin
