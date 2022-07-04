@@ -49,16 +49,31 @@ K = 12
     v=rand(N,K); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
+@testset "MatrixOperator update test" begin
+    u = rand(N,K)
+    p = rand(N)
+    t = rand()
+
+    L = MatrixOperator(zeros(N,N);
+                       update_func= (A,u,p,t) -> (A .= p*p'; nothing)
+                      )
+
+    A = p*p'
+    ans = A * u
+    @test L(u,p,t) ≈ ans
+    v=copy(u); @test L(v,u,p,t) ≈ ans
+end
+
 @testset "DiagonalOperator update test" begin
     u = rand(N,K)
     p = rand(N)
     t = rand()
 
     D = DiagonalOperator(zeros(N);
-                         update_func= (diag,u,p,t) -> (diag .= p; nothing)
+                         update_func= (diag,u,p,t) -> (diag .= p*t; nothing)
                         )
 
-    ans = Diagonal(p) * u
+    ans = Diagonal(p*t) * u
     @test D(u,p,t) ≈ ans
     v=copy(u); @test D(v,u,p,t) ≈ ans
 end
@@ -82,6 +97,26 @@ end
     @test L \ u ≈ D \ (u - B * b)
     v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-B*b)
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
+end
+
+@testset "AffineOperator update test" begin
+    A = rand(N,N)
+    B = rand(N,N)
+    b = rand(N,K)
+    u = rand(N,K)
+    p = rand(N)
+    t = rand()
+
+    L = AffineOperator(A, B, b;
+                       update_func= (b,u,p,t) -> (b .= Diagonal(p*t)*b; nothing)
+                      )
+
+    b = Diagonal(p*t)*b
+    ans = A * u + B * b
+    @test L(u,p,t) ≈ ans
+    b = Diagonal(p*t)*b
+    ans = A * u + B * b
+    v=copy(u); @test L(v,u,p,t) ≈ ans
 end
 
 @testset "TensorProductOperator" begin
