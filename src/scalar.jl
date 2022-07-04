@@ -106,7 +106,7 @@ isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
 has_ldiv(α::ScalarOperator) = iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
-update_coefficients!(L::ScalarOperator,u,p,t) = (L.update_func(L.val,u,p,t); nothing)
+update_coefficients!(L::ScalarOperator,u,p,t) = (L.val = L.update_func(L.val,u,p,t); nothing)
 
 """
 Lazy addition of Scalar Operators

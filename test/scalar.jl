@@ -31,4 +31,18 @@ K = 12
     X=rand(N,K); Y=rand(N,K); Z=copy(Y); a=rand(); aa=ScalarOperator(a);
     @test axpy!(aa,X,Y) ≈ a*X+Z
 end
+
+@testset "ScalarOperator update test" begin
+    u = rand(N,K)
+    p = rand(N)
+    t = 0.0
+
+    α = ScalarOperator(zero(Float64);
+                       update_func=(a,u,p,t) -> sum(p)
+                      )
+
+    ans = sum(p) * u
+    @test α(u,p,t) ≈ ans
+    v=copy(u); @test α(v,u,p,t) ≈ ans
+end
 #
