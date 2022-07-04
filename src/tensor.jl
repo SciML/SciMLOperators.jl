@@ -29,21 +29,27 @@ struct TensorProductOperator{T,O,I,C} <: AbstractSciMLOperator{T}
     end
 end
 
-function TensorProductOperator(out, in; cache = nothing)
+function TensorProductOperator(outer::Union{AbstractMatrix,AbstractSciMLOperator},
+                               inner::Union{AbstractMatrix,AbstractSciMLOperator};
+                               cache = nothing
+                              )
+    outer = outer isa AbstractMatrix ? MatrixOperator(outer) : outer
+    inner = inner isa AbstractMatrix ? MatrixOperator(inner) : inner
     isset = cache !== nothing
-    TensorProductOperator(out, in, cache, isset)
+
+    TensorProductOperator(outer, inner, cache, isset)
 end
 
 # constructors
 TensorProductOperator(op::AbstractSciMLOperator) = op
 TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
-TensorProductOperator(Io::IdentityOperator{No}, Ii::IdentityOperator{Ni}) where{No,Ni} = IdentityOperator{No*Ni}()
+TensorProductOperator(::IdentityOperator{No}, ::IdentityOperator{Ni}) where{No,Ni} = IdentityOperator{No*Ni}()
 
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
-# TODO - overload Base.kron
+# TODO - overload Base.kron for tensor product operators
 #Base.kron(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # convert to matrix
@@ -73,6 +79,7 @@ for op in (
                              )
     end
 end
+Base.conj(L::TensorProductOperator) = TensorProductOperator(conj(L.outer), conj(L.inner); cache=L.cache)
 
 getops(L::TensorProductOperator) = (L.outer, L.inner)
 islinear(L::TensorProductOperator) = islinear(L.outer) & islinear(L.inner)
@@ -248,7 +255,7 @@ const PERM = (2, 1, 3)
 function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return C
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         return L.outer.λ * outer_mul(L.outer.L, u, C)
     end
 
@@ -278,7 +285,7 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     if L.outer isa IdentityOperator
         copyto!(v, C1)
         return v
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         outer_mul!(v, L.outer.L, u)
         lmul!(L.outer.λ, v)
         return v
@@ -318,10 +325,10 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         c1 = _reshape(C1, (m, k))
         axpby!(α, c1, β, v)
         return v
-#   elseif L.outer isa ScalarOperator
-#       outer_mul!(v, L.outer.L, u, α, β) # <- figure out which cache is still unused
-#       lmul!(L.outer.λ, v)
-#       return v
+    elseif L.outer isa ScaledOperator
+        a = convert(Number, α*L.outer.λ)
+        outer_mul!(v, L.outer.L, u, a, β)
+        return v
     end
 
     mi, _  = size(L.inner)
@@ -353,7 +360,7 @@ end
 function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return C
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         return L.outer.λ \ outer_div(L.outer.L, u, C)
     end
 
@@ -383,7 +390,7 @@ function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     if L.outer isa IdentityOperator
         copyto!(v, C1)
         return v
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         outer_div!(v, L.outer.L, u)
         ldiv!(L.outer.λ, v)
         return v
@@ -417,7 +424,7 @@ end
 function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
     if L.outer isa IdentityOperator
         return u
-    elseif L.outer isa ScalarOperator
+    elseif L.outer isa ScaledOperator
         outer_div!(L.outer.L, u)
         ldiv!(L.outer.λ, u)
         return u

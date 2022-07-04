@@ -18,6 +18,7 @@ Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(
 Base.size(::IdentityOperator{N}) where{N} = (N, N)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
+Base.conj(A::IdentityOperator) = A
 LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
 for pred in (
              :issymmetric, :ishermitian, :isposdef,
@@ -108,6 +109,7 @@ Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zero
 Base.size(::NullOperator{N}) where{N} = (N, N)
 Base.adjoint(A::NullOperator) = A
 Base.transpose(A::NullOperator) = A
+Base.conj(A::NullOperator) = A
 LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
 for pred in (
              :issymmetric, :ishermitian,
@@ -253,35 +255,26 @@ LinearAlgebra.ldiv!(α::ScalarOperator, u::AbstractVecOrMat) = ldiv!(α.val, u)
     (λ L)*(u) = λ * L(u)
 """
 struct ScaledOperator{T,
-                      λType<:ScalarOperator,
-                      LType<:AbstractSciMLOperator,
-                      C,
+                      λType,
+                      LType,
                      } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
-    cache::C
 
-    function ScaledOperator(λ::ScalarOperator{Tλ},
+    function ScaledOperator(λ::AbstractSciMLScalarOperator{Tλ},
                             L::AbstractSciMLOperator{TL},
-                            cache = zeros(promote_type(Tλ,TL), 1),
                            ) where{Tλ,TL}
         T = promote_type(Tλ, TL)
-        new{T,typeof(λ),typeof(L),typeof(cache)}(λ, L, cache)
+        new{T,typeof(λ),typeof(L)}(λ, L)
     end
 end
 
-ScalingNumberTypes = (
-                      :ScalarOperator,
-                      :Number,
-                      :UniformScaling,
-                     )
-
 # constructors
-for T in ScalingNumberTypes[2:end]
+for T in SCALINGNUMBERTYPES[2:end]
     @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(ScalarOperator(λ), L)
 end
 
-for T in ScalingNumberTypes
+for T in SCALINGNUMBERTYPES
     @eval function ScaledOperator(λ::$T, L::ScaledOperator)
         λ = ScalarOperator(λ) * L.λ
         ScaledOperator(λ, L.L)
@@ -311,6 +304,7 @@ for op in (
           )
     @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
+Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledOperator) = (L.λ, L.L,)
@@ -344,19 +338,19 @@ for fact in (
 end
 
 # operator application, inversion
-for op in (
-           :*, :\,
-          )
-    @eval Base.$op(L::ScaledOperator, x::AbstractVecOrMat) = $op(L.λ, $op(L.L, x))
-end
+Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
+Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
-    mul!(v, L.L, u, L.λ.val, false)
+    iszero(L.λ) && return lmul!(false, v)
+    a = convert(Number, L.λ)
+    mul!(v, L.L, u, a, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
-    mul!(L.cache, [L.λ.val,], [α,])
-    mul!(v, L.L, u, first(L.cache), β)
+    iszero(L.λ) && return lmul!(β, v)
+    a = convert(Number, L.λ*α)
+    mul!(v, L.L, u, a, β)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
@@ -408,7 +402,7 @@ for op in (
     @eval Base.$op(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, $op(B).ops...)
     @eval Base.$op(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., $op(B))
 
-    for T in ScalingNumberTypes
+    for T in SCALINGNUMBERTYPES
         @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
             @assert issquare(L)
             N  = size(L, 1)
@@ -436,6 +430,7 @@ for op in (
           )
     @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
 end
+Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
 
 getops(L::AddedOperator) = L.ops
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -546,11 +541,11 @@ for op in (
     end
 
     # scalar operator
-    @eval function Base.$op(λ::ScalarOperator, L::ComposedOperator)
+    @eval function Base.$op(λ::AbstractSciMLScalarOperator, L::ComposedOperator)
         ScaledOperator(λ, L)
     end
 
-    @eval function Base.$op(L::ComposedOperator, λ::ScalarOperator)
+    @eval function Base.$op(L::ComposedOperator, λ::AbstractSciMLScalarOperator)
         ScaledOperator(λ, L)
     end
 end
@@ -564,8 +559,12 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...)
+    @eval Base.$op(L::ComposedOperator) = ComposedOperator(
+                                                           $op.(reverse(L.ops))...;
+                                                           cache=L.isset ? reverse(L.cache) : nothing,
+                                                          )
 end
+Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 getops(L::ComposedOperator) = L.ops
@@ -680,19 +679,22 @@ function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
 end
 
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
+
+Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
+Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
+
 Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
 
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
-Base.adjoint(L::InvertedOperator) = InvertedOperator(L.L')
+Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = L.isset ? L.cache' : nothing)
+Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = L.isset ? L.cache' : nothing)
+Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
 
 getops(L::InvertedOperator) = (L.L,)
 
 has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
 has_ldiv(L::InvertedOperator) = has_mul(L.L)
 has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
-
-Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
-Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 
 @forward InvertedOperator.L (
                              # LinearAlgebra

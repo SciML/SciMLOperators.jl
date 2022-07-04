@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -145,9 +145,10 @@ function FunctionOperator(op;
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t)
-    @set! L.p = p
-    @set! L.t = t
-    L
+    L.p = p
+    L.t = t
+
+    nothing
 end
 
 Base.size(L::FunctionOperator) = L.traits.size
@@ -255,6 +256,8 @@ has_mul(L::FunctionOperator{iip}) where{iip} = true
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
+
+# TODO - FunctionOperator, Base.conj, transpose
 
 # operator application
 Base.:*(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op(u, L.p, L.t)

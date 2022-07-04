@@ -35,13 +35,17 @@ for op in (
     @eval function Base.$op(L::MatrixOperator) # TODO - test this thoroughly
         MatrixOperator(
                        $op(L.A);
-                       update_func = (A,u,p,t) -> $op(L.update_func(L.A,u,p,t))
+                       update_func= (A,u,p,t) -> $op(L.update_func($op(L.A),u,p,t)) # TODO - test
                       )
     end
 end
+Base.conj(L::MatrixOperator) = MatrixOperator(
+                                              conj(L.A);
+                                              update_func= (A,u,b,t) -> conj(L.update_func(conj(L.A),u,p,t))
+                                             )
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
-update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); L)
+update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); nothing)
 
 isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::MatrixOperator) = iszero(L.A)
@@ -107,7 +111,6 @@ Like MatrixOperator, but stores a Factorization instead.
 
 Supports left division and `ldiv!` when applied to an array.
 """
-# diagonal, bidiagonal, adjoint(factorization)
 struct InvertibleOperator{T,FType} <: AbstractSciMLLinearOperator{T}
     F::FType
 
@@ -149,7 +152,9 @@ end
 
 # traits
 Base.size(L::InvertibleOperator) = size(L.F)
+Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F))
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
+Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.F))
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
@@ -179,8 +184,13 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, B, b)
+    L = AffineOperator(A, B, b[; update_func])
     L(u) = A*u + B*b
+
+Represents a time-dependent affine operator. The update function is called
+by `update_coefficients!` and is assumed to have the following signature:
+
+    update_func(b::AbstractArray,u,p,t) -> [modifies b]
 """
 struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     A::AType
@@ -238,7 +248,7 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 Base.size(L::AffineOperator) = size(L.A)
 
-update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); L)
+update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); nothing)
 
 islinear(::AffineOperator) = false
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
