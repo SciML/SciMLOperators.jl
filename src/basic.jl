@@ -261,13 +261,13 @@ Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
 Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
-    iszero(L) && return lmul!(false, v)
+    iszero(L.λ) && return lmul!(false, v)
     a = convert(Number, L.λ)
     mul!(v, L.L, u, a, false)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
-    iszero(L) && return lmul!(β, v)
+    iszero(L.λ) && return lmul!(β, v)
     a = convert(Number, L.λ*α)
     mul!(v, L.L, u, a, β)
 end
