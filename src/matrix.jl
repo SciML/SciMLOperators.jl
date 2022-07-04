@@ -86,7 +86,7 @@ LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 ```julia
 DiagonalOperator(diag, [; update_func])
 
-Represents a time-dependent elementwise scaling (diagonal-scalign) operation.
+Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
 The update function is called by `update_coefficients!` and is assumed to have
 the following signature:
 
