@@ -1,4 +1,13 @@
 #
+"""
+    BatchedDiagonalOperator(diag, [; update_func])
+
+Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
+Acts on `AbstractArray`s of the same size as `diag`. The update function is called
+by `update_coefficients!` and is assumed to have the following signature:
+
+    update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
+"""
 struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLLinearOperator{T}
     diag::D
     update_func::F
