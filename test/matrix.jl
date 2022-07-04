@@ -49,6 +49,20 @@ K = 12
     v=rand(N,K); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
+@testset "DiagonalOperator update test" begin
+    u = rand(N,K)
+    p = rand(N)
+    t = rand()
+
+    D = DiagonalOperator(zeros(N);
+                         update_func= (diag,u,p,t) -> (diag .= p; nothing)
+                        )
+
+    ans = Diagonal(p) * u
+    @test D(u,p,t) ≈ ans
+    v=copy(u); @test D(v,u,p,t) ≈ ans
+end
+
 @testset "AffineOperator" begin
     u = rand(N,K)
     A = rand(N,N)
@@ -123,32 +137,5 @@ end
     op = cache_operator(op, u)
     v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
     v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
-end
-
-@testset "Operator Algebra" begin
-    N2 = N*N
-    A = rand(N,N)
-    B = rand(N,N)
-    C = rand(N,N)
-    D = rand(N,N)
-
-    u = rand(N2,K)
-    α = rand()
-    β = rand()
-
-    T1 = ⊗(A, B)
-    T2 = ⊗(C, D)
-
-    D1  = DiagonalOperator(rand(N2))
-    D2  = DiagonalOperator(rand(N2))
-
-    TT = [T1, T2]
-    DD = Diagonal([D1, D2])
-
-    op = TT' * DD * TT
-    op = cache_operator(op, u)
-
-    v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
-    v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
 end
 #
