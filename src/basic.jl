@@ -187,11 +187,11 @@ struct ScaledOperator{T,
 end
 
 # constructors
-for T in ScalingNumberTypes[2:end]
+for T in SCALINGNUMBERTYPES[2:end]
     @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(ScalarOperator(λ), L)
 end
 
-for T in ScalingNumberTypes
+for T in SCALINGNUMBERTYPES
     @eval function ScaledOperator(λ::$T, L::ScaledOperator)
         λ = ScalarOperator(λ) * L.λ
         ScaledOperator(λ, L.L)
@@ -322,7 +322,7 @@ for op in (
     @eval Base.$op(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, $op(B).ops...)
     @eval Base.$op(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., $op(B))
 
-    for T in ScalingNumberTypes
+    for T in SCALINGNUMBERTYPES
         @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
             @assert issquare(L)
             N  = size(L, 1)

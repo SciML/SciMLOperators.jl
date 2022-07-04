@@ -3,7 +3,7 @@
 # AbstractSciMLScalarOperator interface
 ###
 
-ScalingNumberTypes = (
+SCALINGNUMBERTYPES = (
                       :AbstractSciMLScalarOperator,
                       :Number,
                       :UniformScaling,
@@ -86,16 +86,9 @@ ScalarOperator(α::AbstractSciMLScalarOperator) = α
 ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
-function Base.:-(α::ScalarOperator) # TODO - test
-    # can also just form ScalarOperator(-1) * α
-    val = -α.val
-    update_func = (oldval,u,p,t) -> -α.update_func(-oldval,u,p,t)
-    ScalarOperator(val; update_func=update_func)
-end
-
 function Base.conj(α::ScalarOperator) # TODO - test
     val = α.val'
-    update_func = (oldval,u,p,t) -> α.update_func(oldval',u,p,t)'
+    update_func = (oldval,u,p,t) -> α.update_func(oldval |> conj,u,p,t) |> conj
     ScalarOperator(val; update_func=update_func)
 end
 
@@ -137,10 +130,11 @@ Base.:+(A::AddedScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A.
 Base.:+(A::AbstractSciMLScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A, B.ops...)
 Base.:+(A::AddedScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A.ops..., B)
 
+Base.:-(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A, -B)
 for op in (
            :-, :+,
           )
-    for T in ScalingNumberTypes
+    for T in SCALINGNUMBERTYPES[2:end]
         @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = AddedScalarOperator(α, ScalarOperator($op(x)))
         @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = AddedScalarOperator(ScalarOperator(x), $op(α))
     end
@@ -179,9 +173,9 @@ for op in (
     @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
     @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
 
-    for T in ScalingNumberTypes
-        @eval Base.$op(α::ComposedScalarOperator, x::$T) = ComposedScalarOperator(α, ScalarOperator($op(x)))
-        @eval Base.$op(x::$T, α::ComposedScalarOperator) = ComposedScalarOperator(ScalarOperator(x), $op(α))
+    for T in SCALINGNUMBERTYPES[2:end]
+        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = ComposedScalarOperator(α, ScalarOperator(x))
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ComposedScalarOperator(ScalarOperator(x), x)
     end
 end
 
