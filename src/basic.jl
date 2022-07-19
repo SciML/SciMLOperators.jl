@@ -311,15 +311,15 @@ AddedOperator(L::AbstractSciMLOperator) = L
 
 # constructors
 Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
+Base.:+(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, B.ops...)
+Base.:+(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., B)
+Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
+
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
 
 for op in (
            :+, :-,
           )
-
-    @eval Base.$op(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., $op(B).ops...)
-    @eval Base.$op(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, $op(B).ops...)
-    @eval Base.$op(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., $op(B))
 
     for T in SCALINGNUMBERTYPES
         @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
