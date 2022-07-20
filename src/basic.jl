@@ -315,6 +315,16 @@ Base.:+(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, B.ops...)
 Base.:+(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., B)
 Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
 
+function Base.:+(A::AddedOperator, Z::NullOperator)
+    @assert size(A) == size(Z)
+    A
+end
+
+function Base.:+(Z::NullOperator, A::AddedOperator)
+    @assert size(A) == size(Z)
+    A
+end
+
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
 
 for op in (
