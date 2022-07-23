@@ -3,61 +3,58 @@
 # automatic differentiation interface
 ###
 
+# rrule for updatecoefficients!
+#function ChainRulesCore.rrule(
+#                              L::AbstractSciMLOperator,
+#                              u::AbstractVecOrMat,
+#                              p,
+#                              t,
+#                             )
+#    L(u, p, t), function(dv)
+#
+#        NoTangent(), du, dp, dt
+#    end
+#end
+
+# FunctionOperator
 function ChainRulesCore.rrule(
                               ::typeof(Base.:*),
                               L::FunctionOperator{true},
                               u::AbstractVecOrMat,
                              )
-    v = L * u
+    v = zero(L.cache[2])
 
-    project_L = ProjectTo(L)
+    rrule_ret = rrule(L.op, v, u, L.p, L.t)
+
+    op_pullback = if rrule_ret isa Nothing
+        L.op(v, u, L.p, L.t)
+
+        nothing
+    else
+        rrule_ret[2]
+    end
+
     project_u = ProjectTo(u)
 
     function times_pullback(dv)
-        @assert has_adjoint(L) "Adjoint not defined for in-place operator of
-        type $(typeof(L)). To do reverse pass, either define the adjoint to the
-        operator via the `op_adjoint` kwarg, or use an out-of-place version."
+        if op_pullback isa Nothing
+            if !(has_adjoint(L))
+                @error "cant really ad w/o adjoint or pullback"
+            end
 
-        # how to accumulate gradient WRT `p`, `t` ??
-        # overwrite ProjectTo for functionoperator ??
+            @warn "not computing tangents for p, t"
+            du = @thunk(project_u(L' * unthunk(dv)))
+            dp = NoTangent()
+            dt = NoTangent()
+        else
+            _, du, dp, dt = op_pullback(dv)
+        end
 
-#       dL = @thunk(project_L(dv * u')) 
-#       dL = Tangent{L}(...)
-        du = @thunk(project_u(L' * unthunk(dv)))
+        dL = Tangent{FunctionOperator}(;p=dp, t=dt)
 
-        NoTangent(), NoTangent(), du
+        NoTangent(), dL, du
     end
 
     v, times_pullback
 end
-
-###
-# frule
-###
-
-#=
-function ChainRulesCore.ProjectTo(L::MatrixOperator)
-    info = (;
-            A = ProjectTo(L.A),
-            update_func = ProjectTo(L.update_func),
-           )
-    ProjectTo{MatrixOperator}(info)
-end
-
-function (p::ChainRulesCore.ProjectTo{MatrixOperator})(dx::AbstractMatrix)
-end
-
-function ChainRulesCore.frule(
-                              (_,ΔL,Δu),
-                              ::typeof(Base.:*),
-                              L::AbstractSciMLOperator,
-                              u::AbstractVecOrMat,
-                             )
-    @show typeof(ΔL) # <-- 
-    @show typeof(Δu)
-    v = L * u
-    Δ = muladd(ΔL, u, L * Δu)
-end
-=#
-
 #

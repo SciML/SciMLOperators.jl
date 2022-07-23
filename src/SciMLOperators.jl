@@ -18,7 +18,6 @@ import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
 import SparseArrays: sparse
-import ChainRulesCore: frule, rrule, Tangent, ProjectTo
 
 """
 $(TYPEDEF)
@@ -46,9 +45,6 @@ include("matrix.jl")
 include("batch.jl")
 include("func.jl")
 include("tensor.jl")
-include("rules.jl")
-
-include("rules.jl")
 
 include("rules.jl")
 
