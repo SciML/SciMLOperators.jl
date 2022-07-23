@@ -376,7 +376,7 @@ getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
 function Base.:*(L::AddedOperator, u::AbstractVecOrMat)
-    sum(op -> iszero(op) ? similar(u, Bool) * false : op * u, L.ops)
+    sum(op -> iszero(op) ? zero(u) : op * u, L.ops)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AddedOperator, u::AbstractVecOrMat)
@@ -522,7 +522,7 @@ Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc,
 Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    vec = similar(u)
+    vec = zero(u)
     cache = (vec,)
     for i in reverse(2:length(L.ops))
         vec   = L.ops[i] * vec
@@ -641,7 +641,7 @@ Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
 Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
 function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
-    cache = similar(u)
+    cache = zero(u)
     @set! L.cache = cache
     L
 end

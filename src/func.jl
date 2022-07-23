@@ -126,8 +126,8 @@ function FunctionOperator(op;
              )
 
     cache = (
-             similar(input_prototype),
-             similar(output_prototype),
+             zero(input_prototype),
+             zero(output_prototype),
             )
     isset = cache === nothing
 
@@ -265,13 +265,13 @@ Base.:\(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op_inverse(u, L.p, 
 
 function Base.:*(L::FunctionOperator{true}, u::AbstractVecOrMat)
     _, co = L.cache
-    du = copy(co)
+    du = zero(co)
     L.op(du, u, L.p, L.t)
 end
 
 function Base.:\(L::FunctionOperator{true}, u::AbstractVecOrMat)
     ci, _ = L.cache
-    du = copy(ci)
+    du = zero(ci)
     L.op_inverse(du, u, L.p, L.t)
 end
 

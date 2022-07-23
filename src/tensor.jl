@@ -123,10 +123,10 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    c1 = similar(u, (mi, no*k))  # c1 = L.inner * u
-    c2 = similar(u, (no, mi, k)) # permut (2, 1, 3)
-    c3 = similar(u, (mo, mi*k))  # c3 = L.outer * c2
-    c4 = similar(u, (mo*mi, k))  # cache v in 5 arg mul!
+    c1 = false * similar(u, (mi, no*k))  # c1 = L.inner * u
+    c2 = false * similar(u, (no, mi, k)) # permut (2, 1, 3)
+    c3 = false * similar(u, (mo, mi*k))  # c3 = L.outer * c2
+    c4 = false * similar(u, (mo*mi, k))  # cache v in 5 arg mul!
 
     @set! L.cache = (c1, c2, c3, c4,)
     L
