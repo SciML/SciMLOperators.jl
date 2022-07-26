@@ -94,7 +94,7 @@ for (op, LType, VType) in (
                             )
 
     @eval function cache_internals(L::$LType, u::AbstractVecOrMat)
-        @set! L.L = cache_operator(L.L, _reshape(u, size(L,1)))
+        @set! L.L = cache_operator(L.L, reshape(u, size(L,1)))
         L
     end
 

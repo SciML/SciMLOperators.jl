@@ -50,12 +50,12 @@ function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
     if isreal(L)
         true
     else
-        d = _vec(L.diag)
+        d = vec(L.diag)
         D = Diagonal(d)
         ishermitian(d)
     end
 end
-LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(_vec(L.diag)))
+LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
 isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 issquare(L::BatchedDiagonalOperator) = true
@@ -72,9 +72,9 @@ Base.:*(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .* u
 Base.:\(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .\ u
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::AbstractVecOrMat)
-    V = _vec(v)
-    U = _vec(u)
-    d = _vec(L.diag)
+    V = vec(v)
+    U = vec(u)
+    d = vec(L.diag)
     D = Diagonal(d)
     mul!(V, D, U)
 
@@ -82,9 +82,9 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::AbstractVecOrMat, α, β)
-    V = _vec(v)
-    U = _vec(u)
-    d = _vec(L.diag)
+    V = vec(v)
+    U = vec(u)
+    d = vec(L.diag)
     D = Diagonal(d)
     mul!(V, D, U, α, β)
 
@@ -92,9 +92,9 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::AbstractVecOrMat)
-    V = _vec(v)
-    U = _vec(u)
-    d = _vec(L.diag)
+    V = vec(v)
+    U = vec(u)
+    d = vec(L.diag)
     D = Diagonal(d)
     ldiv!(V, D, U)
 
@@ -102,8 +102,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u:
 end
 
 function LinearAlgebra.ldiv!(L::BatchedDiagonalOperator, u::AbstractVecOrMat)
-    U = _vec(u)
-    d = _vec(L.diag)
+    U = vec(u)
+    d = vec(L.diag)
     D = Diagonal(d)
     ldiv!(D, U)
 
