@@ -1,7 +1,4 @@
 #
-_vec(a) = vec(a)
-_reshape(a, dims::NTuple{D,Int}) where{D} = reshape(a, dims)
-
 function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
     m, n = size(L)
     nk = length(u)

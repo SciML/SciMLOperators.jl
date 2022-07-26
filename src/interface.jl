@@ -57,7 +57,7 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
 
     @assert s[1] == n "Dimension mismatch"
 
-    U = _reshape(u, (n, k))
+    U = reshape(u, (n, k))
     L = cache_operator(L, U)
     L
 end

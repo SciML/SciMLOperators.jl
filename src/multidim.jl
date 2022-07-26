@@ -14,10 +14,10 @@ for op in (
             (size(L, 1), size(u)[2:end]...,)
         end
 
-        uu = _reshape(u, sizes[1])
+        uu = reshape(u, sizes[1])
         vv = $op(L, uu)
 
-        _reshape(vv, sizev)
+        reshape(vv, sizev)
     end
 end
 
@@ -26,8 +26,8 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u:
 
     sizes = _mat_sizes(L, u)
 
-    uu = _reshape(u, sizes[1])
-    vv = _reshape(v, sizes[2])
+    uu = reshape(u, sizes[1])
+    vv = reshape(v, sizes[2])
 
     mul!(vv, L, uu)
 
@@ -39,8 +39,8 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u:
 
     sizes = _mat_sizes(L, u)
 
-    uu = _reshape(u, sizes[1])
-    vv = _reshape(v, sizes[2])
+    uu = reshape(u, sizes[1])
+    vv = reshape(v, sizes[2])
 
     mul!(vv, L, uu, α, β)
 
@@ -52,8 +52,8 @@ function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLLinearOperator, u
 
     sizes = _mat_sizes(L, u)
 
-    uu = _reshape(u, sizes[1])
-    vv = _reshape(v, sizes[2])
+    uu = reshape(u, sizes[1])
+    vv = reshape(v, sizes[2])
 
     ldiv!(vv, L, uu)
 
@@ -65,7 +65,7 @@ function LinearAlgebra.ldiv!(L::AbstractSciMLLinearOperator, u::AbstractArray)
 
     sizes = _mat_sizes(L, u)
 
-    uu = _reshape(u, sizes[1])
+    uu = reshape(u, sizes[1])
 
     ldiv!(L, uu)
 
