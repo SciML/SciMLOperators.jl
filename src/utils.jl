@@ -1,17 +1,17 @@
 #
 """ use Base.ReshapedArray """
 _reshape(a, dims::NTuple{D,Int}) where{D} = reshape(a,dims)
-_reshape(a::ReshapedArray, dims::NTuple{D,Int}) where{D} = _reshape(a.parent, dims)
-
-function _reshape(a::AbstractArray, dims::NTuple{D,Int}) where{D}
-    @assert prod(dims) == length(a) "cannot reshape array of size $(size(a)) to size $dims"
-    dims == size(a) && return a
-    ReshapedArray(a, dims, ())
-end
+#_reshape(a::ReshapedArray, dims::NTuple{D,Int}) where{D} = _reshape(a.parent, dims)
+#
+#function _reshape(a::AbstractArray, dims::NTuple{D,Int}) where{D}
+#    @assert prod(dims) == length(a) "cannot reshape array of size $(size(a)) to size $dims"
+#    dims == size(a) && return a
+#    ReshapedArray(a, dims, ())
+#end
 
 _vec(a) = vec(a)
-_vec(a::AbstractVector) = a
-_vec(a::AbstractArray) = _reshape(a,(length(a),))
+#_vec(a::AbstractVector) = a
+#_vec(a::AbstractArray) = _reshape(a,(length(a),))
 
 function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
     m, n = size(L)
