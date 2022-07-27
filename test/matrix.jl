@@ -97,6 +97,22 @@ end
     @test L \ u ≈ D \ (u - B * b)
     v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-B*b)
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
+
+    L = AddVector(b)
+    @test L * u ≈ u + b
+    @test L \ u ≈ u - b
+    v=rand(N,K); @test mul!(v, L, u) ≈  u + b
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(u + b) + β*w
+    v=rand(N,K); @test ldiv!(v, L, u) ≈  u - b
+    v=copy(u); @test ldiv!(L, u) ≈  v - b
+
+    L = AddVector(MatrixOperator(B), b)
+    @test L * u ≈ u + B * b
+    @test L \ u ≈ u - B * b
+    v=rand(N,K); @test mul!(v, L, u) ≈  u + B * b
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(u + B * b) + β*w
+    v=rand(N,K); @test ldiv!(v, L, u) ≈  u - B * b
+    v=copy(u); @test ldiv!(L, u) ≈  v - B * b
 end
 
 @testset "AffineOperator update test" begin

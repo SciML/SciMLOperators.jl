@@ -216,7 +216,7 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
             typeof(cache),
             typeof(update_func),
            }(
-             A, B, b, cache,
+             A, B, b, cache, update_func,
             )
     end
 end
@@ -236,19 +236,26 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
     AffineOperator(A, B, b, cache, update_func)
 end
 
+"""
+    L = AddVector(b[; update_func])
+    L(u) = u + b
+"""
 function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
     N  = size(b, 1)
-    Z  = NullOperator{N}()
+    Id = IdentityOperator{N}()
+
+    AffineOperator(Id, Id, b; update_func=update_func)
+end
+
+"""
+    L = AddVector(B, b[; update_func])
+    L(u) = u + B*b
+"""
+function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+    N = size(B, 1)
     Id = IdentityOperator{N}()
 
     AffineOperator(Id, B, b; update_func=update_func)
-end
-
-function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
-    N = size(B, 1)
-    Z = NullOperator{N}()
-
-    AffineOperator(Z, B, b; update_func=update_func)
 end
 
 getops(L::AffineOperator) = (L.A, L.B, L.b)
@@ -265,8 +272,7 @@ has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
     @set! L.A = cache_operator(L.A, u)
-    @set! L.B = cache_operator(L.B, u)
-    @set! L.b = cache_operator(L.b, u)
+    @set! L.B = cache_operator(L.B, L.b)
     L
 end
 
