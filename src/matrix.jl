@@ -236,19 +236,26 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
     AffineOperator(A, B, b, cache, update_func)
 end
 
+"""
+    L = AddVector(b[; update_func])
+    L(u) = u + b
+"""
 function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
     N  = size(b, 1)
-    Z  = NullOperator{N}()
+    Id = IdentityOperator{N}()
+
+    AffineOperator(Id, Id, b; update_func=update_func)
+end
+
+"""
+    L = AddVector(B, b[; update_func])
+    L(u) = u + B*b
+"""
+function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+    N = size(B, 1)
     Id = IdentityOperator{N}()
 
     AffineOperator(Id, B, b; update_func=update_func)
-end
-
-function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
-    N = size(B, 1)
-    Z = NullOperator{N}()
-
-    AffineOperator(Z, B, b; update_func=update_func)
 end
 
 getops(L::AffineOperator) = (L.A, L.B, L.b)
