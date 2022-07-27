@@ -216,7 +216,7 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
             typeof(cache),
             typeof(update_func),
            }(
-             A, B, b, cache,
+             A, B, b, cache, update_func,
             )
     end
 end
