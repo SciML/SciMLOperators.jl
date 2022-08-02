@@ -36,7 +36,7 @@ for (op_type, A) in
                                            T=Float64, isinplace=false, size=(N,N),
                                            input_prototype=u0, output_prototype=u0)),
 
-     ## wrappers
+     ## ignore wrappers
      #(AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
      #(TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
 

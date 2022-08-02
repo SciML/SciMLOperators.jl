@@ -518,8 +518,26 @@ for fact in (
 end
 
 # operator application
-Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
-Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+#Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
+#Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+
+function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
+    v = u
+    for op in L.ops
+        v = op \ v
+    end
+
+    v
+end
+
+function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
+    v = u
+    for op in reverse(L.ops)
+        v = op * v
+    end
+
+    v
+end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
     vec = zero(u)
