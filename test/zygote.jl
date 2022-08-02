@@ -2,8 +2,12 @@
 using SciMLOperators, Zygote, LinearAlgebra
 using Random
 
+using SciMLOperators
 using SciMLOperators: IdentityOperator, NullOperator, AdjointOperator, TransposedOperator,
-                      InvertedOperator, InvertibleOperator
+                      InvertedOperator, InvertibleOperator, AbstractSciMLOperator,
+                      AddedScalarOperator, ComposedScalarOperator, ScaledOperator,
+                      BatchedDiagonalOperator, AddedOperator, ComposedOperator,
+                      has_mul, has_ldiv
 
 Random.seed!(0)
 n = 3
@@ -17,26 +21,31 @@ M = rand(N,N)
 
 for (op_type, A) in
     (
-     ("IdentityOperator", IdentityOperator{N}()),
-     ("NullOperator", NullOperator{N}()),
-     ("MatrixOperator", MatrixOperator(rand(N,N))),
-     ("AffineOperator", AffineOperator(rand(N,N), rand(N,N), rand(N,K))),
-     ("ScaledOperator", rand() * MatrixOperator(rand(N,N))),
-     ("InvertedOperator", InvertedOperator(rand(N,N) |> MatrixOperator)),
-     ("InvertibleOperator", InvertibleOperator(rand(N,N) |> MatrixOperator)),
-     ("BatchDiagonalOperator", DiagonalOperator(rand(N,K))),
-     ("AddedOperator", rand(N,N) + rand(N,N)),
-     #("ComposedOperator", rand(N,N) * rand(N,N)),
-     ("TensorProdutOperator", TensorProductOperator(rand(n,n), rand(n,n))),
-     ("AdjointOperator", AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
-     ("TransposedOperator", TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
-     ("ScalarOperator", ScalarOperator(rand())),
-     #("AddedScalarOperator", ScalarOperator(rand()) + ScalarOperator(rand())),
-     ("ComposedScalarOperator", ScalarOperator(rand()) * ScalarOperator(rand())),
-     ("FunctionOperator", FunctionOperator((u,p,t)->M*u, op_inverse=(u,p,t)->M\u,
+     (IdentityOperator, IdentityOperator{N}()),
+     (NullOperator, NullOperator{N}()),
+     (MatrixOperator, MatrixOperator(rand(N,N))),
+     (AffineOperator, AffineOperator(rand(N,N), rand(N,N), rand(N,K))),
+     (ScaledOperator, rand() * MatrixOperator(rand(N,N))),
+     (InvertedOperator, InvertedOperator(rand(N,N) |> MatrixOperator)),
+     (InvertibleOperator, InvertibleOperator(rand(N,N) |> MatrixOperator)),
+     (BatchedDiagonalOperator, DiagonalOperator(rand(N,K))),
+     (AddedOperator, MatrixOperator(rand(N,N)) + MatrixOperator(rand(N,N))),
+     (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))), # ERROR
+     (TensorProductOperator, TensorProductOperator(rand(n,n), rand(n,n))),
+     (FunctionOperator, FunctionOperator((u,p,t)->M*u, op_inverse=(u,p,t)->M\u,
                                            T=Float64, isinplace=false, size=(N,N),
-                                           input_prototype=u0, output_prototype=u0))
+                                           input_prototype=u0, output_prototype=u0)),
+
+     ## wrappers
+     #(AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
+     #(TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
+
+     (ScalarOperator, ScalarOperator(rand())),
+     (AddedScalarOperator, ScalarOperator(rand()) + ScalarOperator(rand())), # ERROR
+     (ComposedScalarOperator, ScalarOperator(rand()) * ScalarOperator(rand())),
     )
+
+    @assert A isa op_type
 
     loss_mul = function(p)
     
@@ -56,22 +65,20 @@ for (op_type, A) in
         l = sum(w)
     end
 
-    if A isa NullOperator
-        @testset "$op_type" begin
-            l_mul = loss_mul(ps)
-            g_mul = Zygote.gradient(loss_mul, ps)[1]
+    @testset "$op_type" begin
+        l_mul = loss_mul(ps)
+        g_mul = Zygote.gradient(loss_mul, ps)[1]
 
+        if A isa NullOperator
             @test isa(g_mul, Nothing)
+        else
+            @test !isa(g_mul, Nothing)
         end
-    else
-        @testset "$op_type" begin
-            l_mul = loss_mul(ps)
-            g_mul = Zygote.gradient(loss_mul, ps)[1]
 
+        if has_ldiv(A)
             l_div = loss_div(ps)
             g_div = Zygote.gradient(loss_div, ps)[1]
 
-            @test !isa(g_mul, Nothing)
             @test !isa(g_div, Nothing)
         end
     end
