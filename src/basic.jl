@@ -293,6 +293,7 @@ struct AddedOperator{T,
     ops::O
 
     function AddedOperator(ops)
+        @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
@@ -414,6 +415,7 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     isset::Bool
 
     function ComposedOperator(ops, cache, isset::Bool)
+        @assert !isempty(ops)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]

@@ -115,6 +115,7 @@ struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
     function AddedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
+        @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
@@ -140,17 +141,17 @@ for op in (
     end
 end
 
-#function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-#    sum(op -> convert(Number, op), α.ops; init=zero(T))
-#end
-
 function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-    val = zero(T)
-    for op in α.ops
-        val += convert(Number, op)
-    end
-    val
+    sum(op -> convert(Number, op), α.ops)
 end
+
+#function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
+#    val = zero(T)
+#    for op in α.ops
+#        val += convert(Number, op)
+#    end
+#    val
+#end
 
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
@@ -165,6 +166,7 @@ struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
     function ComposedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
+        @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
