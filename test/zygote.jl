@@ -3,10 +3,12 @@ using SciMLOperators, Zygote, LinearAlgebra
 using Random
 
 using SciMLOperators
-using SciMLOperators: IdentityOperator, NullOperator, AdjointOperator, TransposedOperator,
-                      InvertedOperator, InvertibleOperator, AbstractSciMLOperator,
-                      AddedScalarOperator, ComposedScalarOperator, ScaledOperator,
+using SciMLOperators: AbstractSciMLOperator,
+                      IdentityOperator, NullOperator,
+                      AdjointOperator, TransposedOperator,
+                      InvertedOperator, InvertibleOperator,
                       BatchedDiagonalOperator, AddedOperator, ComposedOperator,
+                      AddedScalarOperator, ComposedScalarOperator, ScaledOperator,
                       has_mul, has_ldiv
 
 Random.seed!(0)
@@ -33,8 +35,8 @@ for (op_type, A) in
      (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))),
      (TensorProductOperator, TensorProductOperator(rand(n,n), rand(n,n))),
      (FunctionOperator, FunctionOperator((u,p,t)->M*u, op_inverse=(u,p,t)->M\u,
-                                           T=Float64, isinplace=false, size=(N,N),
-                                           input_prototype=u0, output_prototype=u0)),
+                                         T=Float64, isinplace=false, size=(N,N),
+                                         input_prototype=u0, output_prototype=u0)),
 
      ## ignore wrappers
      #(AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
