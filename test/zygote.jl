@@ -30,7 +30,7 @@ for (op_type, A) in
      (InvertibleOperator, InvertibleOperator(rand(N,N) |> MatrixOperator)),
      (BatchedDiagonalOperator, DiagonalOperator(rand(N,K))),
      (AddedOperator, MatrixOperator(rand(N,N)) + MatrixOperator(rand(N,N))),
-     (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))), # ERROR
+     (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))),
      (TensorProductOperator, TensorProductOperator(rand(n,n), rand(n,n))),
      (FunctionOperator, FunctionOperator((u,p,t)->M*u, op_inverse=(u,p,t)->M\u,
                                            T=Float64, isinplace=false, size=(N,N),
@@ -41,7 +41,7 @@ for (op_type, A) in
      #(TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
 
      (ScalarOperator, ScalarOperator(rand())),
-     (AddedScalarOperator, ScalarOperator(rand()) + ScalarOperator(rand())), # ERROR
+     (AddedScalarOperator, ScalarOperator(rand()) + ScalarOperator(rand())),
      (ComposedScalarOperator, ScalarOperator(rand()) * ScalarOperator(rand())),
     )
 
