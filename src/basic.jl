@@ -520,6 +520,7 @@ for fact in (
 end
 
 # operator application
+# https://github.com/SciML/SciMLOperators.jl/pull/94
 #Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 #Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
