@@ -145,14 +145,6 @@ function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
     sum(op -> convert(Number, op), α.ops)
 end
 
-#function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-#    val = zero(T)
-#    for op in α.ops
-#        val += convert(Number, op)
-#    end
-#    val
-#end
-
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
 getops(α::AddedScalarOperator) = α.ops
