@@ -293,6 +293,7 @@ struct AddedOperator{T,
     ops::O
 
     function AddedOperator(ops)
+        @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
@@ -414,6 +415,7 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     isset::Bool
 
     function ComposedOperator(ops, cache, isset::Bool)
+        @assert !isempty(ops)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i-1]
@@ -518,8 +520,27 @@ for fact in (
 end
 
 # operator application
-Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
-Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+# https://github.com/SciML/SciMLOperators.jl/pull/94
+#Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
+#Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+
+function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
+    v = u
+    for op in L.ops
+        v = op \ v
+    end
+
+    v
+end
+
+function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
+    v = u
+    for op in reverse(L.ops)
+        v = op * v
+    end
+
+    v
+end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
     vec = zero(u)

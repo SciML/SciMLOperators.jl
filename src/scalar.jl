@@ -115,6 +115,7 @@ struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
     function AddedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
+        @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
@@ -141,12 +142,14 @@ for op in (
 end
 
 function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-    sum(op -> convert(Number, op), α.ops; init=zero(T))
+    sum(op -> convert(Number, op), α.ops)
 end
 
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
 getops(α::AddedScalarOperator) = α.ops
+has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
+has_ldiv!(α::AddedScalarOperator) = has_ldiv(α)
 
 """
 Lazy composition of Scalar Operators
@@ -155,6 +158,7 @@ struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
     function ComposedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
+        @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
         new{T,typeof(ops)}(ops)
     end
@@ -188,4 +192,6 @@ Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
 
 getops(α::ComposedScalarOperator) = α.ops
+has_ldiv(α::ComposedScalarOperator) = all(has_ldiv, α.ops)
+has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 #

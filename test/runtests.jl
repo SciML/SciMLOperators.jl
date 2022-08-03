@@ -11,5 +11,7 @@ if GROUP == "All" || GROUP == "OperatorInterface"
     @time @safetestset "Matrix Operators" begin include("matrix.jl") end
     @time @safetestset "Function Operator" begin include("func.jl") end
     @time @safetestset "Full tests" begin include("total.jl") end
+
+    @time @safetestset "Zygote.jl" begin include("zygote.jl") end
 end
 end
