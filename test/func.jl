@@ -3,7 +3,6 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 using SciMLOperators: InvertibleOperator, ⊗
-using FFTW
 
 Random.seed!(0)
 N = 8
@@ -30,6 +29,7 @@ K = 12
                            f1;
 
                            isinplace=false,
+                           outofplace=true,
                            T=Float64,
                            size=(N,N),
 
@@ -49,6 +49,7 @@ K = 12
                            f2;
 
                            isinplace=true,
+                           outofplace=false,
                            T=Float64,
                            size=(N,N),
 

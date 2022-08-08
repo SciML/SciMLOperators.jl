@@ -35,7 +35,7 @@ for (op_type, A) in
      (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))),
      (TensorProductOperator, TensorProductOperator(rand(n,n), rand(n,n))),
      (FunctionOperator, FunctionOperator((u,p,t)->M*u, op_inverse=(u,p,t)->M\u,
-                                         T=Float64, isinplace=false, size=(N,N),
+                                         T=Float64, outofplace=true, size=(N,N),
                                          input_prototype=u0, output_prototype=u0)),
 
      ## ignore wrappers
