@@ -320,6 +320,7 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     C1 = first(L.cache)
 
     m, _ = size(L)
+    k = size(u, 2)
 
     if L.outer isa IdentityOperator
         c1 = reshape(C1, (m, k))
@@ -333,7 +334,6 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
 
     mi, _  = size(L.inner)
     mo, no = size(L.outer)
-    k = size(u, 2)
 
     if k == 1
         V  = reshape(v, (mi, mo))
