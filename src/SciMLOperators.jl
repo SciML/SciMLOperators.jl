@@ -7,6 +7,7 @@ import StaticArrays
 import SparseArrays
 import ArrayInterfaceCore
 import Base: ReshapedArray
+import Tricks: static_hasmethod
 import Lazy: @forward
 import Setfield: @set!
 
