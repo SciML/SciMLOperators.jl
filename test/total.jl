@@ -20,14 +20,9 @@ K = 12
     m  = length(k)
     tr = plan_rfft(x)
 
-    ftr = FunctionOperator(
-                           (du,u,p,t) -> mul!(du, tr, u);
+    ftr = FunctionOperator((du,u,p,t) -> mul!(du, tr, u), x, im*k;
                            isinplace=true,
                            T=ComplexF64,
-                           size=(m,n),
-
-                           input_prototype=x,
-                           output_prototype=im*k,
 
                            op_adjoint = (du,u,p,t) -> ldiv!(du, tr, u),
                            op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
