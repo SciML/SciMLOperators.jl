@@ -66,34 +66,43 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
     end
 end
 
-function FunctionOperator(op;
+function FunctionOperator(op,
+                          input::AbstractVecOrMat,
+                          output::AbstractVecOrMat;
 
-                          # necessary
-                          isinplace=nothing,
-                          outofplace=nothing,
-                          T=nothing,
-                          size=nothing,
+                          isinplace::Union{Nothing,Bool}=nothing,
+                          outofplace::Union{Nothing,Bool}=nothing,
+                          T::Union{Type{<:Number},Nothing}=nothing,
 
-                          input_prototype=nothing,
-                          output_prototype=nothing,
-
-                          # optional
                           op_adjoint=nothing,
                           op_inverse=nothing,
                           op_adjoint_inverse=nothing,
 
                           p=nothing,
-                          t=nothing,
+                          t::Union{Number,Nothing}=nothing,
 
                           # traits
                           opnorm=nothing,
-                          issymmetric=false,
-                          ishermitian=false,
-                          isposdef=false,
+                          issymmetric::Bool=false,
+                          ishermitian::Bool=false,
+                          isposdef::Bool=false,
                          )
 
-    isinplace = isinplace isa Nothing ? false : isinplace
-    outofplace = outofplace isa Nothing ? false : outofplace
+    sz = (size(output, 1), size(input, 1))
+    T  = T isa Nothing ? promote_type(eltype.((input, output))...) : T
+    t  = t isa Nothing ? zero(real(T)) : t
+
+    isinplace = if isinplace isa Nothing
+        static_hasmethod(op, typeof((output, input, p, t)))
+    else
+        isinplace
+    end
+
+    outofplace = if outofplace isa Nothing
+        static_hasmethod(op, typeof((input, p, t)))
+    else
+        outofplace
+    end
 
     if !isinplace & !outofplace
         @error "Please provide a funciton signature
@@ -104,11 +113,7 @@ function FunctionOperator(op;
         when called in-place"
     end
 
-    T isa Nothing  && @error "Please provide a Number type for the Operator"
-    size isa Nothing  && @error "Please provide a size (m, n)"
-    if (input_prototype isa Nothing) | (output_prototype isa Nothing)
-        @error "Please provide input/out prototypes vectors/arrays."
-    end
+    T isa Nothing && @error "Please provide a Number type for the Operator"
 
     isreal = T <: Real
     selfadjoint = ishermitian | (isreal & issymmetric)
@@ -123,8 +128,6 @@ function FunctionOperator(op;
         op_adjoint_inverse = op_inverse
     end
 
-    t = t isa Nothing ? zero(T) : t
-
     traits = (;
               opnorm = opnorm,
               issymmetric = issymmetric,
@@ -134,14 +137,11 @@ function FunctionOperator(op;
               isinplace = isinplace,
               outofplace = outofplace,
               T = T,
-              size = size,
+              size = sz,
              )
 
-    cache = (
-             zero(input_prototype),
-             zero(output_prototype),
-            )
-    isset = cache === nothing
+    cache = zero.((input, output))
+    isset = true
 
     FunctionOperator(
                      op,
