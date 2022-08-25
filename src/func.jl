@@ -105,12 +105,10 @@ function FunctionOperator(op,
     end
 
     if !isinplace & !outofplace
-        @error "Please provide a funciton signature
-        by specifying `isinplace` or, `outofplace`, or both as `true`, or `false`.
-        If `isinplace = false`, the signature is `op(u, p, t)`,
-        and if `isinplace = true`, the signature is `op(du, u, p, t)`.
-        Further, it is assumed that the function call would be nonallocating
-        when called in-place"
+        @error "Please provide a funciton with signatures `op(u, p, t)` for applying
+        the operator out-of-place, and/or the signature is `op(du, u, p, t)` for
+        in-place application. Further, we assume that the function call would be
+        nonallocating when called in-place"
     end
 
     T isa Nothing && @error "Please provide a Number type for the Operator"
