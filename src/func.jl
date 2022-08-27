@@ -107,8 +107,7 @@ function FunctionOperator(op,
     if !isinplace & !outofplace
         @error "Please provide a funciton with signatures `op(u, p, t)` for applying
         the operator out-of-place, and/or the signature is `op(du, u, p, t)` for
-        in-place application. Further, we assume that the function call would be
-        nonallocating when called in-place"
+        in-place application."
     end
 
     T isa Nothing && @error "Please provide a Number type for the Operator"
