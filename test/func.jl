@@ -3,7 +3,6 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 using SciMLOperators: InvertibleOperator, ⊗
-using FFTW
 
 Random.seed!(0)
 N = 8
@@ -26,15 +25,7 @@ K = 12
     f2i(du, u, p, t) = ldiv!(du, F, u)
 
     # out of place
-    op1 = FunctionOperator(
-                           f1;
-
-                           isinplace=false,
-                           T=Float64,
-                           size=(N,N),
-
-                           input_prototype=u,
-                           output_prototype=A*u,
+    op1 = FunctionOperator(f1, u, A*u;
 
                            op_inverse=f1i,
 
@@ -45,15 +36,7 @@ K = 12
                           )
 
     # in place
-    op2 = FunctionOperator(
-                           f2;
-
-                           isinplace=true,
-                           T=Float64,
-                           size=(N,N),
-
-                           input_prototype=u,
-                           output_prototype=A*u,
+    op2 = FunctionOperator(f2, u, A*u;
 
                            op_inverse=f2i,
 
@@ -96,19 +79,7 @@ end
 
     f(du,u,p,t) = mul!(du, Diagonal(p*t), u)
 
-    op = FunctionOperator(
-                          f;
-
-                          isinplace=true,
-                          T=Float64,
-                          size=(N,N),
-
-                          input_prototype=u,
-                          output_prototype=u,
-
-                          p=p*0.0,
-                          t=0.0,
-                         )
+    op = FunctionOperator(f, u, u; p=zero(p), t=zero(t))
 
     ans = @. u * p * t
     @test op(u,p,t) ≈ ans

@@ -1,7 +1,7 @@
 name = "SciMLOperators"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 authors = ["xtalax <alex.lemony@gmail.com>"]
-version = "0.1.12"
+version = "0.1.13"
 
 [deps]
 ArrayInterfaceCore = "30b0a656-2188-435a-8636-2ec0e6a096e2"
@@ -11,6 +11,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 
 [compat]
 ArrayInterfaceCore = "0.1"

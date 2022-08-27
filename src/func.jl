@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-mutable struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -22,7 +22,8 @@ mutable struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSc
     """ Cache """
     cache::C
 
-    function FunctionOperator(op,
+    function FunctionOperator(
+                              op,
                               op_adjoint,
                               op_inverse,
                               op_adjoint_inverse,
@@ -34,11 +35,14 @@ mutable struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSc
                              )
 
         iip = traits.isinplace
+        oop = traits.outofplace
         T   = traits.T
 
         isset = cache !== nothing
 
-        new{iip,
+        new{
+            iip,
+            oop,
             T,
             typeof(op),
             typeof(op_adjoint),
@@ -62,42 +66,51 @@ mutable struct FunctionOperator{isinplace,T,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSc
     end
 end
 
-function FunctionOperator(op;
+function FunctionOperator(op,
+                          input::AbstractVecOrMat,
+                          output::AbstractVecOrMat;
 
-                          # necessary
-                          isinplace=nothing,
-                          T=nothing,
-                          size=nothing,
+                          isinplace::Union{Nothing,Bool}=nothing,
+                          outofplace::Union{Nothing,Bool}=nothing,
+                          T::Union{Type{<:Number},Nothing}=nothing,
 
-                          input_prototype=nothing,
-                          output_prototype=nothing,
-
-                          # optional
                           op_adjoint=nothing,
                           op_inverse=nothing,
                           op_adjoint_inverse=nothing,
 
                           p=nothing,
-                          t=nothing,
+                          t::Union{Number,Nothing}=nothing,
 
                           # traits
                           opnorm=nothing,
-                          issymmetric=false,
-                          ishermitian=false,
-                          isposdef=false,
+                          issymmetric::Bool=false,
+                          ishermitian::Bool=false,
+                          isposdef::Bool=false,
                          )
 
-    isinplace isa Nothing  && @error "Please provide a funciton signature
-    by specifying `isinplace` as either `true`, or `false`.
-    If `isinplace = false`, the signature is `op(u, p, t)`,
-    and if `isinplace = true`, the signature is `op(du, u, p, t)`.
-    Further, it is assumed that the function call would be nonallocating
-    when called in-place"
-    T isa Nothing  && @error "Please provide a Number type for the Operator"
-    size isa Nothing  && @error "Please provide a size (m, n)"
-    if (input_prototype isa Nothing) | (output_prototype isa Nothing)
-        @error "Please provide input/out prototypes vectors/arrays."
+    sz = (size(output, 1), size(input, 1))
+    T  = T isa Nothing ? promote_type(eltype.((input, output))...) : T
+    t  = t isa Nothing ? zero(real(T)) : t
+
+    isinplace = if isinplace isa Nothing
+        static_hasmethod(op, typeof((output, input, p, t)))
+    else
+        isinplace
     end
+
+    outofplace = if outofplace isa Nothing
+        static_hasmethod(op, typeof((input, p, t)))
+    else
+        outofplace
+    end
+
+    if !isinplace & !outofplace
+        @error "Please provide a funciton with signatures `op(u, p, t)` for applying
+        the operator out-of-place, and/or the signature is `op(du, u, p, t)` for
+        in-place application."
+    end
+
+    T isa Nothing && @error "Please provide a Number type for the Operator"
 
     isreal = T <: Real
     selfadjoint = ishermitian | (isreal & issymmetric)
@@ -112,8 +125,6 @@ function FunctionOperator(op;
         op_adjoint_inverse = op_inverse
     end
 
-    t = t isa Nothing ? zero(T) : t
-
     traits = (;
               opnorm = opnorm,
               issymmetric = issymmetric,
@@ -121,15 +132,13 @@ function FunctionOperator(op;
               isposdef = isposdef,
 
               isinplace = isinplace,
+              outofplace = outofplace,
               T = T,
-              size = size,
+              size = sz,
              )
 
-    cache = (
-             zero(input_prototype),
-             zero(output_prototype),
-            )
-    isset = cache === nothing
+    cache = zero.((input, output))
+    isset = true
 
     FunctionOperator(
                      op,
@@ -260,16 +269,16 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 # TODO - FunctionOperator, Base.conj, transpose
 
 # operator application
-Base.:*(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op(u, L.p, L.t)
-Base.:\(L::FunctionOperator{false}, u::AbstractVecOrMat) = L.op_inverse(u, L.p, L.t)
+Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op(u, L.p, L.t)
+Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op_inverse(u, L.p, L.t)
 
-function Base.:*(L::FunctionOperator{true}, u::AbstractVecOrMat)
+function Base.:*(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     _, co = L.cache
     du = zero(co)
     L.op(du, u, L.p, L.t)
 end
 
-function Base.:\(L::FunctionOperator{true}, u::AbstractVecOrMat)
+function Base.:\(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     ci, _ = L.cache
     du = zero(ci)
     L.op_inverse(du, u, L.p, L.t)

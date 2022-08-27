@@ -78,6 +78,23 @@ end
     v=copy(u); @test D(v,u,p,t) ≈ ans
 end
 
+@testset "Batched Diagonal Operator" begin
+    u = rand(N,K)
+    d = rand(N,K)
+    α = rand()
+    β = rand()
+
+    L = DiagonalOperator(d)
+
+    @test L * u ≈ d .* u
+    v=rand(N,K); @test mul!(v, L, u) ≈ d .* u
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(d .* u) + β*w
+
+    @test L \ u ≈ d .\ u
+    v=rand(N,K); @test ldiv!(v, L, u) ≈ d .\ u
+    v=copy(u); @test ldiv!(L, u) ≈ d .\ v
+end
+
 @testset "AffineOperator" begin
     u = rand(N,K)
     A = rand(N,N)
