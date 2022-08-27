@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Wrap a Fourier transform with SciMLOperators · SciMLOperators.jl</title><script async src="https://www.googletagmanager.com/gtag/js?id=UA-90474609-3"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-90474609-3', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://scimlbase.sciml.ai/stable/tutorials/fftw/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="SciMLOperators.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">SciMLOperators.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../interface/">The AbstractSciMLOperator Interface</a></li><li><a class="tocitem" href="../../premade_operators/">Premade SciMLOperators</a></li><li class="is-active"><a class="tocitem" href>Wrap a Fourier transform with SciMLOperators</a><ul class="internal"><li><a class="tocitem" href="#Copy-Paste-Code"><span>Copy-Paste Code</span></a></li><li><a class="tocitem" href="#Explanation"><span>Explanation</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Wrap a Fourier transform with SciMLOperators</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Wrap a Fourier transform with SciMLOperators</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/SciML/SciMLOperators.jl/blob/master/docs/src/tutorials/fftw.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Wrap-a-Fourier-transform-with-SciMLOperators"><a class="docs-heading-anchor" href="#Wrap-a-Fourier-transform-with-SciMLOperators">Wrap a Fourier transform with SciMLOperators</a><a id="Wrap-a-Fourier-transform-with-SciMLOperators-1"></a><a class="docs-heading-anchor-permalink" href="#Wrap-a-Fourier-transform-with-SciMLOperators" title="Permalink"></a></h1><p>In this tutorial, we will wrap a Fast Fourier Transform (FFT) in a SciMLOperator via the <code>FunctionOperator</code> interface. FFTs are commonly used algorithms for performing numerical interpolation and differentiation. In this example, we will use the FFT to compute the derivative of a function.</p><h2 id="Copy-Paste-Code"><a class="docs-heading-anchor" href="#Copy-Paste-Code">Copy-Paste Code</a><a id="Copy-Paste-Code-1"></a><a class="docs-heading-anchor-permalink" href="#Copy-Paste-Code" title="Permalink"></a></h2><pre><code class="nohighlight hljs">using SciMLOperators
+using LinearAlgebra, FFTW
+
+L  = 2π
+n  = 256
+dx = L / n
+x  = range(start=-L/2, stop=L/2-dx, length=n) |&gt; Array
+
+u  = @. sin(5x)cos(7x);
+du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+
+transform = plan_rfft(x)
+k = Array(rfftfreq(n, 2π*n/L))
+
+op_transform = FunctionOperator(
+                                (du,u,p,t) -&gt; mul!(du, transform, u);
+                                isinplace=true,
+                                T=ComplexF64,
+                                size=(length(k),n),
+
+                                input_prototype=x,
+                                output_prototype=im*k,
+
+                                op_inverse = (du,u,p,t) -&gt; ldiv!(du, transform, u)
+                               )
+
+ik = im * DiagonalOperator(k)
+Dx = op_transform \ ik * op_transform
+
+Dx = cache_operator(Dx, x)
+
+@show ≈(Dx * u, du; atol=1e-8)
+@show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)</code></pre><h2 id="Explanation"><a class="docs-heading-anchor" href="#Explanation">Explanation</a><a id="Explanation-1"></a><a class="docs-heading-anchor-permalink" href="#Explanation" title="Permalink"></a></h2><p>We load <code>SciMLOperators</code>, <code>LinearAlgebra</code>, and <code>FFTW</code> (short for Fastest Fourier Transform in the West), a common Fourier transform library. Next, we define an equispaced grid from -π to π, and write the function <code>u</code> that we intend to differentiate. Since this is a trivial example, we already know the derivative, <code>du</code> and write it down to later test our FFT wrapper.</p><pre><code class="nohighlight hljs">using SciMLOperators
+using LinearAlgebra, FFTW
+
+L  = 2π
+n  = 256
+dx = L / n
+x  = range(start=-L/2, stop=L/2-dx, length=n) |&gt; Array
+
+u  = @. sin(5x)cos(7x);
+du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+</code></pre><p>Now, we define the Fourier transform. Since our input is purely Real, we use the real Fast Fourier Transform. The funciton <code>plan_rfft</code> outputs a real fast fourier transform object that can be applied to inputs that are like <code>x</code> as follows: <code>xhat = transform * x</code>, and <code>LinearAlgebra.mul!(xhat, transform, x)</code>.  We also get <code>k</code>, the frequency modes sampled by our finite grid, via the function <code>rfftfreq</code>.</p><pre><code class="nohighlight hljs">transform = plan_rfft(x)
+k = Array(rfftfreq(n, 2π*n/L))</code></pre><p>Now we are ready to define our wrapper for the FFT object. To <code>FunctionOperator</code>, we pass the in-place forward application of the transform, <code>(du,u,p,t) -&gt; mul!(du, transform, u)</code>, its inverse application, <code>(du,u,p,t) -&gt; ldiv!(du, transform, u)</code>, as well as input and output prototype vectors. We also set the flag <code>isinplace</code> to <code>true</code> to signal that we intend to use the operator in a non-allocating way, and pass in the element-type and size of the operator.</p><pre><code class="nohighlight hljs">op_transform = FunctionOperator(
+                                (du,u,p,t) -&gt; mul!(du, transform, u);
+                                isinplace=true,
+                                T=ComplexF64,
+                                size=(length(k),n),
+
+                                input_prototype=x,
+                                output_prototype=im*k,
+
+                                op_inverse = (du,u,p,t) -&gt; ldiv!(du, transform, u)
+                               )</code></pre><p>After wrapping the FFT with <code>FunctionOperator</code>, we are ready to compose it with other SciMLOperators. Below we form the derivative operator, and cache it via the function <code>cache_operator</code> that requires an input prototype. We can test our derivative operator both in-place, and out-of-place by comparing its output to the analytical derivative.</p><pre><code class="nohighlight hljs">ik = im * DiagonalOperator(k)
+Dx = op_transform \ ik * op_transform
+
+@show ≈(Dx * u, du; atol=1e-8)
+@show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)</code></pre><pre><code class="nohighlight hljs">≈(Dx * u, du; atol = 1.0e-8) = true
+≈(mul!(copy(u), Dx, u), du; atol = 1.0e-8) = true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade SciMLOperators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.23 on <span class="colophon-date" title="Saturday 27 August 2022 16:33">Saturday 27 August 2022</span>. Using Julia version 1.8.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
