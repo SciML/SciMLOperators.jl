@@ -51,6 +51,8 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
 end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
+    u isa AbstractVecOrMat && @error "cache_operator not defined for $(typeof(L)), $(typeof(u))."
+
     n = size(L, 2)
     s = size(u)
     k = prod(s[2:end])
