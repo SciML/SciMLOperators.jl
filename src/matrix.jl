@@ -148,6 +148,10 @@ for fact in (
         InvertibleOperator($fact(convert(AbstractMatrix, L); kwargs...))
 end
 
+function Base.convert(::Type{<:Factorization}, L::InvertibleOperator{T,<:Factorization}) where{T}
+    L.F
+end
+
 function Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator)
     if L.F isa Adjoint
         convert(AbstractMatrix,L.F')'
