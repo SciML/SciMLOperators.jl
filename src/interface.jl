@@ -167,12 +167,12 @@ issquare(::Union{
 issquare(A...) = @. (&)(issquare(A)...)
 
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
-Base.Matrix(L::AbstractSciMLLinearOperator) = Matrix(convert(AbstractMatrix, L))
+Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
 
-LinearAlgebra.exp(L::AbstractSciMLLinearOperator,t) = exp(t*L)
+LinearAlgebra.exp(L::AbstractSciMLOperator,t) = exp(t*L)
 has_exp(L::AbstractSciMLLinearOperator) = true
-expmv(L::AbstractSciMLLinearOperator,u,p,t) = exp(L,t)*u
-expmv!(v,L::AbstractSciMLLinearOperator,u,p,t) = mul!(v,exp(L,t),u)
+expmv(L::AbstractSciMLOperator,u,p,t) = exp(L,t)*u
+expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 
 ###
 # fallback implementations
@@ -188,37 +188,37 @@ function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
     convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
 end
 
-Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Any,N}) where {N}
+Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Any,N}) where {N}
     convert(AbstractMatrix, L)[I...]
 end
-function Base.getindex(L::AbstractSciMLLinearOperator, I::Vararg{Int, N}) where {N}
+function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
     convert(AbstractMatrix,L)[I...]
 end
 
-LinearAlgebra.exp(L::AbstractSciMLLinearOperator) = exp(Matrix(L))
-LinearAlgebra.opnorm(L::AbstractSciMLLinearOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
+LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
+LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 for pred in (
              :issymmetric,
              :ishermitian,
              :isposdef,
             )
-    @eval function LinearAlgebra.$pred(L::AbstractSciMLLinearOperator)
+    @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
         $pred(convert(AbstractMatrix, L))
     end
 end
 for op in (
            :sum,:prod
           )
-  @eval function LinearAlgebra.$op(L::AbstractSciMLLinearOperator; kwargs...)
+  @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
       $op(convert(AbstractMatrix, L); kwargs...)
   end
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat)
     mul!(v, convert(AbstractMatrix,L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
     mul!(v, convert(AbstractMatrix,L), u, α, β)
 end
 #

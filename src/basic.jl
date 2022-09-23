@@ -695,7 +695,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstrac
     axpy!(β, L.cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat)
     mul!(v, L.L, u)
 end
 

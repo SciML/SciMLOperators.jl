@@ -142,9 +142,9 @@ for fact in (
              :svd, :svd!,
             )
 
-    @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator, args...) =
+    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator, args...) =
         InvertibleOperator($fact(convert(AbstractMatrix, L), args...))
-    @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator; kwargs...) =
+    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator; kwargs...) =
         InvertibleOperator($fact(convert(AbstractMatrix, L); kwargs...))
 end
 
