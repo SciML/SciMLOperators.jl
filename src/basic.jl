@@ -212,7 +212,7 @@ end
 Base.:-(L::AbstractSciMLOperator) = ScaledOperator(-true, L)
 Base.:+(L::AbstractSciMLOperator) = L
 
-Base.convert(::Type{AbstractMatrix}, L::ScaledOperator) = L.λ.val * convert(AbstractMatrix, L.L)
+Base.convert(::Type{AbstractMatrix}, L::ScaledOperator) = convert(Number,L.λ) * convert(AbstractMatrix, L.L)
 SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
