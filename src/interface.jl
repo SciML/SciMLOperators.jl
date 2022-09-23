@@ -214,15 +214,6 @@ for op in (
   end
 end
 
-for op in (
-           :+, :-,
-          )
-
-    @eval function Base.$op(L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
-        $op(convert(AbstractMatrix,L), u)
-    end
-end
-
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLLinearOperator, u::AbstractVecOrMat)
     mul!(v, convert(AbstractMatrix,L), u)
 end

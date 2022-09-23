@@ -311,7 +311,14 @@ end
 AddedOperator(L::AbstractSciMLOperator) = L
 
 # constructors
-Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
+function Base.:+(ops::Union{AbstractSciMLOperator, AbstractMatrix}...)
+    ops_ = ()
+    for op in ops
+        op = op isa AbstractMatrix ? MatrixOperator(op) : op
+        ops_ = (ops_..., op)
+    end
+    AddedOperator(ops_...)
+end
 Base.:+(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, B.ops...)
 Base.:+(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., B)
 Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
@@ -327,6 +334,8 @@ function Base.:+(Z::NullOperator, A::AddedOperator)
 end
 
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
+Base.:-(A::AbstractSciMLOperator, B::AbstractMatrix) = A - MatrixOperator(B)
+Base.:-(A::AbstractMatrix, B::AbstractSciMLOperator) = MatrixOperator(A) - B
 
 for op in (
            :+, :-,
