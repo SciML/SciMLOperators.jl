@@ -359,7 +359,7 @@ for op in (
 end
 
 Base.convert(::Type{AbstractMatrix}, L::AddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)
-SparseArrays.sparse(L::AddedOperator) = sum(_sparse, L.ops)
+SparseArrays.sparse(L::AddedOperator) = sum(sparse, L.ops)
 
 # traits
 Base.size(L::AddedOperator) = size(first(L.ops))
@@ -491,7 +491,7 @@ for op in (
 end
 
 Base.convert(::Type{AbstractMatrix}, L::ComposedOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
-SparseArrays.sparse(L::ComposedOperator) = prod(_sparse, L.ops)
+SparseArrays.sparse(L::ComposedOperator) = prod(sparse, L.ops)
 
 # traits
 Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
