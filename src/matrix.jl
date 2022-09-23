@@ -52,6 +52,7 @@ isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
+SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
