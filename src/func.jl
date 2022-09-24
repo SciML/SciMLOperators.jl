@@ -90,7 +90,7 @@ end
 
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
-                          output::AbstractVecOrMat;
+                          output::AbstractVecOrMat =  input;
 
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
