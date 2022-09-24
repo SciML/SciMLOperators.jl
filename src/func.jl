@@ -67,6 +67,28 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
 end
 
 function FunctionOperator(op,
+                          input::AbstractArray{<:Any,D},
+                          output::AbstractArray{<:Any,D};
+                          kwargs...) where{D}
+    D ≤ 2 && @error "FunctionOperator not defined for $(typeof(input)), $(typeof(output))."
+
+    NK = length(input)
+    MK = length(output)
+
+    M = size(output, 1)
+    N = size(input, 1)
+
+    K  = NK ÷ N
+
+    @assert MK == M * K
+
+    input  = reshape(input,  (N, K))
+    output = reshape(output, (M, K))
+
+    FunctionOperator(op, input, output; kwargs...)
+end
+
+function FunctionOperator(op,
                           input::AbstractVecOrMat,
                           output::AbstractVecOrMat;
 
