@@ -52,6 +52,7 @@ isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
+SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
@@ -142,10 +143,14 @@ for fact in (
              :svd, :svd!,
             )
 
-    @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator, args...) =
+    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator, args...) =
         InvertibleOperator($fact(convert(AbstractMatrix, L), args...))
-    @eval LinearAlgebra.$fact(L::AbstractSciMLLinearOperator; kwargs...) =
+    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator; kwargs...) =
         InvertibleOperator($fact(convert(AbstractMatrix, L); kwargs...))
+end
+
+function Base.convert(::Type{<:Factorization}, L::InvertibleOperator{T,<:Factorization}) where{T}
+    L.F
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator)

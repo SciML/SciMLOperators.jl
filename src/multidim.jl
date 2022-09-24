@@ -21,7 +21,7 @@ for op in (
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error "LinearAlgebra.mul! not defined for $(typeof(L)), $(typeof(u))."
 
     sizes = _mat_sizes(L, u)
@@ -34,7 +34,7 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u:
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray, α, β)
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
     u isa AbstractVecOrMat && @error "LinearAlgebra.mul! not defined for $(typeof(L)), $(typeof(u))."
 
     sizes = _mat_sizes(L, u)
@@ -47,7 +47,7 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLLinearOperator, u:
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLLinearOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error "LinearAlgebra.ldiv! not defined for $(typeof(L)), $(typeof(u))."
 
     sizes = _mat_sizes(L, u)
@@ -60,7 +60,7 @@ function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLLinearOperator, u
     v
 end
 
-function LinearAlgebra.ldiv!(L::AbstractSciMLLinearOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error "LinearAlgebra.ldiv! not defined for $(typeof(L)), $(typeof(u))."
 
     sizes = _mat_sizes(L, u)

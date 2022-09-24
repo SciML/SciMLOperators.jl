@@ -212,7 +212,7 @@ end
 Base.:-(L::AbstractSciMLOperator) = ScaledOperator(-true, L)
 Base.:+(L::AbstractSciMLOperator) = L
 
-Base.convert(::Type{AbstractMatrix}, L::ScaledOperator) = L.λ.val * convert(AbstractMatrix, L.L)
+Base.convert(::Type{AbstractMatrix}, L::ScaledOperator) = convert(Number,L.λ) * convert(AbstractMatrix, L.L)
 SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
@@ -311,7 +311,14 @@ end
 AddedOperator(L::AbstractSciMLOperator) = L
 
 # constructors
-Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
+function Base.:+(ops::Union{AbstractSciMLOperator, AbstractMatrix}...)
+    ops_ = ()
+    for op in ops
+        op = op isa AbstractMatrix ? MatrixOperator(op) : op
+        ops_ = (ops_..., op)
+    end
+    AddedOperator(ops_...)
+end
 Base.:+(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, B.ops...)
 Base.:+(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., B)
 Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
@@ -327,6 +334,8 @@ function Base.:+(Z::NullOperator, A::AddedOperator)
 end
 
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
+Base.:-(A::AbstractSciMLOperator, B::AbstractMatrix) = A - MatrixOperator(B)
+Base.:-(A::AbstractMatrix, B::AbstractSciMLOperator) = MatrixOperator(A) - B
 
 for op in (
            :+, :-,
@@ -350,7 +359,7 @@ for op in (
 end
 
 Base.convert(::Type{AbstractMatrix}, L::AddedOperator) = sum(op -> convert(AbstractMatrix, op), L.ops)
-SparseArrays.sparse(L::AddedOperator) = sum(_sparse, L.ops)
+SparseArrays.sparse(L::AddedOperator) = sum(sparse, L.ops)
 
 # traits
 Base.size(L::AddedOperator) = size(first(L.ops))
@@ -482,7 +491,7 @@ for op in (
 end
 
 Base.convert(::Type{AbstractMatrix}, L::ComposedOperator) = prod(op -> convert(AbstractMatrix, op), L.ops)
-SparseArrays.sparse(L::ComposedOperator) = prod(_sparse, L.ops)
+SparseArrays.sparse(L::ComposedOperator) = prod(sparse, L.ops)
 
 # traits
 Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
@@ -686,7 +695,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstrac
     axpy!(β, L.cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat)
     mul!(v, L.L, u)
 end
 

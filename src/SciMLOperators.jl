@@ -17,7 +17,7 @@ import Base: +, -, *, /, \, ∘, ==, conj, exp, kron
 import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
-import SparseArrays: sparse
+import SparseArrays: sparse, issparse
 
 """
 $(TYPEDEF)
@@ -40,8 +40,8 @@ include("left.jl")
 include("multidim.jl")
 
 include("scalar.jl")
-include("basic.jl")
 include("matrix.jl")
+include("basic.jl")
 include("batch.jl")
 include("func.jl")
 include("tensor.jl")
