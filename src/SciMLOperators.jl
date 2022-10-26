@@ -3,10 +3,9 @@ module SciMLOperators
 using DocStringExtensions
 
 using LinearAlgebra
-import StaticArrays
 import SparseArrays
+import StaticArraysCore
 import ArrayInterfaceCore
-import Base: ReshapedArray
 import Tricks: static_hasmethod
 import Lazy: @forward
 import Setfield: @set!
