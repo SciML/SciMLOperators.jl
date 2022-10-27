@@ -14,7 +14,7 @@ K = 12
     L = 2π
 
     dx = L / n
-    x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
+    x  = -L/2:dx:L/2-dx |> Array
 
     k  = rfftfreq(n, 2π*n/L) |> Array
     m  = length(k)
