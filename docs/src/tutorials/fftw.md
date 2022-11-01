@@ -11,31 +11,29 @@ derivative of a function.
 using SciMLOperators
 using LinearAlgebra, FFTW
 
-L  = 2π
-n  = 256
+n = 256
+L = 2π
+
 dx = L / n
 x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
-
 u  = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-transform = plan_rfft(x)
-k = Array(rfftfreq(n, 2π*n/L))
+k  = rfftfreq(n, 2π*n/L) |> Array
+m  = length(k)
+tr = plan_rfft(x)
 
-op_transform = FunctionOperator(
-                                (du,u,p,t) -> mul!(du, transform, u);
-                                isinplace=true,
-                                T=ComplexF64,
-                                size=(length(k),n),
+L = FunctionOperator((du,u,p,t) -> mul!(du, tr, u), x, im*k;
+                     isinplace=true,
+                     T=ComplexF64,
 
-                                input_prototype=x,
-                                output_prototype=im*k,
-
-                                op_inverse = (du,u,p,t) -> ldiv!(du, transform, u)
-                               )
+                     op_adjoint = (du,u,p,t) -> ldiv!(du, tr, u),
+                     op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
+                     op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
+                    )
 
 ik = im * DiagonalOperator(k)
-Dx = op_transform \ ik * op_transform
+Dx = L \ ik * L
 
 Dx = cache_operator(Dx, x)
 
