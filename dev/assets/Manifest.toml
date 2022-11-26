@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.2"
+julia_version = "1.8.3"
 manifest_format = "2.0"
-project_hash = "60ceabd0c914400c9b774b2abdd7ce4f79ff39ae"
+project_hash = "509247ac92547f31178b720b7e0a38fc73b530ff"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -46,9 +46,9 @@ version = "0.2.3"
 
 [[deps.Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
-git-tree-sha1 = "3ca828fe1b75fa84b021a7860bd039eaea84d2f2"
+git-tree-sha1 = "aaabba4ce1b7f8a9b34c015053d3b1edf60fa49c"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.3.0"
+version = "4.4.0"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -198,9 +198,9 @@ version = "1.4.1"
 
 [[deps.Parsers]]
 deps = ["Dates", "SnoopPrecompile"]
-git-tree-sha1 = "cceb0257b662528ecdf0b4b4302eb00e767b38e7"
+git-tree-sha1 = "b64719e8b4504983c7fca6cc9db3ebc8acc2a4d6"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.5.0"
+version = "2.5.1"
 
 [[deps.Preferences]]
 deps = ["TOML"]
@@ -228,9 +228,9 @@ version = "1.3.1"
 
 [[deps.RecursiveArrayTools]]
 deps = ["Adapt", "ArrayInterfaceCore", "ArrayInterfaceStaticArraysCore", "ChainRulesCore", "DocStringExtensions", "FillArrays", "GPUArraysCore", "IteratorInterfaceExtensions", "LinearAlgebra", "RecipesBase", "StaticArraysCore", "Statistics", "Tables", "ZygoteRules"]
-git-tree-sha1 = "fe25988dce8dd3b763cf39d0ca39b09db3571ff7"
+git-tree-sha1 = "4c7a6462350942da60ea5749afd7cea58017301f"
 uuid = "731186ca-8d62-57ce-b412-fbd966d074cd"
-version = "2.32.1"
+version = "2.32.2"
 
 [[deps.RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
@@ -244,9 +244,9 @@ version = "0.7.0"
 
 [[deps.SciMLBase]]
 deps = ["ArrayInterfaceCore", "CommonSolve", "ConstructionBase", "Distributed", "DocStringExtensions", "EnumX", "FunctionWrappersWrappers", "IteratorInterfaceExtensions", "LinearAlgebra", "Logging", "Markdown", "Preferences", "RecipesBase", "RecursiveArrayTools", "RuntimeGeneratedFunctions", "StaticArraysCore", "Statistics", "Tables"]
-git-tree-sha1 = "5686a5c9660c5fb571e3a8be63ff1848de82bdbd"
+git-tree-sha1 = "333f274c40f7560997d1d5ca9ae4932534c85010"
 uuid = "0bca4576-84f4-4d90-8ffe-ffa030f20462"
-version = "1.71.0"
+version = "1.74.0"
 
 [[deps.SciMLOperators]]
 deps = ["ArrayInterfaceCore", "DocStringExtensions", "Lazy", "LinearAlgebra", "Setfield", "SparseArrays", "StaticArraysCore", "Tricks"]
