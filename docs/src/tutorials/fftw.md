@@ -21,19 +21,19 @@ du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
 k  = rfftfreq(n, 2π*n/L) |> Array
 m  = length(k)
-tr = plan_rfft(x)
+transform = plan_rfft(x)
 
-L = FunctionOperator((du,u,p,t) -> mul!(du, tr, u), x, im*k;
+T = FunctionOperator((du,u,p,t) -> mul!(du, transform, u), x, im*k;
                      isinplace=true,
                      T=ComplexF64,
 
-                     op_adjoint = (du,u,p,t) -> ldiv!(du, tr, u),
-                     op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
-                     op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
+                     op_adjoint = (du,u,p,t) -> ldiv!(du, transform, u),
+                     op_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
+                     op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
                     )
 
 ik = im * DiagonalOperator(k)
-Dx = L \ ik * L
+Dx = T \ ik * T
 
 Dx = cache_operator(Dx, x)
 
@@ -70,8 +70,9 @@ and `LinearAlgebra.mul!(xhat, transform, x)`.  We also get `k`, the frequency mo
 our finite grid, via the function `rfftfreq`.
 
 ```
-transform = plan_rfft(x)
-k = Array(rfftfreq(n, 2π*n/L))
+k  = rfftfreq(n, 2π*n/L) |> Array
+m  = length(k)
+tr = plan_rfft(x)
 ```
 
 Now we are ready to define our wrapper for the FFT object. To `FunctionOperator`, we
@@ -82,17 +83,14 @@ We also set the flag `isinplace` to `true` to signal that we intend to use the o
 in a non-allocating way, and pass in the element-type and size of the operator.
 
 ```
-op_transform = FunctionOperator(
-                                (du,u,p,t) -> mul!(du, transform, u);
-                                isinplace=true,
-                                T=ComplexF64,
-                                size=(length(k),n),
+T = FunctionOperator((du,u,p,t) -> mul!(du, transform, u), x, im*k;
+                     isinplace=true,
+                     T=ComplexF64,
 
-                                input_prototype=x,
-                                output_prototype=im*k,
-
-                                op_inverse = (du,u,p,t) -> ldiv!(du, transform, u)
-                               )
+                     op_adjoint = (du,u,p,t) -> ldiv!(du, transform, u),
+                     op_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
+                     op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
+                    )
 ```
 
 After wrapping the FFT with `FunctionOperator`, we are ready to compose it with other
@@ -102,7 +100,7 @@ both in-place, and out-of-place by comparing its output to the analytical deriva
 
 ```
 ik = im * DiagonalOperator(k)
-Dx = op_transform \ ik * op_transform
+Dx = T \ ik * T
 
 @show ≈(Dx * u, du; atol=1e-8)
 @show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)
