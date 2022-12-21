@@ -7,7 +7,7 @@ for op in (
            :*, :\,
           )
     @eval function Base.$op(L::AbstractSciMLOperator, u::AbstractArray)
-        u isa AbstractVecOrMat && @error "Base.$op not defined for $(typeof(L)), $(typeof(u))."
+        u isa AbstractVecOrMat && error("Operation $(Base.$op) not defined for $(typeof(L)), $(typeof(u)).")
 
         sizes = _mat_sizes(L, u)
         sizev = issquare(L) ? size(u) : begin
