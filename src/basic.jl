@@ -511,7 +511,7 @@ has_mul!(L::ComposedOperator) = all(has_mul!, L.ops)
 has_ldiv(L::ComposedOperator) = all(has_ldiv, L.ops)
 has_ldiv!(L::ComposedOperator) = all(has_ldiv!, L.ops)
 
-factorize(L::ComposedOperator) = prod(factorize, reverse(L.ops))
+factorize(L::ComposedOperator) = prod(factorize, L.ops)
 for fact in (
              :lu, :lu!,
              :qr, :qr!,
