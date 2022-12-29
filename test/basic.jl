@@ -157,8 +157,12 @@ end
     @test op isa ComposedOperator
     @test *(op.ops...) isa ComposedOperator
 
-    @test op * u ≈ ABCmulu
-    @test op \ u ≈ ABCdivu
+    opF = factorize(op)
+
+    @test opF isa ComposedOperator
+
+    @test ABCmulu ≈ op * u
+    @test ABCdivu ≈ op \ u ≈ opF \ u
 
     op = cache_operator(op, u)
     v=rand(N,K); @test mul!(v, op, u) ≈ ABCmulu
@@ -172,6 +176,20 @@ end
     op = cache_operator(op, u)
     v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
+
+    # Test caching of composed operator when inner ops do not support Base.:*
+    # See issue #129
+    inner_op = qr(MatrixOperator(rand(N, N)))
+    # We use the QR factorization of a non-square matrix, which does
+    # not support * as verified below.
+    @test !has_mul(inner_op)
+    @test has_ldiv(inner_op)
+    @test_throws MethodError inner_op * u
+    # We can now test that caching does not rely on matmul
+    op = inner_op * factorize(MatrixOperator(rand(N, N)))
+    @test_nowarn op = cache_operator(op, rand(N)) 
+    u = rand(N)
+    @test ldiv!(rand(N), op, u) ≈ op \ u
 end
 
 @testset "Adjoint, Transpose" begin

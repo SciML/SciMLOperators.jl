@@ -231,6 +231,7 @@ islinear(L::ScaledOperator) = all(islinear, L.ops)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 Base.iszero(L::ScaledOperator) = iszero(L.L) | iszero(L.λ)
 has_adjoint(L::ScaledOperator) = has_adjoint(L.L)
+has_mul(L::ScaledOperator) = has_mul(L.L)
 has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
@@ -507,11 +508,12 @@ getops(L::ComposedOperator) = L.ops
 islinear(L::ComposedOperator) = all(islinear, L.ops)
 Base.iszero(L::ComposedOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedOperator) = all(has_adjoint, L.ops)
+has_mul(L::ComposedOperator) = all(has_mul, L.ops)
 has_mul!(L::ComposedOperator) = all(has_mul!, L.ops)
 has_ldiv(L::ComposedOperator) = all(has_ldiv, L.ops)
 has_ldiv!(L::ComposedOperator) = all(has_ldiv!, L.ops)
 
-factorize(L::ComposedOperator) = prod(factorize, reverse(L.ops))
+factorize(L::ComposedOperator) = prod(factorize, L.ops)
 for fact in (
              :lu, :lu!,
              :qr, :qr!,
@@ -548,11 +550,24 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    vec = zero(u)
-    cache = (vec,)
-    for i in reverse(2:length(L.ops))
-        vec   = L.ops[i] * vec
-        cache = (vec, cache...)
+    if has_mul(L)
+        vec = zero(u)
+        cache = (vec,)
+        for i in reverse(2:length(L.ops))
+            vec   = L.ops[i] * vec
+            cache = (vec, cache...)
+        end
+    elseif has_ldiv(L)
+        m = size(L, 1) 
+        k = size(u, 2)
+        vec = u isa AbstractMatrix ? similar(u, (m, k)) : similar(u, (m,))
+        cache = ()
+        for i in 1:length(L.ops)
+            vec   = L.ops[i] \ vec
+            cache = (cache..., vec)
+        end
+    else
+        error("ComposedOperator cannot be cached without supporting either mul or ldiv.")
     end
 
     @set! L.cache = cache
@@ -647,6 +662,7 @@ Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
 
 getops(L::InvertedOperator) = (L.L,)
 
+has_mul(L::InvertedOperator) = has_ldiv(L.L)
 has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
 has_ldiv(L::InvertedOperator) = has_mul(L.L)
 has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
