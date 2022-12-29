@@ -176,6 +176,18 @@ end
     op = cache_operator(op, u)
     v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
+
+    # Test caching of composed operator when inner ops do not support Base.:*
+    # See issue #129
+    inner_op = factorize(MatrixOperator(rand(N-1,N)))
+    # We use the QR factorization of a non-square matrix, which does
+    # not support * as verified below.
+    @test !has_mul(inner_op)
+    @test has_ldiv(inner_op)
+    @test_throws MethodError inner_op * u
+    # We can now test that caching does not rely on matmul
+    op = inner_op * MatrixOperator(rand(N, N) )
+    @test_nowarn cache_operator(op, u) 
 end
 
 @testset "Adjoint, Transpose" begin
