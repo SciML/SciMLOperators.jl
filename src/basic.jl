@@ -199,14 +199,16 @@ for T in SCALINGNUMBERTYPES
         ScaledOperator(λ, L.L)
     end
     
-    @eval Base.:*(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(λ, L)
-    @eval Base.:*(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(λ, L)
+    for LT in SCALINGCOMBINETYPES
+        @eval Base.:*(λ::$T, L::$LT) = ScaledOperator(λ, L)
+        @eval Base.:*(L::$LT, λ::$T) = ScaledOperator(λ, L)
 
-    @eval Base.:\(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(inv(λ), L)
-    @eval Base.:\(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(λ, inv(L))
+        @eval Base.:\(λ::$T, L::$LT) = ScaledOperator(inv(λ), L)
+        @eval Base.:\(L::$LT, λ::$T) = ScaledOperator(λ, inv(L))
 
-    @eval Base.:/(L::AbstractSciMLOperator, λ::$T) = ScaledOperator(inv(λ), L)
-    @eval Base.:/(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(λ, inv(L))
+        @eval Base.:/(L::$LT, λ::$T) = ScaledOperator(inv(λ), L)
+        @eval Base.:/(λ::$T, L::$LT) = ScaledOperator(λ, inv(L))
+    end
 end
 
 Base.:-(L::AbstractSciMLOperator) = ScaledOperator(-true, L)
@@ -338,18 +340,20 @@ for op in (
           )
 
     for T in SCALINGNUMBERTYPES
-        @eval function Base.$op(L::AbstractSciMLOperator, λ::$T)
-            @assert issquare(L)
-            N  = size(L, 1)
-            Id = IdentityOperator{N}()
-            AddedOperator(L, $op(λ)*Id)
-        end
+        for LT in SCALINGCOMBINETYPES
+            @eval function Base.$op(L::$LT, λ::$T)
+                @assert issquare(L)
+                N  = size(L, 1)
+                Id = IdentityOperator{N}()
+                AddedOperator(L, $op(λ)*Id)
+            end
 
-        @eval function Base.$op(λ::$T, L::AbstractSciMLOperator)
-            @assert issquare(L)
-            N  = size(L, 1)
-            Id = IdentityOperator{N}()
-            AddedOperator(λ*Id, $op(L))
+            @eval function Base.$op(λ::$T, L::$LT)
+                @assert issquare(L)
+                N  = size(L, 1)
+                Id = IdentityOperator{N}()
+                AddedOperator(λ*Id, $op(L))
+            end
         end
     end
 end

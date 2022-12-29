@@ -30,6 +30,20 @@ K = 12
 
     X=rand(N,K); Y=rand(N,K); Z=copy(Y); a=rand(); aa=ScalarOperator(a);
     @test axpy!(aa,X,Y) ≈ a*X+Z
+
+    # Test that ScalarOperator's remain AbstractSciMLScalarOperator's under common ops
+    @test α + α isa SciMLOperators.AddedScalarOperator
+    (α + α) * u ≈ x * u + x * u
+    @test α * α isa SciMLOperators.ComposedScalarOperator
+    (α * α) * u ≈ x * x * u
+
+    # Test combination with other operators
+    for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator{N}())
+        @test α + op isa SciMLOperators.AddedOperator
+        @test (α + op) * u ≈ x * u + op * u
+        @test α * op isa SciMLOperators.ScaledOperator
+        @test (α * op) * u ≈ x * (op * u)
+    end
 end
 
 @testset "ScalarOperator update test" begin
