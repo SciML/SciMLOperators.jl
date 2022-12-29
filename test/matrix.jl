@@ -153,7 +153,7 @@ end
 end
 
 @testset "TensorProductOperator" begin
-for square in [false, true] for K in [1, K]
+for square in [false, true] #for K in [1, K]
     m1, n1 = 3 , 5
     m2, n2 = 7 , 11
     m3, n3 = 13, 17
@@ -232,6 +232,6 @@ for square in [false, true] for K in [1, K]
         u3=rand(N3,K); @test_broken ldiv!(u3, opABC_F, v3) ≈ ABC \ v3 # errors
     end
 
-end end
+end #end
 end
 #
