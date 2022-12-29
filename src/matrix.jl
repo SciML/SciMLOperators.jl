@@ -271,6 +271,7 @@ update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); nothi
 islinear(::AffineOperator) = false
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
 has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
+has_mul(L::AffineOperator) = has_mul(L.A)
 has_mul!(L::AffineOperator) = has_mul!(L.A)
 has_ldiv(L::AffineOperator) = has_ldiv(L.A)
 has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
