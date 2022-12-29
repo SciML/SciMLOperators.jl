@@ -90,6 +90,8 @@ has_mul!(L::TensorProductOperator) = has_mul!(L.outer) & has_mul!(L.inner)
 has_ldiv(L::TensorProductOperator) = has_ldiv(L.outer) & has_ldiv(L.inner)
 has_ldiv!(L::TensorProductOperator) = has_ldiv!(L.outer) & has_ldiv!(L.inner)
 
+factorize(L::TensorProductOperator) = TensorProductOperator(factorize(L.outer), factorize(L.inner))
+
 # operator application
 function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
     _ , ni = size(L.inner)
