@@ -550,11 +550,23 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    vec = zero(u)
-    cache = (vec,)
-    for i in reverse(2:length(L.ops))
-        vec   = L.ops[i] * vec
-        cache = (vec, cache...)
+    if has_mul(L)
+        vec = zero(u)
+        cache = (vec,)
+        for i in reverse(2:length(L.ops))
+            vec   = L.ops[i] * vec
+            cache = (vec, cache...)
+        end
+    elseif has_ldiv(L)
+        m, k = size(u)
+        vec = u isa AbstractMatrix ? similar(u, (m, k)) : similar(u, (m,))
+        cache = ()
+        for i in 1:length(L.ops)-1
+            vec   = L.ops[i] \ vec
+            cache = (cache..., vec)
+        end
+    else
+        error("ComposedOperator cannot be cached without supporting either mul or ldiv.")
     end
 
     @set! L.cache = cache
