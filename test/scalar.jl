@@ -36,6 +36,12 @@ K = 12
     (α + α) * u ≈ x * u + x * u
     @test α * α isa SciMLOperators.ComposedScalarOperator
     (α * α) * u ≈ x * x * u
+    @test inv(α) isa SciMLOperators.InvertedScalarOperator
+    inv(α) * u ≈ 1/x * u 
+    @test α * inv(α) isa SciMLOperators.ComposedScalarOperator
+    α * inv(α) * u ≈ u 
+    @test α / α isa SciMLOperators.ComposedScalarOperator
+    α * α * u ≈ u 
 
     # Test combination with other operators
     for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator{N}())
@@ -43,6 +49,9 @@ K = 12
         @test (α + op) * u ≈ x * u + op * u
         @test α * op isa SciMLOperators.ScaledOperator
         @test (α * op) * u ≈ x * (op * u)
+        @test all(map(T -> (T isa SciMLOperators.ScaledOperator), (α / op, op / α, op \ α, α \ op)))
+        @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
+        @test (op / α) * u ≈ (α \ op) * u ≈ 1/α * op * u 
     end
 end
 
