@@ -49,7 +49,7 @@ K = 12
         @test (α + op) * u ≈ x * u + op * u
         @test α * op isa SciMLOperators.ScaledOperator
         @test (α * op) * u ≈ x * (op * u)
-        @test all(isa.((α / op, op / α, op \ α, α \ op], SciMLOperators.ScaledOperator)))
+        @test all(map(T -> (T isa SciMLOperators.ScaledOperator), (α / op, op / α, op \ α, α \ op)))
         @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
         @test (op / α) * u ≈ (α \ op) * u ≈ 1/α * op * u 
     end
