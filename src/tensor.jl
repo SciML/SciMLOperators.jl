@@ -122,16 +122,24 @@ function Base.:\(L::TensorProductOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
-    mi, _  = size(L.inner)
+    mi, ni = size(L.inner)
     mo, no = size(L.outer)
     k = size(u, 2)
 
-    c1 = false * similar(u, (mi, no*k))  # c1 = L.inner * u
-    c2 = false * similar(u, (no, mi, k)) # permut (2, 1, 3)
-    c3 = false * similar(u, (mo, mi*k))  # c3 = L.outer * c2
-    c4 = false * similar(u, (mo*mi, k))  # cache v in 5 arg mul!
+    # 3 arg mul!
+    c1 = lmul!(false, similar(u, (mi, no*k)) ) # c1 = L.inner * u
+    c2 = lmul!(false, similar(u, (no, mi, k))) # permut (2, 1, 3)
+    c3 = lmul!(false, similar(u, (mo, mi*k)) ) # c3 = L.outer * c2
 
-    @set! L.cache = (c1, c2, c3, c4,)
+    # 5 arg mul!
+    c4 = lmul!(false, similar(u, (mo*mi, k)) ) # cache v in 5 arg mul!
+
+    # 3 arg ldiv!
+    c5 = lmul!(false, similar(u, (ni, mo*k)) ) # c1 = L.inner \ u
+    c6 = lmul!(false, similar(u, (mo, ni, k))) # permut (2, 1, 3)
+    c7 = lmul!(false, similar(u, (no, ni*k)) ) # c3 = L.outer \ c2
+
+    @set! L.cache = (c1, c2, c3, c4, c5, c6, c7)
     L
 end
 
@@ -160,7 +168,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     _ , no = size(L.outer)
     k = size(u, 2)
 
-    C1, C2, C3, _ = L.cache
+    C1, C2, C3 = L.cache[1:3]
     U = reshape(u, (ni, no*k))
 
     """
@@ -181,11 +189,11 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    _ , ni = size(L.inner)
-    _ , no = size(L.outer)
+    mi, ni = size(L.inner)
+    mo, no = size(L.outer)
     k = size(u, 2)
 
-    C1, C2, C3, c4 = L.cache
+    C1 = first(L.cache)
     U = reshape(u, (ni, no*k))
 
     """
@@ -197,7 +205,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
     mul!(C1, L.inner, U)
 
     # V = α(C * B') + β(V)
-    outer_mul!(v, L, u, α, β)
+    c = reshape(C1, (mi * no, k))
+    outer_mul!(v, L, c, α, β)
 
     v
 end
@@ -206,11 +215,11 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    mi , _ = size(L.inner)
-    mo , _ = size(L.outer)
+    mi , ni = size(L.inner)
+    mo , no = size(L.outer)
     k = size(u, 2)
 
-    C1, C2, C3, _ = L.cache
+    C1, C2, C3 = L.cache[1:3]
     U = reshape(u, (mi, mo * k))
 
     """
@@ -221,8 +230,9 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     # C .= A \ U
     ldiv!(C1, L.inner, U)
 
-    # V .= C / B' <===> V' .= B \ C'
-    outer_div!(v, L, u)
+    # V .= C / B' <==> V' .= B \ C'
+    c = reshape(C1, (ni * mo, k))
+    outer_div!(v, L, c)
 
     v
 end
@@ -250,7 +260,7 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     # U .= A \ U
     ldiv!(L.inner, U)
 
-    # U .= U / B' <===> U' .= B \ U'
+    # U .= U / B' <==> U' .= B \ U'
     outer_div!(L, u)
 
     u
@@ -311,7 +321,7 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         return v
     end
 
-    _, C2, C3, _ = L.cache
+    C2, C3 = L.cache[2:3]
 
     C1 = reshape(C1, (mi, no, k))
     permutedims!(C2, C1, PERM)
@@ -324,19 +334,18 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     v
 end
 
-function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
-    C1 = first(L.cache)
+function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, c::AbstractVecOrMat, α, β)
 
     m, _ = size(L)
-    k = size(u, 2)
+    k = size(c, 2)
 
     if L.outer isa IdentityOperator
-        c1 = reshape(C1, (m, k))
-        axpby!(α, c1, β, v)
+        c = reshape(c, (m, k))
+        axpby!(α, c, β, v)
         return v
     elseif L.outer isa ScaledOperator
-        a = convert(Number, α*L.outer.λ)
-        outer_mul!(v, L.outer.L, u, a, β)
+        a = convert(Number, α * L.outer.λ)
+        outer_mul!(v, L.outer.L, c, a, β)
         return v
     end
 
@@ -344,16 +353,16 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     mo, no = size(L.outer)
 
     if k == 1
-        V  = reshape(v, (mi, mo))
-        C1 = reshape(C1, (mi, no))
-        mul!(transpose(V), L.outer, transpose(C1), α, β)
+        V = reshape(v, (mi, mo))
+        C = reshape(c, (mi, no))
+        mul!(transpose(V), L.outer, transpose(C), α, β)
         return v
     end
 
-    _, C2, C3, c4 = L.cache
+    C2, C3, c4 = L.cache[2:4]
 
-    C1 = reshape(C1, (mi, no, k))
-    permutedims!(C2, C1, PERM)
+    C = reshape(c, (mi, no, k))
+    permutedims!(C2, C, PERM)
     C2 = reshape(C2, (no, mi*k))
     mul!(C3, L.outer, C2)
     C3 = reshape(C3, (mo, mi, k))
@@ -379,7 +388,6 @@ function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
 
     _ , ni = size(L.inner)
     mo, no = size(L.outer)
-#   m , n  = size(L)
 
     C = reshape(C, (ni, mo, k))
     C = permutedims(C, PERM)
@@ -392,35 +400,33 @@ function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
     V
 end
 
-function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
-    C1 = first(L.cache)
+function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, c::AbstractVecOrMat)
 
     if L.outer isa IdentityOperator
-        copyto!(v, C1)
+        copyto!(v, c)
         return v
     elseif L.outer isa ScaledOperator
-        outer_div!(v, L.outer.L, u)
+        outer_div!(v, L.outer.L, c)
         ldiv!(L.outer.λ, v)
         return v
     end
 
-    mi, no = size(L.inner)
+    mi, ni = size(L.inner)
     mo, no = size(L.outer)
-#   m , n  = size(L)
-    k = size(u, 2)
+    k = size(c, 2)
 
     if k == 1
-        V  = reshape(v, (mi, mo))
-        C1 = reshape(C1, (mi, no))
-        ldiv!(transpose(V), L.outer, transpose(C1))
+        V = reshape(v, (ni, no))
+        C = reshape(c, (ni, mo))
+        ldiv!(transpose(V), L.outer, transpose(C))
         return v
     end
 
-    _, C2, C3, _ = L.cache
+    C2, C3 = L.cache[2:3]
 
-    C1 = reshape(C1, (mi, no, k))
-    permutedims!(C2, C1, PERM)
-    C2 = reshape(C2, (no, mi*k))
+    C = reshape(c, (ni, mo, k))
+    permutedims!(C2, C, PERM)
+    C2 = reshape(C2, (mo, ni*k))
     ldiv!(C3, L.outer, C2)
     C3 = reshape(C3, (mo, mi, k))
     V  = reshape(v , (mi, mo, k))
@@ -440,7 +446,6 @@ function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
 
     _ , ni = size(L.inner)
     _ , no = size(L.outer)
-#   m , n  = size(L)
     k = size(u, 2)
 
     U = reshape(u, (ni, no*k))

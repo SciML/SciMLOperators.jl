@@ -220,9 +220,8 @@ end
     v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
     v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
 
-    # TODO - nonsquare  division
     #u2=rand(N2,K); @test ldiv!(u2, opAB_F , v2) ≈ AB  \ v2
-    #u3=rand(N3,K); @test ldiv!(u3, factorize(opABC), v3) ≈ ABC \ v3
+    #u3=rand(N3,K); @test ldiv!(u3, opABC_F, v3) ≈ ABC \ v3
 
     if square
         v2=copy(u2); @test ldiv!(opAB_F , u2) ≈ AB  \ v2
