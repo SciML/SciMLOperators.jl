@@ -169,6 +169,9 @@ end
     u2 = rand(n1*n2, K)
     u3 = rand(n1*n2*n3, K)
 
+    v2 = rand(m1*m2, K)
+    v3 = rand(m1*m2*m3, K)
+
     opAB  = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
 
@@ -180,6 +183,9 @@ end
 
     @test opAB  * u2 ≈ AB  * u2
     @test opABC * u3 ≈ ABC * u3
+
+    @test opAB  \ v2 ≈ AB  \ v2
+    @test opABC \ v3 ≈ ABC \ v3
 
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)
@@ -193,6 +199,12 @@ end
 
     v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
     v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
+
+    # TODO - nonsquare  division
+    #u2=rand(N2,K); @test ldiv!(u2, factorize(opAB) , v2) ≈ AB  \ v2
+    #u3=rand(N3,K); @test ldiv!(u3, factorize(opABC), v3) ≈ ABC \ v3
+    #v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
+    #v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
 
     N1 = 8
     N2 = 12

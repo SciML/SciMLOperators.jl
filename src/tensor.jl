@@ -105,17 +105,17 @@ function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
 end
 
 function Base.:\(L::TensorProductOperator, u::AbstractVecOrMat)
-    _ , ni = size(L.inner)
-    _ , no = size(L.outer)
+    mi , _ = size(L.inner)
+    mo , _ = size(L.outer)
     m , n  = size(L)
     k = size(u, 2)
 
-    U = reshape(u, (ni, no*k))
+    U = reshape(u, (mi, mo * k))
     C = L.inner \ U
 
     V = outer_div(L, u, C)
 
-    u isa AbstractMatrix ? reshape(V, (m, k)) : reshape(V, (m,))
+    u isa AbstractMatrix ? reshape(V, (n, k)) : reshape(V, (n,))
 end
 
 function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
@@ -203,12 +203,12 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    _ , ni = size(L.inner)
-    _ , no = size(L.outer)
+    mi , _ = size(L.inner)
+    mo , _ = size(L.outer)
     k = size(u, 2)
 
     C1, C2, C3, _ = L.cache
-    U = reshape(u, (ni, no*k))
+    U = reshape(u, (mi, mo * k))
 
     """
         v .= kron(B, A) ldiv u
@@ -228,11 +228,11 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
-    ni = size(L.inner, 1)
-    no = size(L.outer, 1)
+    mi = size(L.inner, 1)
+    mo = size(L.outer, 1)
     k  = size(u, 2)
 
-    U = reshape(u, (ni, no*k))
+    U = reshape(u, (mi, mo * k))
 
     """
         u .= kron(B, A) ldiv u
@@ -369,16 +369,16 @@ function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
         return transpose(L.outer \ transpose(C))
     end
 
-    mi, _  = size(L.inner)
+    _ , ni = size(L.inner)
     mo, no = size(L.outer)
 #   m , n  = size(L)
 
-    C = reshape(C, (mi, no, k))
+    C = reshape(C, (ni, mo, k))
     C = permutedims(C, PERM)
-    C = reshape(C, (no, mi*k))
+    C = reshape(C, (mo, ni * k))
 
     V = L.outer \ C
-    V = reshape(V, (mo, mi, k))
+    V = reshape(V, (no, ni, k))
     V = permutedims(V, PERM)
 
     V
@@ -396,7 +396,7 @@ function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
         return v
     end
 
-    mi, _  = size(L.inner)
+    mi, no = size(L.inner)
     mo, no = size(L.outer)
 #   m , n  = size(L)
     k = size(u, 2)
