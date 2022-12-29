@@ -199,13 +199,12 @@ end
         @test AB ≈ convert(AbstractMatrix, opAB_F)
         @test ABC ≈ convert(AbstractMatrix, opABC_F)
 
-        @test AB \ v2 ≈ opAB \ v2 ≈ opAB_F \ v2
+        @test AB  \ v2 ≈ opAB  \ v2 ≈ opAB_F  \ v2
         @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
     end
 
     @test AB  * u2 ≈ opAB  * u2
     @test ABC * u3 ≈ opABC * u3
-
 
     @test opAB  \ v2 ≈ AB  \ v2
     @test opABC \ v3 ≈ ABC \ v3
