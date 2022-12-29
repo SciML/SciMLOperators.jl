@@ -112,7 +112,17 @@ islinear(::Union{
                 }
         ) = true
 
-has_mul(L) = true
+has_mul(L) = false
+has_mul(::Union{
+                 # LinearAlgebra
+                 AbstractVecOrMat,
+                 AbstractMatrix,
+                 UniformScaling,
+
+                 # Base
+                 Number,
+                }
+        ) = true
 
 has_mul!(L) = false
 has_mul!(::Union{

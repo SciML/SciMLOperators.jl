@@ -88,6 +88,7 @@ for (op, LType, VType) in (
 
                              # SciML
                              isconstant,
+                             has_mul,
                              has_mul!,
                              has_ldiv,
                              has_ldiv!,
