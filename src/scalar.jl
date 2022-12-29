@@ -55,14 +55,32 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat,
     mul!(v, α, u, a, b)
 end
 
-function LinearAlgebra.axpy!(α::AbstractSciMLScalarOperator, x::AbstractVecOrMat, y::AbstractVecOrMat)
+function LinearAlgebra.axpy!(α::AbstractSciMLScalarOperator,
+                             x::AbstractVecOrMat,
+                             y::AbstractVecOrMat)
     α = convert(Number, α)
     axpy!(α, x, y)
 end
 
-function LinearAlgebra.axpby!(α::Union{Number,AbstractSciMLScalarOperator},
+function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
                               x::AbstractVecOrMat,
-                              β::Union{Number,AbstractSciMLScalarOperator},
+                              β::Number,
+                              y::AbstractVecOrMat)
+    α = convert(Number, α)
+    axpby!(α, x, β, y)
+end
+
+function LinearAlgebra.axpby!(α::Number,
+                              x::AbstractVecOrMat,
+                              β::AbstractSciMLScalarOperator,
+                              y::AbstractVecOrMat)
+    β = convert(Number, β)
+    axpby!(α, x, β, y)
+end
+
+function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
+                              x::AbstractVecOrMat,
+                              β::AbstractSciMLScalarOperator,
                               y::AbstractVecOrMat)
     α = convert(Number, α)
     β = convert(Number, β)

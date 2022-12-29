@@ -6,7 +6,7 @@ using FFTW
 
 Random.seed!(0)
 N = 8
-K = 12
+K = 19
 
 @testset "MatrixOperator, InvertibleOperator" begin
     u = rand(N,K)
@@ -152,7 +152,8 @@ end
     v=copy(u); @test L(v,u,p,t) ≈ ans
 end
 
-@testset "TensorProductOperator" begin for square in [false, true]
+@testset "TensorProductOperator" begin
+for square in [false, true] #for K in [1, K]
     m1, n1 = 3 , 5
     m2, n2 = 7 , 11
     m3, n3 = 13, 17
@@ -177,6 +178,10 @@ end
     v2 = rand(m1*m2, K)
     v3 = rand(m1*m2*m3, K)
 
+    # Outputs
+    v2 = rand(m1*m2, K)
+    v3 = rand(m1*m2*m3, K)
+
     opAB  = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
 
@@ -186,47 +191,50 @@ end
     @test AB ≈ convert(AbstractMatrix, opAB)
     @test ABC ≈ convert(AbstractMatrix, opABC)
 
-    if square
-        opAB_F = factorize(opAB)
-        opABC_F = factorize(opABC)
+    # factorization tests
+    opAB_F = factorize(opAB)
+    opABC_F = factorize(opABC)
 
-        @test opAB_F isa TensorProductOperator
-        @test opABC_F isa TensorProductOperator
+    @test opAB_F isa TensorProductOperator
+    @test opABC_F isa TensorProductOperator
 
-        @test AB ≈ convert(AbstractMatrix, opAB_F)
-        @test ABC ≈ convert(AbstractMatrix, opABC_F)
-
-        @test AB \ v2 ≈ opAB \ v2 ≈ opAB_F \ v2
-        @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
-    end
+    @test AB ≈ convert(AbstractMatrix, opAB_F)
+    @test ABC ≈ convert(AbstractMatrix, opABC_F)
 
     @test AB  * u2 ≈ opAB  * u2
     @test ABC * u3 ≈ opABC * u3
 
+    @test AB  \ v2 ≈ opAB  \ v2 ≈ opAB_F  \ v2
+    @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
 
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)
+
+    opAB_F  = cache_operator(opAB_F,  u2)
+    opABC_F = cache_operator(opABC_F, u3)
 
     N2 = n1*n2
     N3 = n1*n2*n3
     M2 = m1*m2
     M3 = m1*m2*m3
+
     v2=rand(M2,K); @test mul!(v2, opAB , u2) ≈ AB  * u2
     v3=rand(M3,K); @test mul!(v3, opABC, u3) ≈ ABC * u3
 
     v2=rand(M2,K); w2=copy(v2); @test mul!(v2, opAB , u2, α, β) ≈ α*AB *u2 + β*w2
     v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
 
-    N1 = 8
-    N2 = 12
-    A = Bidiagonal(rand(N1,N1), :L) # invertible
-    B = Bidiagonal(rand(N2,N2), :L)
-    u = rand(N1*N2)
+    if square
+        u2=rand(N2,K); @test ldiv!(u2, opAB_F , v2) ≈ AB  \ v2
+        u3=rand(N3,K); @test ldiv!(u3, opABC_F, v3) ≈ ABC \ v3
 
-    AB = kron(A, B)
-    op = ⊗(A, B)
-    op = cache_operator(op, u)
-    v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
-    v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
-end end
+        v2=copy(u2); @test ldiv!(opAB_F , u2) ≈ AB  \ v2
+        v3=copy(u3); @test ldiv!(opABC_F, u3) ≈ ABC \ v3
+    else # TODO
+        u2=rand(N2,K); @test_broken ldiv!(u2, opAB_F , v2) ≈ AB  \ v2 # fails
+        u3=rand(N3,K); @test_broken ldiv!(u3, opABC_F, v3) ≈ ABC \ v3 # errors
+    end
+
+end #end
+end
 #
