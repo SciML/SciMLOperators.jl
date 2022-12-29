@@ -9,6 +9,18 @@ SCALINGNUMBERTYPES = (
                       :UniformScaling,
                      )
 
+#= 
+The identity operator must be listed here
+so that rules for combination with scalar
+operators take precedence over rules for
+combining with the identity operator when
+the two are combined together.
+=#
+SCALINGCOMBINETYPES = (
+    :AbstractSciMLOperator,
+    :(IdentityOperator{N} where {N})
+)
+
 Base.size(α::AbstractSciMLScalarOperator) = ()
 Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
 Base.transpose(α::AbstractSciMLScalarOperator) = α
