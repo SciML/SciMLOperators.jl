@@ -173,10 +173,8 @@ end
     # Inputs
     u2 = rand(n1*n2, K)
     u3 = rand(n1*n2*n3, K)
-    # Outputs
-    v2 = rand(m1*m2, K)
-    v3 = rand(m1*m2*m3, K)
 
+    # Outputs
     v2 = rand(m1*m2, K)
     v3 = rand(m1*m2*m3, K)
 
@@ -189,25 +187,21 @@ end
     @test AB ≈ convert(AbstractMatrix, opAB)
     @test ABC ≈ convert(AbstractMatrix, opABC)
 
-    if square
-        opAB_F = factorize(opAB)
-        opABC_F = factorize(opABC)
+    # factorization tests
+    opAB_F = factorize(opAB)
+    opABC_F = factorize(opABC)
 
-        @test opAB_F isa TensorProductOperator
-        @test opABC_F isa TensorProductOperator
+    @test opAB_F isa TensorProductOperator
+    @test opABC_F isa TensorProductOperator
 
-        @test AB ≈ convert(AbstractMatrix, opAB_F)
-        @test ABC ≈ convert(AbstractMatrix, opABC_F)
-
-        @test AB  \ v2 ≈ opAB  \ v2 ≈ opAB_F  \ v2
-        @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
-    end
+    @test AB ≈ convert(AbstractMatrix, opAB_F)
+    @test ABC ≈ convert(AbstractMatrix, opABC_F)
 
     @test AB  * u2 ≈ opAB  * u2
     @test ABC * u3 ≈ opABC * u3
 
-    @test opAB  \ v2 ≈ AB  \ v2
-    @test opABC \ v3 ≈ ABC \ v3
+    @test AB  \ v2 ≈ opAB  \ v2 ≈ opAB_F  \ v2
+    @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
 
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)

@@ -28,12 +28,9 @@ using Test
     opAB  = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
 
-    @test AB \ v2 ≈ opAB \ v2
-    @test ABC \ v3 ≈ opABC \ v3
-
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)
-    
+
     M3 = m1*m2*m3
 
     v3=rand(M3,K); w3=copy(v3);
