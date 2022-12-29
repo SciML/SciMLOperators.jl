@@ -251,5 +251,5 @@ Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
 
 getops(α::InvertedScalarOperator) = (α.λ,)
 has_ldiv(α::InvertedScalarOperator) = has_mul(α.λ)
-has_ldiv!(α::InvertedScalarOperator) = all(has_ldiv!, α.ops)
+has_ldiv!(α::InvertedScalarOperator) = has_ldiv(α)
 #
