@@ -174,6 +174,9 @@ for square in [false, true] #for K in [1, K]
     # Inputs
     u2 = rand(n1*n2, K)
     u3 = rand(n1*n2*n3, K)
+    # Outputs
+    v2 = rand(m1*m2, K)
+    v3 = rand(m1*m2*m3, K)
 
     # Outputs
     v2 = rand(m1*m2, K)
