@@ -244,6 +244,8 @@ end
 # getindex
 Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.L[i]
 Base.getindex(L::ScaledOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]
+
+factorize(L::ScaledOperator) = L.λ * factorize(L.L)
 for fact in (
              :lu, :lu!,
              :qr, :qr!,
