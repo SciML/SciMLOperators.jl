@@ -152,10 +152,14 @@ end
     v=copy(u); @test L(v,u,p,t) ≈ ans
 end
 
-@testset "TensorProductOperator" begin
+@testset "TensorProductOperator" begin for square in [false, true]
     m1, n1 = 3 , 5
     m2, n2 = 7 , 11
     m3, n3 = 13, 17
+
+    if square
+        n1, n2, n3 = m1, m2, m3
+    end
 
     A = rand(m1, n1)
     B = rand(m2, n2)
@@ -182,20 +186,26 @@ end
     @test opAB  isa TensorProductOperator
     @test opABC isa TensorProductOperator
 
-    opAB_F = factorize(opAB)
-    opABC_F = factorize(opABC)
+    @test AB ≈ convert(AbstractMatrix, opAB)
+    @test ABC ≈ convert(AbstractMatrix, opABC)
 
-    @test opAB_F isa TensorProductOperator
-    @test opABC_F isa TensorProductOperator
+    if square
+        opAB_F = factorize(opAB)
+        opABC_F = factorize(opABC)
 
-    @test AB ≈ convert(AbstractMatrix, opAB) ≈ convert(AbstractMatrix, opAB_F)
-    @test ABC ≈ convert(AbstractMatrix, opABC) ≈ convert(AbstractMatrix, opABC_F)
+        @test opAB_F isa TensorProductOperator
+        @test opABC_F isa TensorProductOperator
+
+        @test AB ≈ convert(AbstractMatrix, opAB_F)
+        @test ABC ≈ convert(AbstractMatrix, opABC_F)
+
+        @test AB \ v2 ≈ opAB \ v2 ≈ opAB_F \ v2
+        @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
+    end
 
     @test AB  * u2 ≈ opAB  * u2
     @test ABC * u3 ≈ opABC * u3
 
-    @test_broken AB \ v2 ≈ opAB \ v2 ≈ opAB_F \ v2
-    @test_broken ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
 
     @test opAB  \ v2 ≈ AB  \ v2
     @test opABC \ v3 ≈ ABC \ v3
@@ -230,5 +240,5 @@ end
     op = cache_operator(op, u)
     v=rand(N1*N2); @test ldiv!(v, op, u) ≈ AB \ u
     v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
-end
+end end
 #
