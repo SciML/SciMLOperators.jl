@@ -115,7 +115,7 @@ Base.iszero(α::ScalarOperator) = iszero(α.val)
 
 getops(α::ScalarOperator) = (α.val,)
 isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
-has_ldiv(α::ScalarOperator) = iszero(α.val)
+has_ldiv(α::ScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
 update_coefficients!(L::ScalarOperator,u,p,t) = (L.val = L.update_func(L.val,u,p,t); nothing)
@@ -206,4 +206,50 @@ Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
 getops(α::ComposedScalarOperator) = α.ops
 has_ldiv(α::ComposedScalarOperator) = all(has_ldiv, α.ops)
 has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
+
+"""
+Lazy inversion of Scalar Operators
+"""
+#=
+Keeping with the style, we avoid use of the generic InvertedOperator and instead 
+have a specialized type for this purpose that subtypes AbstractSciMLScalarOperator.
+=#
+struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
+    λ::λType
+
+    function InvertedScalarOperator(λ::AbstractSciMLScalarOperator{T}) where {T}
+        new{T,typeof(λ)}(λ)
+    end
+end
+Base.inv(L::AbstractSciMLScalarOperator) = InvertedScalarOperator(L)
+
+for op in (
+           :/,
+          )
+    for T in SCALINGNUMBERTYPES[2:end]
+        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = α * inv(ScalarOperator(x))
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ScalarOperator(x) * inv(α) 
+        @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = α * inv(β) 
+    end
+end
+
+for op in (
+           :\,
+          )
+    for T in SCALINGNUMBERTYPES[2:end]
+        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = inv(α) * ScalarOperator(x)
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = inv(ScalarOperator(x)) * α
+        @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = inv(α) * β
+    end
+end
+
+function Base.convert(::Type{Number}, α::InvertedScalarOperator{T}) where{T}
+    return inv(convert(Number, α.λ))
+end
+
+Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
+
+getops(α::InvertedScalarOperator) = (α.λ,)
+has_ldiv(α::InvertedScalarOperator) = has_mul(α.λ)
+has_ldiv!(α::InvertedScalarOperator) = all(has_ldiv!, α.ops)
 #
