@@ -135,9 +135,13 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     c4 = lmul!(false, similar(u, (mo*mi, k)) ) # cache v in 5 arg mul!
 
     # 3 arg ldiv!
-    c5 = lmul!(false, similar(u, (ni, mo*k)) ) # c1 = L.inner \ u
-    c6 = lmul!(false, similar(u, (mo, ni, k))) # permut (2, 1, 3)
-    c7 = lmul!(false, similar(u, (no, ni*k)) ) # c3 = L.outer \ c2
+    if issquare(L.inner) & issquare(L.outer)
+        c5, c6, c7 = c1, c2, c3
+    else
+        c5 = lmul!(false, similar(u, (ni, mo*k)) ) # c5 = L.inner \ u
+        c6 = lmul!(false, similar(u, (mo, ni, k))) # permut (2, 1, 3)
+        c7 = lmul!(false, similar(u, (no, ni*k)) ) # c7 = L.outer \ c6
+    end
 
     @set! L.cache = (c1, c2, c3, c4, c5, c6, c7)
     L
@@ -219,8 +223,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     mo , no = size(L.outer)
     k = size(u, 2)
 
-    C1, C2, C3 = L.cache[1:3]
-    U = reshape(u, (mi, mo * k))
+    C5 = L.cache[5]
+    U  = reshape(u, (mi, mo * k))
 
     """
         v .= kron(B, A) ldiv u
@@ -228,10 +232,10 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
     """
 
     # C .= A \ U
-    ldiv!(C1, L.inner, U)
+    ldiv!(C5, L.inner, U)
 
     # V .= C / B' <==> V' .= B \ C'
-    c = reshape(C1, (ni * mo, k))
+    c = reshape(C5, (ni * mo, k))
     outer_div!(v, L, c)
 
     v
@@ -422,15 +426,15 @@ function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, c::AbstractVe
         return v
     end
 
-    C2, C3 = L.cache[2:3]
+    C6, C7 = L.cache[6:7]
 
     C = reshape(c, (ni, mo, k))
-    permutedims!(C2, C, PERM)
-    C2 = reshape(C2, (mo, ni*k))
-    ldiv!(C3, L.outer, C2)
-    C3 = reshape(C3, (mo, mi, k))
-    V  = reshape(v , (mi, mo, k))
-    permutedims!(V, C3, PERM)
+    permutedims!(C6, C, PERM)
+    C6 = reshape(C6, (mo, ni*k))
+    ldiv!(C7, L.outer, C6)
+    C7 = reshape(C7, (no, ni, k))
+    V  = reshape(v , (ni, no, k))
+    permutedims!(V, C7, PERM)
 
     v
 end
