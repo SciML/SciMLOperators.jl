@@ -157,8 +157,12 @@ end
     @test op isa ComposedOperator
     @test *(op.ops...) isa ComposedOperator
 
-    @test op * u ≈ ABCmulu
-    @test op \ u ≈ ABCdivu
+    opF = factorize(op)
+
+    @test opF isa ComposedOperator
+
+    @test ABCmulu ≈ op * u
+    @test ABCdivu ≈ op \ u ≈ opF \ u
 
     op = cache_operator(op, u)
     v=rand(N,K); @test mul!(v, op, u) ≈ ABCmulu
