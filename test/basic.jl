@@ -98,8 +98,16 @@ end
 
     op = ScaledOperator(α, MatrixOperator(A))
 
-    @test op * u       ≈     α * A * u
+    @test op isa ScaledOperator
+
+    @test α * A * u ≈ op * u
     @test (β * op) * u ≈ β * α * A * u
+
+    opF = factorize(op)
+
+    @test opF isa ScaledOperator
+
+    @test α * A  ≈ convert(AbstractMatrix, op) ≈ convert(AbstractMatrix, opF)
 
     v=rand(N,K); @test mul!(v, op, u) ≈ α * A * u
     v=rand(N,K); w=copy(v); @test mul!(v, op, u, a, b) ≈ a*(α*A*u) + b*w

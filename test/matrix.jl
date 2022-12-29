@@ -166,8 +166,12 @@ end
     AB  = kron(A, B)
     ABC = kron(A, B, C)
 
+    # Inputs
     u2 = rand(n1*n2, K)
     u3 = rand(n1*n2*n3, K)
+    # Outputs
+    v2 = rand(m1*m2, K)
+    v3 = rand(m1*m2*m3, K)
 
     opAB  = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
@@ -175,11 +179,20 @@ end
     @test opAB  isa TensorProductOperator
     @test opABC isa TensorProductOperator
 
-    @test convert(AbstractMatrix, opAB)  ≈ AB
-    @test convert(AbstractMatrix, opABC) ≈ ABC
+    opAB_F = factorize(opAB)
+    opABC_F = factorize(opABC)
 
-    @test opAB  * u2 ≈ AB  * u2
-    @test opABC * u3 ≈ ABC * u3
+    @test opAB_F isa TensorProductOperator
+    @test opABC_F isa TensorProductOperator
+
+    @test AB ≈ convert(AbstractMatrix, opAB) ≈ convert(AbstractMatrix, opAB_F)
+    @test ABC ≈ convert(AbstractMatrix, opABC) ≈ convert(AbstractMatrix, opABC_F)
+
+    @test AB  * u2 ≈ opAB  * u2
+    @test ABC * u3 ≈ opABC * u3
+
+    @test_broken AB \ v2 ≈ opAB \ v2 ≈ opAB_F \ v2
+    @test_broken ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
 
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)
