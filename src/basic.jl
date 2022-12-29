@@ -558,10 +558,11 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
             cache = (vec, cache...)
         end
     elseif has_ldiv(L)
-        m, k = size(u)
+        m = size(L, 1) 
+        k = size(u, 2)
         vec = u isa AbstractMatrix ? similar(u, (m, k)) : similar(u, (m,))
         cache = ()
-        for i in 1:length(L.ops)-1
+        for i in 1:length(L.ops)
             vec   = L.ops[i] \ vec
             cache = (cache..., vec)
         end
