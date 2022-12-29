@@ -206,10 +206,14 @@ end
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)
 
+    opAB_F  = cache_operator(opAB_F,  u2)
+    opABC_F = cache_operator(opABC_F, u3)
+
     N2 = n1*n2
     N3 = n1*n2*n3
     M2 = m1*m2
     M3 = m1*m2*m3
+
     v2=rand(M2,K); @test mul!(v2, opAB , u2) ≈ AB  * u2
     v3=rand(M3,K); @test mul!(v3, opABC, u3) ≈ ABC * u3
 
@@ -217,10 +221,13 @@ end
     v3=rand(M3,K); w3=copy(v3); @test mul!(v3, opABC, u3, α, β) ≈ α*ABC*u3 + β*w3
 
     # TODO - nonsquare  division
-    #u2=rand(N2,K); @test ldiv!(u2, factorize(opAB) , v2) ≈ AB  \ v2
+    #u2=rand(N2,K); @test ldiv!(u2, opAB_F , v2) ≈ AB  \ v2
     #u3=rand(N3,K); @test ldiv!(u3, factorize(opABC), v3) ≈ ABC \ v3
-    #v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
-    #v=copy(u);     @test ldiv!(op, u)    ≈ AB \ v
+
+    if square
+        v2=copy(u2); @test ldiv!(opAB_F , u2) ≈ AB  \ v2
+        v3=copy(u3); @test ldiv!(opABC_F, u3) ≈ ABC \ v3
+    end
 
     N1 = 8
     N2 = 12

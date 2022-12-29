@@ -228,6 +228,11 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::A
 end
 
 function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
+    msg = "Two-argument ldiv! is only available for square operators"
+    @assert issquare(L) msg
+    @assert issquare(L.inner) msg
+    @assert issquare(L.outer) msg
+
     @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
