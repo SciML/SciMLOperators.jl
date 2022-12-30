@@ -147,7 +147,7 @@ function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
     L
 end
 
-function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat) where{D}
+function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
     if !(L.isset)
         L = cache_self(L, u)
     end
