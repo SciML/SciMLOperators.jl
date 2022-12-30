@@ -56,16 +56,23 @@ K = 12
 end
 
 @testset "ScalarOperator update test" begin
-    u = rand(N,K)
-    p = rand(N)
-    t = 0.0
+    u = ones(N,K)
+    v = zeros(N,K)
+    p = rand()
+    t = rand()
 
-    α = ScalarOperator(zero(Float64);
-                       update_func=(a,u,p,t) -> sum(p)
-                      )
+    α = ScalarOperator(0.0; update_func=(a,u,p,t) -> p)
+    β = ScalarOperator(0.0; update_func=(a,u,p,t) -> t)
 
-    ans = sum(p) * u
-    @test α(u,p,t) ≈ ans
-    v=copy(u); @test α(v,u,p,t) ≈ ans
+    @test α(u,p,t)   ≈ p * u
+    @test α(v,u,p,t) ≈ p * u
+
+    num = α + 2 / β * 3 - 4
+    val = p + 2 / t * 3 - 4
+
+    @test num(u,p,t)   ≈ val * u
+    @test num(v,u,p,t) ≈ val * u
+
+    @test convert(Number, num) ≈ val
 end
 #
