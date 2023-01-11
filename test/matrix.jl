@@ -235,7 +235,7 @@ for square in [false, true] #for K in [1, K]
         if VERSION < v"1.9-"
             @test_broken ldiv!(u2, opAB_F , v2) ≈ AB  \ v2
         else
-            @test ldiv!(u2, opAB_F , v2) ≈ AB  \ v2 # fails
+            @test ldiv!(u2, opAB_F , v2) ≈ AB  \ v2
         end
         u3=rand(N3,K); @test_broken ldiv!(u3, opABC_F, v3) ≈ ABC \ v3 # errors
     end
