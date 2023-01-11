@@ -111,6 +111,9 @@ function DiagonalOperator(diag::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
+const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ? LinearAlgebra.AdjointFactorization : Adjoint
+const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? LinearAlgebra.TransposeFactorization : Transpose
+
 """
     InvertibleOperator(F)
 
@@ -153,13 +156,12 @@ function Base.convert(::Type{<:Factorization}, L::InvertibleOperator{T,<:Factori
     L.F
 end
 
-function Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator)
-    if L.F isa Adjoint
-        convert(AbstractMatrix,L.F')'
-    else
-        convert(AbstractMatrix, L.F)
-    end
-end
+Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator) =
+    convert(AbstractMatrix, L.F)
+Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator{<:Any,<:Union{Adjoint,AdjointFact}}) =
+    adjoint(convert(AbstractMatrix, adjoint(L.F)))
+Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator{<:Any,<:Union{Transpose,TransposeFact}}) =
+    transpose(convert(AbstractMatrix, transpose(L.F)))
 
 # traits
 Base.size(L::InvertibleOperator) = size(L.F)
