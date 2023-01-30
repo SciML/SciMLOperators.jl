@@ -75,8 +75,6 @@ Base.eltype(::AbstractSciMLOperator{T}) where T = T
 Base.oneunit(L::AbstractSciMLOperator) = one(L)
 Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
 
-issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
-
 Base.iszero(::AbstractSciMLOperator) = false # TODO
 
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
@@ -160,7 +158,7 @@ has_adjoint(::Union{
                    }
            ) = true
 
-issquare(A) = size(A,1) === size(A,2)
+issquare(L) = isequal(size(L)...)
 issquare(::Union{
                  # LinearAlgebra
                  UniformScaling,
