@@ -174,6 +174,7 @@ LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 getops(L::InvertibleOperator) = (L.F,)
+islinear(L::InvertibleOperator) = islinear(L.F)
 
 @forward InvertibleOperator.F (
                                # LinearAlgebra
