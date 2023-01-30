@@ -33,6 +33,25 @@ end
 # caching interface
 ###
 
+function iscached(L::AbstractSciMLOperator)
+    has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
+    isset = has_cache ?  L.cache !== nothing : true
+
+    return isset & all(iscached, getops(L)) 
+end
+
+iscached(::Union{
+                 # LinearAlgebra
+                 AbstractMatrix,
+                 UniformScaling,
+                 Factorization,
+
+                 # Base
+                 Number,
+
+                }
+        ) = true
+
 """
 Allocate caches for a SciMLOperator for fast evaluation
 
