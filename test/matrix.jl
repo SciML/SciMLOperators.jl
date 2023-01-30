@@ -207,11 +207,23 @@ for square in [false, true] #for K in [1, K]
     @test AB  \ v2 ≈ opAB  \ v2 ≈ opAB_F  \ v2
     @test ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
 
+    @test !iscached(opAB)
+    @test !iscached(opABC)
+
+    @test !iscached(opAB_F)
+    @test !iscached(opABC_F)
+
     opAB  = cache_operator(opAB,  u2)
     opABC = cache_operator(opABC, u3)
 
     opAB_F  = cache_operator(opAB_F,  u2)
     opABC_F = cache_operator(opABC_F, u3)
+
+    @test iscached(opAB)
+    @test iscached(opABC)
+
+    @test iscached(opAB_F)
+    @test iscached(opABC_F)
 
     N2 = n1*n2
     N3 = n1*n2*n3
