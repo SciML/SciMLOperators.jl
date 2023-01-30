@@ -56,6 +56,8 @@ export ScalarOperator,
 export update_coefficients!,
        update_coefficients,
 
+       isconstant,
+
        cache_operator,
 
        has_adjoint,
