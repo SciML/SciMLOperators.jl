@@ -58,7 +58,6 @@ end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
 isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
-issquare(::BatchedDiagonalOperator) = true
 islinear(::BatchedDiagonalOperator) = true
 has_adjoint(L::BatchedDiagonalOperator) = true
 has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)

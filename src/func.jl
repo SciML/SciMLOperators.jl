@@ -136,8 +136,6 @@ function FunctionOperator(op,
 
     T isa Nothing && @error "Please provide a Number type for the Operator"
 
-    issquare = size(input) == size(output)
-
     isreal = T <: Real
     selfadjoint = ishermitian | (isreal & issymmetric)
     adjointable = !(op_adjoint isa Nothing) | selfadjoint
@@ -152,7 +150,6 @@ function FunctionOperator(op,
     end
 
     traits = (;
-              issquare = issquare,
               islinear = islinear,
 
               opnorm = opnorm,

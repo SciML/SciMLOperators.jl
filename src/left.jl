@@ -62,10 +62,7 @@ AbstractTransposedVecOrMat = Transpose{T,<:AbstractVecOrMat} where{T}
 has_adjoint(::AdjointOperator) = true
 #has_adjoint(::TransposedOperator) = ??
 
-issquare(L::AdjointOperator) = issquare(L.L)
-issquare(L::TransposedOperator) = issquare(L.L)
-
-islienar(L::AdjointOperator) = islinear(L.L)
+islinear(L::AdjointOperator) = islinear(L.L)
 islinear(L::TransposedOperator) = islinear(L.L)
 
 Base.transpose(L::AdjointOperator) = conj(L.L)
