@@ -33,6 +33,7 @@ K = 12
 
     @test size(Id) == (N, N)
     @test Id' isa IdentityOperator{N}
+    @test isconstant(Id)
 
     for op in (
                *, \,
@@ -62,6 +63,7 @@ end
     Z = NullOperator{N}()
 
     @test NullOperator(u) isa NullOperator{N}
+    @test isconstant(Z)
     @test zero(A) isa NullOperator{N}
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 
@@ -99,6 +101,7 @@ end
     op = ScaledOperator(α, MatrixOperator(A))
 
     @test op isa ScaledOperator
+    @test isconstant(op)
 
     @test α * A * u ≈ op * u
     @test (β * op) * u ≈ β * α * A * u
@@ -106,6 +109,7 @@ end
     opF = factorize(op)
 
     @test opF isa ScaledOperator
+    @test isconstant(opF)
 
     @test α * A  ≈ convert(AbstractMatrix, op) ≈ convert(AbstractMatrix, opF)
 
@@ -138,6 +142,11 @@ end
         @test op3 isa AddedOperator
         @test op4 isa AddedOperator
 
+        @test isconstant(op1)
+        @test isconstant(op2)
+        @test isconstant(op3)
+        @test isconstant(op4)
+
         @test op1 * u ≈ op(  A*u,   B*u)
         @test op2 * u ≈ op(α*A*u,   B*u)
         @test op3 * u ≈ op(  A*u, β*B*u)
@@ -163,11 +172,14 @@ end
     op = ∘(MatrixOperator.((A, B, C))...)
 
     @test op isa ComposedOperator
+    @test isconstant(op)
+
     @test *(op.ops...) isa ComposedOperator
 
     opF = factorize(op)
 
     @test opF isa ComposedOperator
+    @test isconstant(opF)
 
     @test ABCmulu ≈ op * u
     @test ABCdivu ≈ op \ u ≈ opF \ u
@@ -223,6 +235,9 @@ end
         AAt = LType(AA)
         DDt = LType(DD)
 
+        @test isconstant(AAt)
+        @test isconstant(DDt)
+
         @test AAt.L === AA
         @test op(u) isa VType
 
@@ -246,6 +261,8 @@ end
     β  = rand()
 
     Di = cache_operator(Di, u)
+
+    @test isconstant(Di)
 
     @test Di * u ≈ u ./ s
     v=rand(N); @test mul!(v, Di, u) ≈ u ./ s
