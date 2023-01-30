@@ -29,6 +29,7 @@ K = 12
 
                            op_inverse=f1i,
 
+                           islinear=true,
                            opnorm=true,
                            issymmetric=true,
                            ishermitian=true,
@@ -40,11 +41,17 @@ K = 12
 
                            op_inverse=f2i,
 
+                           islinear=true,
                            opnorm=true,
                            issymmetric=true,
                            ishermitian=true,
                            isposdef=true,
                           )
+    @test issquare(op1)
+    @test issquare(op2)
+
+    @test islinear(op1)
+    @test islinear(op2)
 
     @test op1' === op1
 

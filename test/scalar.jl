@@ -14,6 +14,8 @@ K = 12
     u = rand(N,K)
 
     @test α isa ScalarOperator
+    @test issquare(α)
+    @test islinear(α)
     @test convert(Number, α) isa Number
     @test convert(ScalarOperator, a) isa ScalarOperator
 
