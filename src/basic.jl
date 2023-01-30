@@ -423,10 +423,8 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
     ops::O
     """ cache for 3 and 5 argument mul! """
     cache::C
-    """ is cache set """
-    isset::Bool
 
-    function ComposedOperator(ops, cache, isset::Bool)
+    function ComposedOperator(ops, cache)
         @assert !isempty(ops)
         for i in reverse(2:length(ops))
             opcurr = ops[i]
@@ -436,14 +434,12 @@ struct ComposedOperator{T,O,C} <: AbstractSciMLOperator{T}
         end
 
         T = promote_type(eltype.(ops)...)
-        isset = cache !== nothing
-        new{T,typeof(ops),typeof(cache)}(ops, cache, isset)
+        new{T,typeof(ops),typeof(cache)}(ops, cache)
     end
 end
 
 function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
-    isset = cache !== nothing
-    ComposedOperator(ops, cache, isset)
+    ComposedOperator(ops, cache)
 end
 
 # constructors
@@ -504,7 +500,7 @@ for op in (
           )
     @eval Base.$op(L::ComposedOperator) = ComposedOperator(
                                                            $op.(reverse(L.ops))...;
-                                                           cache=L.isset ? reverse(L.cache) : nothing,
+                                                           cache=iscached(L) ? reverse(L.cache) : nothing,
                                                           )
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
@@ -581,7 +577,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
-    if !(L.isset)
+    if !iscached(L)
         L = cache_self(L, u)
     end
 
@@ -594,7 +590,7 @@ function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     vecs = (v, L.cache[1:end-1]..., u)
@@ -605,7 +601,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     cache = L.cache[end]
@@ -617,7 +613,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     vecs = (u, reverse(L.cache[1:end-1])..., v)
@@ -641,17 +637,14 @@ end
 struct InvertedOperator{T, LType, C} <: AbstractSciMLOperator{T}
     L::LType
     cache::C
-    isset::Bool
 
-    function InvertedOperator(L::AbstractSciMLOperator{T}, cache, isset) where{T}
-        isset = cache !== nothing
-        new{T,typeof(L),typeof(cache)}(L, cache, isset)
+    function InvertedOperator(L::AbstractSciMLOperator{T}, cache) where{T}
+        new{T,typeof(L),typeof(cache)}(L, cache)
     end
 end
 
 function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
-    isset = cache !== nothing
-    InvertedOperator(L, cache, isset)
+    InvertedOperator(L, cache)
 end
 
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
@@ -662,8 +655,8 @@ Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
 
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
-Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = L.isset ? L.cache' : nothing)
-Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = L.isset ? L.cache' : nothing)
+Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
+Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
 
 getops(L::InvertedOperator) = (L.L,)
@@ -704,7 +697,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstrac
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     copy!(L.cache, v)
@@ -718,7 +711,7 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstra
 end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
-    @assert L.isset "cache needs to be set up for operator of type $(typeof(L)).
+    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
     copy!(L.cache, u)
