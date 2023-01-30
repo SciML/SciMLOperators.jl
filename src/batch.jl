@@ -8,7 +8,7 @@ by `update_coefficients!` and is assumed to have the following signature:
 
     update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
 """
-struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLLinearOperator{T}
+struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
     diag::D
     update_func::F
 
@@ -58,7 +58,8 @@ end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
 isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
-issquare(L::BatchedDiagonalOperator) = true
+issquare(::BatchedDiagonalOperator) = true
+islinear(::BatchedDiagonalOperator) = true
 has_adjoint(L::BatchedDiagonalOperator) = true
 has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
 has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
