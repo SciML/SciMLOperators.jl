@@ -12,4 +12,14 @@ end
 dims(A) = length(size(A))
 dims(::AbstractArray{<:Any,N}) where{N} = N
 dims(::AbstractSciMLOperator) = 2
+
+# Keyword argument filtering
+struct FilterKwargs{F,K}
+    f::F
+    accepted_kwarg_fields::K
+end
+function (f_filter::FilterKwargs)(args...; kwargs...)
+    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in f_filter.accepted_kwarg_fields)
+    f_filter.f(args...; filtered_kwargs...)
+end
 #

@@ -15,19 +15,31 @@ out-of-place form B = update_coefficients(A,u,p,t).
 """
 function (::AbstractSciMLOperator) end
 
+# Utilities for update functions
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
+function preprocess_update_func(update_func, accepted_kwarg_fields)
+    update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
+    return FilterKwargs(update_func, accepted_kwarg_fields)
+end
+function update_func_isconstant(update_func)
+    if update_func isa FilterKwargs
+        return update_func.f == DEFAULT_UPDATE_FUNC
+    else
+        return update_func == DEFAULT_UPDATE_FUNC
+    end
+end
 
-update_coefficients!(L,u,p,t) = nothing
-update_coefficients(L,u,p,t) = L
-function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
+update_coefficients!(L,u,p,t; kwargs...) = nothing
+update_coefficients(L,u,p,t; kwargs...) = L
+function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     for op in getops(L)
-        update_coefficients!(op, u, p, t)
+        update_coefficients!(op, u, p, t; kwargs...)
     end
     nothing
 end
 
-(L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
-(L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
+(L::AbstractSciMLOperator)(u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); L * u)
+(L::AbstractSciMLOperator)(du, u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
 
 ###
 # caching interface

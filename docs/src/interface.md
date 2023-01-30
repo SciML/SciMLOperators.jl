@@ -55,3 +55,10 @@ the proof to affine operators, so then ``exp(A*t)*v`` operations via Krylov meth
 affine as well, and all sorts of things. Thus affine operators have no matrix representation but they 
 are still compatible with essentially any Krylov method which would otherwise be compatible with
 matrix-free representations, hence their support in the SciMLOperators interface.
+
+## Note about keyword arguments to `update_coefficients!`
+
+In rare cases, an operator may be used in a context where additional state is expected to be provided
+to `update_coefficients!` beyond `u`, `p`, and `t`. In this case, the operator may accept this additional
+state through arbitrary keyword arguments to `update_coefficients!`. When the caller provides these, they will be recursively propagated downwards through composed operators just like `u`, `p`, and `t`, and provided to the operator.
+For the [premade SciMLOperators](premade_operators.md), one can specify the keyword arguments used by an operator with an `accepted_kwarg_fields` argument that defaults to an empty tuple.

@@ -192,10 +192,10 @@ function update_coefficients(L::FunctionOperator, u, p, t)
                     )
 end
 
-function update_coefficients!(L::FunctionOperator, u, p, t)
+function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
     ops = getops(L)
     for op in ops
-        update_coefficients!(op, u, p, t)
+        update_coefficients!(op, u, p, t; kwargs...)
     end
 
     L.p = p
