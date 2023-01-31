@@ -51,6 +51,7 @@ export ScalarOperator,
 export update_coefficients!,
        update_coefficients,
 
+       iscached,
        cache_operator,
 
        issquare,

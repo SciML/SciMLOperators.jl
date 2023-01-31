@@ -17,8 +17,6 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
     p::P
     """ Time """
     t::Tt
-    """ Is cache set? """
-    isset::Bool
     """ Cache """
     cache::C
 
@@ -30,15 +28,12 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
                               traits,
                               p,
                               t,
-                              isset,
                               cache
                              )
 
         iip = traits.isinplace
         oop = traits.outofplace
         T   = traits.T
-
-        isset = cache !== nothing
 
         new{
             iip,
@@ -60,7 +55,6 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
              traits,
              p,
              t,
-             isset,
              cache,
             )
     end
@@ -164,7 +158,6 @@ function FunctionOperator(op,
              )
 
     cache = zero.((input, output))
-    isset = true
 
     FunctionOperator(
                      op,
@@ -174,7 +167,6 @@ function FunctionOperator(op,
                      traits,
                      p,
                      t,
-                     isset,
                      cache,
                     )
 end
@@ -209,8 +201,7 @@ function Base.adjoint(L::FunctionOperator)
     p = L.p
     t = L.t
 
-    isset = L.isset
-    cache = if isset
+    cache = if iscached(L)
         cache = reverse(L.cache)
     else
         nothing
@@ -223,7 +214,6 @@ function Base.adjoint(L::FunctionOperator)
                      traits,
                      p,
                      t,
-                     isset,
                      cache,
                     )
 end
@@ -253,8 +243,7 @@ function Base.inv(L::FunctionOperator)
     p = L.p
     t = L.t
 
-    isset = L.cache !== nothing
-    cache = if isset
+    cache = if iscached(L)
         cache = reverse(L.cache)
     else
         nothing
@@ -267,7 +256,6 @@ function Base.inv(L::FunctionOperator)
                      traits,
                      p,
                      t,
-                     isset,
                      cache,
                     )
 end
