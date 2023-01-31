@@ -27,6 +27,9 @@ K = 19
     @test isconstant(AA)
     @test isconstant(AAt)
 
+    @test issquare(AA)
+    @test islinear(AA)
+
     FF  = factorize(AA)
     FFt = FF'
 
@@ -82,6 +85,8 @@ end
                         )
 
     @test !isconstant(D)
+    @test issquare(D)
+    @test islinear(D)
 
     ans = Diagonal(p*t) * u
     @test D(u,p,t) ≈ ans
@@ -96,6 +101,9 @@ end
 
     L = DiagonalOperator(d)
     @test isconstant(L)
+
+    @test issquare(L)
+    @test islinear(L)
 
     @test L * u ≈ d .* u
     v=rand(N,K); @test mul!(v, L, u) ≈ d .* u
@@ -117,17 +125,25 @@ end
 
     L = AffineOperator(MatrixOperator(A), MatrixOperator(B), b)
     @test isconstant(L)
+    @test issquare(L)
+    @test !islinear(L)
 
     @test L * u ≈ A * u + B*b
     v=rand(N,K); @test mul!(v, L, u) ≈ A*u + B*b
     v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + B*b) + β*w
 
     L = AffineOperator(MatrixOperator(D), MatrixOperator(B), b)
+    @test issquare(L)
+    @test !islinear(L)
+
     @test L \ u ≈ D \ (u - B * b)
     v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-B*b)
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
 
     L = AddVector(b)
+    @test issquare(L)
+    @test !islinear(L)
+
     @test L * u ≈ u + b
     @test L \ u ≈ u - b
     v=rand(N,K); @test mul!(v, L, u) ≈  u + b
@@ -136,6 +152,9 @@ end
     v=copy(u); @test ldiv!(L, u) ≈  v - b
 
     L = AddVector(MatrixOperator(B), b)
+    @test issquare(L)
+    @test !islinear(L)
+
     @test L * u ≈ u + B * b
     @test L \ u ≈ u - B * b
     v=rand(N,K); @test mul!(v, L, u) ≈  u + B * b
@@ -204,6 +223,17 @@ for square in [false, true] #for K in [1, K]
 
     @test isconstant(opAB)
     @test isconstant(opABC)
+
+    @test islinear(opAB)
+    @test islinear(opABC)
+
+    if square
+        @test issquare(opAB)
+        @test issquare(opABC)
+    else
+        @test !issquare(opAB)
+        @test !issquare(opABC)
+    end
 
     @test AB ≈ convert(AbstractMatrix, opAB)
     @test ABC ≈ convert(AbstractMatrix, opABC)

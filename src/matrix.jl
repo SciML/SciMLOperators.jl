@@ -8,7 +8,7 @@ the following signature:
 
     update_func(A::AbstractMatrix,u,p,t) -> [modifies A]
 """
-struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLLinearOperator{T}
+struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLOperator{T}
     A::AType
     update_func::F
     MatrixOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
@@ -28,6 +28,8 @@ Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator
                            has_ldiv,
                            has_ldiv!,
                           )
+islinear(::MatrixOperator) = true
+
 Base.size(L::MatrixOperator) = size(L.A)
 for op in (
            :adjoint,
@@ -123,7 +125,7 @@ Like MatrixOperator, but stores a Factorization instead.
 
 Supports left division and `ldiv!` when applied to an array.
 """
-struct InvertibleOperator{T,FType} <: AbstractSciMLLinearOperator{T}
+struct InvertibleOperator{T,FType} <: AbstractSciMLOperator{T}
     F::FType
 
     function InvertibleOperator(F)
@@ -133,7 +135,7 @@ struct InvertibleOperator{T,FType} <: AbstractSciMLLinearOperator{T}
 end
 
 # constructor
-function LinearAlgebra.factorize(L::AbstractSciMLLinearOperator)
+function LinearAlgebra.factorize(L::AbstractSciMLOperator)
     fact = factorize(convert(AbstractMatrix, L))
     InvertibleOperator(fact)
 end
@@ -174,6 +176,7 @@ LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 getops(L::InvertibleOperator) = (L.F,)
+islinear(L::InvertibleOperator) = islinear(L.F)
 
 @forward InvertibleOperator.F (
                                # LinearAlgebra

@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 """
-struct IdentityOperator{N} <: AbstractSciMLLinearOperator{Bool} end
+struct IdentityOperator{N} <: AbstractSciMLOperator{Bool} end
 
 # constructors
 IdentityOperator(u::AbstractArray) = IdentityOperator{size(u,1)}()
@@ -28,7 +28,7 @@ end
 
 getops(::IdentityOperator) = ()
 isconstant(::IdentityOperator) = true
-islinear(L::IdentityOperator) = true
+islinear(::IdentityOperator) = true
 has_adjoint(::IdentityOperator) = true
 has_mul!(::IdentityOperator) = true
 has_ldiv(::IdentityOperator) = true
@@ -92,7 +92,7 @@ end
 """
 $(TYPEDEF)
 """
-struct NullOperator{N} <: AbstractSciMLLinearOperator{Bool} end
+struct NullOperator{N} <: AbstractSciMLOperator{Bool} end
 
 # constructors
 NullOperator(u::AbstractArray) = NullOperator{size(u,1)}()
@@ -120,7 +120,7 @@ LinearAlgebra.isposdef(::NullOperator) = false
 
 getops(::NullOperator) = ()
 isconstant(::NullOperator) = true
-islinear(L::NullOperator) = true
+islinear(::NullOperator) = true
 Base.iszero(::NullOperator) = true
 has_adjoint(::NullOperator) = true
 has_mul!(::NullOperator) = true
@@ -229,8 +229,8 @@ Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledOperator) = (L.λ, L.L,)
-islinear(L::ScaledOperator) = all(islinear, L.ops)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
+islinear(L::ScaledOperator) = islinear(L.L)
 Base.iszero(L::ScaledOperator) = iszero(L.L) | iszero(L.λ)
 has_adjoint(L::ScaledOperator) = has_adjoint(L.L)
 has_mul(L::ScaledOperator) = has_mul(L.L)
@@ -375,6 +375,7 @@ end
 Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
 
 getops(L::AddedOperator) = L.ops
+islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
@@ -667,6 +668,7 @@ Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = L.iss
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
 
 getops(L::InvertedOperator) = (L.L,)
+islinear(L::InvertedOperator) = islinear(L.L)
 
 has_mul(L::InvertedOperator) = has_ldiv(L.L)
 has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
