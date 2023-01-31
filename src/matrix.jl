@@ -35,11 +35,13 @@ for op in (
            :adjoint,
            :transpose,
           )
-    @eval function Base.$op(L::MatrixOperator) # TODO - test this thoroughly
-        MatrixOperator(
-                       $op(L.A);
-                       update_func= (A,u,p,t) -> $op(L.update_func($op(L.A),u,p,t)) # TODO - test
-                      )
+    @eval function Base.$op(L::MatrixOperator)
+        if isconstant(L)
+            MatrixOperator($op(L.A))
+        else
+            update_func = (A,u,p,t) -> $op(L.update_func($op(L.A),u,p,t))
+            MatrixOperator($op(L.A); update_func = update_func)
+        end
     end
 end
 Base.conj(L::MatrixOperator) = MatrixOperator(
@@ -50,6 +52,7 @@ Base.conj(L::MatrixOperator) = MatrixOperator(
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
 update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); nothing)
 
+getops(L::MatrixOperator) = (L.A)
 isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 
@@ -75,8 +78,6 @@ Base.Broadcast.broadcastable(L::MatrixOperator) = L
 Base.ndims(::Type{<:MatrixOperator{T,AType}}) where{T,AType} = ndims(AType)
 ArrayInterfaceCore.issingular(L::MatrixOperator) = ArrayInterfaceCore.issingular(L.A)
 Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func)
-
-getops(L::MatrixOperator) = (L.A)
 
 # operator application
 Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
@@ -104,10 +105,11 @@ an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of 
 `L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
 with leading length `size(u, 1) = N`.
 """
-function DiagonalOperator(diag::AbstractVector; update_func=DEFAULT_UPDATE_FUNC)
-    function diag_update_func(A, u, p, t)
-        update_func(A.diag, u, p, t)
-        A
+function DiagonalOperator(diag::AbstractVector; update_func = DEFAULT_UPDATE_FUNC)
+    diag_update_func = if update_func == DEFAULT_UPDATE_FUNC
+        DEFAULT_UPDATE_FUNC
+    else
+        (A, u, p, t) -> (update_func(A.diag, u, p, t); A)
     end
     MatrixOperator(Diagonal(diag); update_func=diag_update_func)
 end
@@ -214,7 +216,7 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
     b::bType
 
     cache::cType
-    update_func::F
+    update_func::F # updates b
 
     function AffineOperator(A, B, b, cache, update_func)
         T = promote_type(eltype.((A,B,b))...)
@@ -234,7 +236,7 @@ end
 function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         B::Union{AbstractMatrix,AbstractSciMLOperator},
                         b::AbstractArray;
-                        update_func=DEFAULT_UPDATE_FUNC,
+                        update_func = DEFAULT_UPDATE_FUNC,
                        )
     @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
     of same size"
@@ -250,7 +252,7 @@ end
     L = AddVector(b[; update_func])
     L(u) = u + b
 """
-function AddVector(b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+function AddVector(b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC)
     N  = size(b, 1)
     Id = IdentityOperator{N}()
 
@@ -261,7 +263,7 @@ end
     L = AddVector(B, b[; update_func])
     L(u) = u + B*b
 """
-function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
+function AddVector(B, b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC)
     N = size(B, 1)
     Id = IdentityOperator{N}()
 
@@ -269,11 +271,12 @@ function AddVector(B, b::AbstractVecOrMat; update_func=DEFAULT_UPDATE_FUNC)
 end
 
 getops(L::AffineOperator) = (L.A, L.B, L.b)
-Base.size(L::AffineOperator) = size(L.A)
 
 update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); nothing)
-
+isconstant(L::AffineOperator) = (L.update_func == DEFAULT_UPDATE_FUNC) & all(isconstant, (L.A, L.B))
 islinear(::AffineOperator) = false
+
+Base.size(L::AffineOperator) = size(L.A)
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
 has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
 has_mul(L::AffineOperator) = has_mul(L.A)

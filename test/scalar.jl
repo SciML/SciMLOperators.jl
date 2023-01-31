@@ -22,6 +22,7 @@ K = 12
     @test convert(ScalarOperator, a) isa ScalarOperator
 
     @test size(α) == ()
+    @test isconstant(α)
 
     v=copy(u); @test lmul!(α, u) ≈ v * x
     v=copy(u); @test rmul!(u, α) ≈ x * v
@@ -67,6 +68,9 @@ end
 
     α = ScalarOperator(0.0; update_func=(a,u,p,t) -> p)
     β = ScalarOperator(0.0; update_func=(a,u,p,t) -> t)
+
+    @test !isconstant(α)
+    @test !isconstant(β)
 
     @test α(u,p,t)   ≈ p * u
     @test α(v,u,p,t) ≈ p * u

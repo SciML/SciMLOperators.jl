@@ -24,6 +24,9 @@ K = 19
     @test AA  isa MatrixOperator
     @test AAt isa MatrixOperator
 
+    @test isconstant(AA)
+    @test isconstant(AAt)
+
     @test issquare(AA)
     @test islinear(AA)
 
@@ -32,6 +35,9 @@ K = 19
 
     @test FF  isa InvertibleOperator
     @test FFt isa InvertibleOperator
+
+    @test isconstant(FF)
+    @test isconstant(FFt)
 
     @test eachindex(A)  === eachindex(AA)
     @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
@@ -58,8 +64,10 @@ end
     t = rand()
 
     L = MatrixOperator(zeros(N,N);
-                       update_func= (A,u,p,t) -> (A .= p*p'; nothing)
+                       update_func = (A,u,p,t) -> (A .= p*p'; nothing)
                       )
+
+    @test !isconstant(L)
 
     A = p*p'
     ans = A * u
@@ -73,9 +81,10 @@ end
     t = rand()
 
     D = DiagonalOperator(zeros(N);
-                         update_func= (diag,u,p,t) -> (diag .= p*t; nothing)
+                         update_func = (diag,u,p,t) -> (diag .= p*t; nothing)
                         )
 
+    @test !isconstant(D)
     @test issquare(D)
     @test islinear(D)
 
@@ -91,6 +100,7 @@ end
     β = rand()
 
     L = DiagonalOperator(d)
+    @test isconstant(L)
 
     @test issquare(L)
     @test islinear(L)
@@ -114,6 +124,7 @@ end
     β = rand()
 
     L = AffineOperator(MatrixOperator(A), MatrixOperator(B), b)
+    @test isconstant(L)
     @test issquare(L)
     @test !islinear(L)
 
@@ -161,8 +172,10 @@ end
     t = rand()
 
     L = AffineOperator(A, B, b;
-                       update_func= (b,u,p,t) -> (b .= Diagonal(p*t)*b; nothing)
+                       update_func = (b,u,p,t) -> (b .= Diagonal(p*t)*b; nothing)
                       )
+
+    @test !isconstant(L)
 
     b = Diagonal(p*t)*b
     ans = A * u + B * b
@@ -208,6 +221,12 @@ for square in [false, true] #for K in [1, K]
     @test opAB  isa TensorProductOperator
     @test opABC isa TensorProductOperator
 
+    @test isconstant(opAB)
+    @test isconstant(opABC)
+
+    @test islinear(opAB)
+    @test islinear(opABC)
+
     if square
         @test issquare(opAB)
         @test issquare(opABC)
@@ -216,15 +235,15 @@ for square in [false, true] #for K in [1, K]
         @test !issquare(opABC)
     end
 
-    @test islinear(opAB)
-    @test islinear(opABC)
-
     @test AB ≈ convert(AbstractMatrix, opAB)
     @test ABC ≈ convert(AbstractMatrix, opABC)
 
     # factorization tests
     opAB_F = factorize(opAB)
     opABC_F = factorize(opABC)
+
+    @test isconstant(opAB_F)
+    @test isconstant(opABC_F)
 
     @test opAB_F isa TensorProductOperator
     @test opABC_F isa TensorProductOperator

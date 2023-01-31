@@ -107,9 +107,18 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
 ### Extra standard assumptions
 
-isconstant(L) = true
+isconstant(::Union{
+                   # LinearAlgebra
+                   AbstractMatrix,
+                   UniformScaling,
+                   Factorization,
+
+                   # Base
+                   Number,
+
+                  }
+          ) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
-#isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 
 #islinear(L) = false
 islinear(::AbstractSciMLOperator) = false
