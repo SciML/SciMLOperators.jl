@@ -27,6 +27,8 @@ K = 12
     β = rand()
     Id = IdentityOperator{N}()
 
+    @test issquare(Id)
+    @test islinear(Id)
     @test IdentityOperator(u) isa IdentityOperator{N}
     @test one(A) isa IdentityOperator{N}
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
@@ -61,6 +63,8 @@ end
     β = rand()
     Z = NullOperator{N}()
 
+    @test issquare(Z)
+    @test islinear(Z)
     @test NullOperator(u) isa NullOperator{N}
     @test zero(A) isa NullOperator{N}
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
@@ -99,6 +103,8 @@ end
     op = ScaledOperator(α, MatrixOperator(A))
 
     @test op isa ScaledOperator
+    @test issquare(op)
+    @test islinear(op)
 
     @test α * A * u ≈ op * u
     @test (β * op) * u ≈ β * α * A * u
@@ -164,10 +170,14 @@ end
 
     @test op isa ComposedOperator
     @test *(op.ops...) isa ComposedOperator
+    @test issquare(op)
+    @test islinear(op)
 
     opF = factorize(op)
 
     @test opF isa ComposedOperator
+    @test issquare(opF)
+    @test islinear(opF)
 
     @test ABCmulu ≈ op * u
     @test ABCdivu ≈ op \ u ≈ opF \ u
@@ -202,10 +212,14 @@ end
 
 @testset "Adjoint, Transpose" begin
 
-    for (op, LType, VType) in (
-                               (adjoint,   AdjointOperator,    AbstractAdjointVecOrMat   ),
-                               (transpose, TransposedOperator, AbstractTransposedVecOrMat),
-                              )
+    for (op,
+         LType,
+         VType
+        ) in (
+              (adjoint,   AdjointOperator,    AbstractAdjointVecOrMat   ),
+              (transpose, TransposedOperator, AbstractTransposedVecOrMat),
+             )
+
         A = rand(N,N)
         D = Bidiagonal(rand(N,N), :L)
         u = rand(N,K)
@@ -215,7 +229,13 @@ end
         b = rand()
 
         At = op(A)
-        Dt = op(A)
+        Dt = op(D)
+
+        @test issquare(At)
+        @test issquare(Dt)
+
+        @test islinear(At)
+        @test islinear(Dt)
 
         AA = MatrixOperator(A)
         DD = MatrixOperator(D)
@@ -246,6 +266,9 @@ end
     β  = rand()
 
     Di = cache_operator(Di, u)
+
+    @test issquare(Di)
+    @test islinear(Di)
 
     @test Di * u ≈ u ./ s
     v=rand(N); @test mul!(v, Di, u) ≈ u ./ s

@@ -26,12 +26,7 @@ abstract type AbstractSciMLOperator{T} end
 """
 $(TYPEDEF)
 """
-abstract type AbstractSciMLLinearOperator{T} <: AbstractSciMLOperator{T} end
-
-"""
-$(TYPEDEF)
-"""
-abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLLinearOperator{T} end
+abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLOperator{T} end
 
 include("utils.jl")
 include("interface.jl")
@@ -57,6 +52,9 @@ export update_coefficients!,
        update_coefficients,
 
        cache_operator,
+
+       issquare,
+       islinear,
 
        has_adjoint,
        has_expmv,
