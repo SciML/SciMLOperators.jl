@@ -27,6 +27,8 @@ K = 12
                            op_adjoint = (du,u,p,t) -> ldiv!(du, tr, u),
                            op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
                            op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
+
+                           islinear=true,
                           )
 
     # derivative test

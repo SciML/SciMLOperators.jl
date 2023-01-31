@@ -98,10 +98,12 @@ function FunctionOperator(op,
                           t::Union{Number,Nothing}=nothing,
 
                           # traits
-                          opnorm=nothing,
-                          issymmetric::Bool=false,
-                          ishermitian::Bool=false,
-                          isposdef::Bool=false,
+                          islinear::Bool = false,
+
+                          opnorm = nothing,
+                          issymmetric::Bool = false,
+                          ishermitian::Bool = false,
+                          isposdef::Bool = false,
                          )
 
     sz = (size(output, 1), size(input, 1))
@@ -142,6 +144,8 @@ function FunctionOperator(op,
     end
 
     traits = (;
+              islinear = islinear,
+
               opnorm = opnorm,
               issymmetric = issymmetric,
               ishermitian = ishermitian,
@@ -270,6 +274,7 @@ LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
 getops(::FunctionOperator) = ()
+islinear(L::FunctionOperator) = L.traits.islinear
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(L::FunctionOperator{iip}) where{iip} = true
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip

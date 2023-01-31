@@ -94,17 +94,12 @@ Base.eltype(::AbstractSciMLOperator{T}) where T = T
 Base.oneunit(L::AbstractSciMLOperator) = one(L)
 Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
 
-issquare(L::AbstractSciMLOperator) = isequal(size(L)...)
-
-Base.iszero(::AbstractSciMLOperator) = false
-
-islinear(::AbstractSciMLOperator) = false
-islinear(::AbstractSciMLLinearOperator) = true
+Base.iszero(::AbstractSciMLOperator) = false # TODO
 
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
-has_exp(L::AbstractSciMLOperator) = false # v = exp(L, t)*u
+has_exp(L::AbstractSciMLOperator) = islinear(L)
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 has_mul!(L::AbstractSciMLOperator) = false # mul!(du, L, u)
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
@@ -116,7 +111,9 @@ isconstant(L) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 #isconstant(L::AbstractSciMLOperator) = L.update_func = DEFAULT_UPDATE_FUNC
 
-islinear(L) = false
+#islinear(L) = false
+islinear(::AbstractSciMLOperator) = false
+
 islinear(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
@@ -125,23 +122,20 @@ islinear(::Union{
 
                  # Base
                  Number,
-
-                 # SciMLOperators
-                 AbstractSciMLLinearOperator,
                 }
         ) = true
 
 has_mul(L) = false
 has_mul(::Union{
-                 # LinearAlgebra
-                 AbstractVecOrMat,
-                 AbstractMatrix,
-                 UniformScaling,
+                # LinearAlgebra
+                AbstractVecOrMat,
+                AbstractMatrix,
+                UniformScaling,
 
-                 # Base
-                 Number,
-                }
-        ) = true
+                # Base
+                Number,
+               }
+       ) = true
 
 has_mul!(L) = false
 has_mul!(::Union{
@@ -171,7 +165,7 @@ has_ldiv!(::Union{
                  }
          ) = true
 
-has_adjoint(L) = false
+has_adjoint(L) = islinear(L)
 has_adjoint(::Union{
                     # LinearAlgebra
                     AbstractMatrix,
@@ -180,13 +174,10 @@ has_adjoint(::Union{
 
                     # Base
                     Number,
-
-                    # SciMLOperators
-                    AbstractSciMLLinearOperator,
                    }
            ) = true
 
-issquare(A) = size(A,1) === size(A,2)
+issquare(L) = isequal(size(L)...)
 issquare(::Union{
                  # LinearAlgebra
                  UniformScaling,
@@ -201,7 +192,6 @@ Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
 
 LinearAlgebra.exp(L::AbstractSciMLOperator,t) = exp(t*L)
-has_exp(L::AbstractSciMLLinearOperator) = true
 expmv(L::AbstractSciMLOperator,u,p,t) = exp(L,t)*u
 expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 

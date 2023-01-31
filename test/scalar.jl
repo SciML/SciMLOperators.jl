@@ -15,6 +15,9 @@ K = 12
 
     @test α isa ScalarOperator
     @test iscached(α)
+    @test issquare(α)
+    @test islinear(α)
+
     @test convert(Number, α) isa Number
     @test convert(ScalarOperator, a) isa ScalarOperator
 

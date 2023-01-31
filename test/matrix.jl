@@ -24,6 +24,9 @@ K = 19
     @test AA  isa MatrixOperator
     @test AAt isa MatrixOperator
 
+    @test issquare(AA)
+    @test islinear(AA)
+
     FF  = factorize(AA)
     FFt = FF'
 
@@ -73,6 +76,9 @@ end
                          update_func= (diag,u,p,t) -> (diag .= p*t; nothing)
                         )
 
+    @test issquare(D)
+    @test islinear(D)
+
     ans = Diagonal(p*t) * u
     @test D(u,p,t) ≈ ans
     v=copy(u); @test D(v,u,p,t) ≈ ans
@@ -85,6 +91,9 @@ end
     β = rand()
 
     L = DiagonalOperator(d)
+
+    @test issquare(L)
+    @test islinear(L)
 
     @test L * u ≈ d .* u
     v=rand(N,K); @test mul!(v, L, u) ≈ d .* u
@@ -105,17 +114,25 @@ end
     β = rand()
 
     L = AffineOperator(MatrixOperator(A), MatrixOperator(B), b)
+    @test issquare(L)
+    @test !islinear(L)
 
     @test L * u ≈ A * u + B*b
     v=rand(N,K); @test mul!(v, L, u) ≈ A*u + B*b
     v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(A*u + B*b) + β*w
 
     L = AffineOperator(MatrixOperator(D), MatrixOperator(B), b)
+    @test issquare(L)
+    @test !islinear(L)
+
     @test L \ u ≈ D \ (u - B * b)
     v=rand(N,K); @test ldiv!(v, L, u) ≈ D \ (u-B*b)
     v=copy(u); @test ldiv!(L, u) ≈ D \ (v-B*b)
 
     L = AddVector(b)
+    @test issquare(L)
+    @test !islinear(L)
+
     @test L * u ≈ u + b
     @test L \ u ≈ u - b
     v=rand(N,K); @test mul!(v, L, u) ≈  u + b
@@ -124,6 +141,9 @@ end
     v=copy(u); @test ldiv!(L, u) ≈  v - b
 
     L = AddVector(MatrixOperator(B), b)
+    @test issquare(L)
+    @test !islinear(L)
+
     @test L * u ≈ u + B * b
     @test L \ u ≈ u - B * b
     v=rand(N,K); @test mul!(v, L, u) ≈  u + B * b
@@ -187,6 +207,17 @@ for square in [false, true] #for K in [1, K]
 
     @test opAB  isa TensorProductOperator
     @test opABC isa TensorProductOperator
+
+    if square
+        @test issquare(opAB)
+        @test issquare(opABC)
+    else
+        @test !issquare(opAB)
+        @test !issquare(opABC)
+    end
+
+    @test islinear(opAB)
+    @test islinear(opABC)
 
     @test AB ≈ convert(AbstractMatrix, opAB)
     @test ABC ≈ convert(AbstractMatrix, opABC)

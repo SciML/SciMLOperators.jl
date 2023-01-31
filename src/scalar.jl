@@ -26,7 +26,8 @@ Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
 Base.transpose(α::AbstractSciMLScalarOperator) = α
 
 has_mul!(::AbstractSciMLScalarOperator) = true
-issquare(L::AbstractSciMLScalarOperator) = true
+issquare(::AbstractSciMLScalarOperator) = true
+islinear(::AbstractSciMLScalarOperator) = true
 has_adjoint(::AbstractSciMLScalarOperator) = true
 
 Base.:*(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) * u
