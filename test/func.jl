@@ -69,7 +69,8 @@ K = 12
     @test has_ldiv(op2)
     @test has_ldiv!(op2)
 
-    op2 = cache_operator(op2, u)
+    @test iscached(op1)
+    @test iscached(op2)
 
     v = rand(N,K); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
     v = rand(N,K); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)

@@ -33,6 +33,7 @@ K = 12
     @test one(A) isa IdentityOperator{N}
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
 
+    @test iscached(Id)
     @test size(Id) == (N, N)
     @test Id' isa IdentityOperator{N}
     @test isconstant(Id)
@@ -71,6 +72,7 @@ end
     @test zero(A) isa NullOperator{N}
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 
+    @test iscached(Z)
     @test size(Z) == (N, N)
     @test Z' isa NullOperator{N}
 
@@ -106,6 +108,7 @@ end
 
     @test op isa ScaledOperator
     @test isconstant(op)
+    @test iscached(op)
     @test issquare(op)
     @test islinear(op)
 
@@ -116,6 +119,7 @@ end
 
     @test opF isa ScaledOperator
     @test isconstant(opF)
+    @test iscached(opF)
 
     @test α * A  ≈ convert(AbstractMatrix, op) ≈ convert(AbstractMatrix, opF)
 
@@ -160,6 +164,8 @@ end
     end
 
     op = AddedOperator(A, B)
+    @test iscached(op)
+
     v=rand(N,K); @test mul!(v, op, u) ≈ (A+B) * u
     v=rand(N,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(A+B)*u + β*w
 end
@@ -194,7 +200,10 @@ end
     @test ABCmulu ≈ op * u
     @test ABCdivu ≈ op \ u ≈ opF \ u
 
+    @test !iscached(op)
     op = cache_operator(op, u)
+    @test iscached(op)
+
     v=rand(N,K); @test mul!(v, op, u) ≈ ABCmulu
     v=rand(N,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*ABCmulu + β*w
 
@@ -203,7 +212,9 @@ end
     C = rand(N) |> Diagonal
 
     op = ∘(MatrixOperator.((A, B, C))...)
+    @test !iscached(op)
     op = cache_operator(op, u)
+    @test iscached(op)
     v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
 
@@ -217,7 +228,9 @@ end
     @test_throws MethodError inner_op * u
     # We can now test that caching does not rely on matmul
     op = inner_op * factorize(MatrixOperator(rand(N, N)))
+    @test !iscached(op)
     @test_nowarn op = cache_operator(op, rand(N)) 
+    @test iscached(op)
     u = rand(N)
     @test ldiv!(rand(N), op, u) ≈ op \ u
 end
@@ -280,8 +293,11 @@ end
     α  = rand()
     β  = rand()
 
+    @test !iscached(Di)
     Di = cache_operator(Di, u)
     @test isconstant(Di)
+    @test iscached(Di)
+
     @test issquare(Di)
     @test islinear(Di)
 
