@@ -648,6 +648,10 @@ function InvertedOperator(L::AbstractSciMLOperator{T}; cache=nothing) where{T}
     InvertedOperator(L, cache)
 end
 
+function InvertedOperator(A::AbstractMatrix{T}; cache=nothing) where{T}
+    InvertedOperator(MatrixOperator(A), cache)
+end
+
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
 
 Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
