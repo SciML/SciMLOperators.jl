@@ -171,7 +171,23 @@ function FunctionOperator(op,
                     )
 end
 
-# TODO - update_coefficients(L, u, p, t)
+function update_coefficients(L, u, p, t)
+    op = update_coefficients(L.op, u, p, t)
+    op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
+    op_inverse = update_coefficients(L.op_inverse, u, p, t)
+    op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t)
+
+    FunctionOperator(op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     L.traits,
+                     p,
+                     t,
+                     L.cache
+                    )
+end
+
 function update_coefficients!(L::FunctionOperator, u, p, t)
     ops = getops(L)
     for op in ops
