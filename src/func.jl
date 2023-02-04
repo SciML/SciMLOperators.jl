@@ -171,7 +171,29 @@ function FunctionOperator(op,
                     )
 end
 
+function update_coefficients(L, u, p, t)
+    op = update_coefficients(L.op, u, p, t)
+    op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
+    op_inverse = update_coefficients(L.op_inverse, u, p, t)
+    op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t)
+
+    FunctionOperator(op,
+                     op_adjoint,
+                     op_inverse,
+                     op_adjoint_inverse,
+                     L.traits,
+                     p,
+                     t,
+                     L.cache
+                    )
+end
+
 function update_coefficients!(L::FunctionOperator, u, p, t)
+    ops = getops(L)
+    for op in ops
+        update_coefficients!(op, u, p, t)
+    end
+
     L.p = p
     L.t = t
 
@@ -273,7 +295,18 @@ LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
-getops(::FunctionOperator) = ()
+function getops(L::FunctionOperator)
+    ops = (L.op,)
+
+    ops = isa(L.op_adjoint, Nothing) ? ops : (ops..., L.op_adjoint)
+    ops = isa(L.op_inverse, Nothing) ? ops : (ops..., L.op_inverse)
+    ops = isa(L.op_adjoint_inverse, Nothing) ? ops : (ops..., L.op_adjoint_inverse)
+
+    ops
+end
+
+#TODO - isconstant(L::FunctionOperator)
+iscached(::FunctionOperator) = true
 islinear(L::FunctionOperator) = L.traits.islinear
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(L::FunctionOperator{iip}) where{iip} = true
