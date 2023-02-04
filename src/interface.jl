@@ -208,8 +208,6 @@ expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 # fallback implementations
 ###
 
-#Base.size(L::AbstractSciMLOperator) = size(convert(AbstractMatrix, L))
-
 function Base.conj(L::AbstractSciMLOperator)
     isreal(L) && return L
     convert(AbstractMatrix, L) |> conj
