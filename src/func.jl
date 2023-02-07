@@ -209,12 +209,6 @@ function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMa
     L
 end
 
-function cache_internals(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
-    for op in getops(L)
-    end
-    L
-end
-
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator)
 
