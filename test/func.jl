@@ -103,10 +103,9 @@ end
     @test L(u,p,t) ≈ ans
     v=copy(u); @test L(v,u,p,t) ≈ ans
 
-    A = Diagonal(p * t)
-
     # test that output isn't accidentally mutated by passing an internal cache.
 
+    A = Diagonal(p * t)
     u1 = rand(N, K)
     u2 = rand(N, K)
 
