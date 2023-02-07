@@ -157,7 +157,7 @@ function FunctionOperator(op,
               size = sz,
              )
 
-    cache = zero.((input, output))
+    cache = nothing
 
     FunctionOperator(
                      op,
@@ -198,6 +198,11 @@ function update_coefficients!(L::FunctionOperator, u, p, t)
     L.t = t
 
     nothing
+end
+
+function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+    @set! L.cache = zero.((u, v))
+    L
 end
 
 Base.size(L::FunctionOperator) = L.traits.size
@@ -306,7 +311,6 @@ function getops(L::FunctionOperator)
 end
 
 #TODO - isconstant(L::FunctionOperator)
-iscached(::FunctionOperator) = true
 islinear(L::FunctionOperator) = L.traits.islinear
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(L::FunctionOperator{iip}) where{iip} = true

@@ -69,6 +69,12 @@ K = 12
     @test has_ldiv(op2)
     @test has_ldiv!(op2)
 
+    @test !iscached(op1)
+    @test !iscached(op2)
+
+    op1 = cache_operator(op1, u, A * u)
+    op2 = cache_operator(op2, u, A * u)
+
     @test iscached(op1)
     @test iscached(op2)
 
@@ -88,6 +94,8 @@ end
     f(du,u,p,t) = mul!(du, Diagonal(p*t), u)
 
     op = FunctionOperator(f, u, u; p=zero(p), t=zero(t))
+
+    op = cache_operator(op, u, u)
 
     ans = @. u * p * t
     @test op(u,p,t) ≈ ans

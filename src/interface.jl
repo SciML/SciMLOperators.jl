@@ -40,6 +40,7 @@ function iscached(L::AbstractSciMLOperator)
     return isset & all(iscached, getops(L)) 
 end
 
+iscached(L) = true
 iscached(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
@@ -57,11 +58,23 @@ Allocate caches for a SciMLOperator for fast evaluation
 
 arguments:
     L :: AbstractSciMLOperator
-    u :: AbstractVecOrMat argument to L
+    in :: AbstractVecOrMat input prototype to L
+    out :: (optional) AbstractVecOrMat output prototype to L
 """
+cache_operator
+
 cache_operator(L, u) = L
-cache_self(L::AbstractSciMLOperator, u::AbstractVecOrMat) = L
-cache_internals(L::AbstractSciMLOperator, u::AbstractVecOrMat) = L
+cache_operatro(L, u, v) = L
+cache_self(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
+cache_internals(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
+
+function cache_operator(L::AbstractSciMLOperator,
+                        u::AbstractVecOrMat,
+                        v::AbstractVecOrMat)
+    L = cache_self(L, u, v)
+    L = cache_internals(L, u, v)
+    L
+end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L = cache_self(L, u)
