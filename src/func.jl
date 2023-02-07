@@ -171,7 +171,7 @@ function FunctionOperator(op,
                     )
 end
 
-function update_coefficients(L, u, p, t)
+function update_coefficients(L::FunctionOperator, u, p, t)
     op = update_coefficients(L.op, u, p, t)
     op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
     op_inverse = update_coefficients(L.op_inverse, u, p, t)

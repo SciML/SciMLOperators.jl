@@ -186,10 +186,14 @@ has_adjoint(::Union{
                    }
            ) = true
 
-issquare(L) = isequal(size(L)...)
+issquare(L) = ndims(L) >= 2 && size(L, 1) == size(L, 2)
+issquare(::AbstractVector) = false
 issquare(::Union{
                  # LinearAlgebra
                  UniformScaling,
+
+                 # SciMLOperators
+                 AbstractSciMLScalarOperator,
 
                  # Base
                  Number,
@@ -197,6 +201,7 @@ issquare(::Union{
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
+Base.ndims(L::AbstractSciMLOperator) = length(size(L))
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
 
