@@ -29,6 +29,8 @@ K = 12
 
                            op_inverse=f1i,
 
+                           ifcache = false,
+
                            islinear=true,
                            opnorm=true,
                            issymmetric=true,
@@ -40,6 +42,8 @@ K = 12
     op2 = FunctionOperator(f2, u, A*u;
 
                            op_inverse=f2i,
+
+                           ifcache = false,
 
                            islinear=true,
                            opnorm=true,

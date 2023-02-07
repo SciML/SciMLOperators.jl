@@ -97,6 +97,8 @@ function FunctionOperator(op,
                           p=nothing,
                           t::Union{Number,Nothing}=nothing,
 
+                          ifcache::Bool = true,
+
                           # traits
                           islinear::Bool = false,
 
@@ -159,16 +161,18 @@ function FunctionOperator(op,
 
     cache = nothing
 
-    FunctionOperator(
-                     op,
-                     op_adjoint,
-                     op_inverse,
-                     op_adjoint_inverse,
-                     traits,
-                     p,
-                     t,
-                     cache,
-                    )
+    L = FunctionOperator(
+                         op,
+                         op_adjoint,
+                         op_inverse,
+                         op_adjoint_inverse,
+                         traits,
+                         p,
+                         t,
+                         cache,
+                        )
+
+    ifcache ? cache_operator(L, input, output) : L
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t)
@@ -202,6 +206,12 @@ end
 
 function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
     @set! L.cache = zero.((u, v))
+    L
+end
+
+function cache_internals(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+    for op in getops(L)
+    end
     L
 end
 
