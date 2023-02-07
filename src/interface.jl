@@ -186,7 +186,8 @@ has_adjoint(::Union{
                    }
            ) = true
 
-issquare(L) = ndims(L) == 2 && isequal(size(L)...)
+issquare(L) = ndims(L) >= 2 && size(L, 1) == size(L, 2)
+issquare(::AbstractVector) = false
 issquare(::Union{
                  # LinearAlgebra
                  UniformScaling,
