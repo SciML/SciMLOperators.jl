@@ -1,7 +1,7 @@
 name = "SciMLOperators"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 authors = ["Vedant Puri <vedantpuri@gmail.com>"]
-version = "0.1.19"
+version = "0.1.20"
 
 [deps]
 ArrayInterfaceCore = "30b0a656-2188-435a-8636-2ec0e6a096e2"
