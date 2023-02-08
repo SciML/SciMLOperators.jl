@@ -29,6 +29,8 @@ K = 12
 
                            op_inverse=f1i,
 
+                           ifcache = false,
+
                            islinear=true,
                            opnorm=true,
                            issymmetric=true,
@@ -40,6 +42,8 @@ K = 12
     op2 = FunctionOperator(f2, u, A*u;
 
                            op_inverse=f2i,
+
+                           ifcache = false,
 
                            islinear=true,
                            opnorm=true,
@@ -69,6 +73,12 @@ K = 12
     @test has_ldiv(op2)
     @test has_ldiv!(op2)
 
+    @test !iscached(op1)
+    @test !iscached(op2)
+
+    op1 = cache_operator(op1, u, A * u)
+    op2 = cache_operator(op2, u, A * u)
+
     @test iscached(op1)
     @test iscached(op2)
 
@@ -87,10 +97,35 @@ end
 
     f(du,u,p,t) = mul!(du, Diagonal(p*t), u)
 
-    op = FunctionOperator(f, u, u; p=zero(p), t=zero(t))
+    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t))
 
     ans = @. u * p * t
-    @test op(u,p,t) ≈ ans
-    v=copy(u); @test op(v,u,p,t) ≈ ans
+    @test L(u,p,t) ≈ ans
+    v=copy(u); @test L(v,u,p,t) ≈ ans
+
+    # test that output isn't accidentally mutated by passing an internal cache.
+
+    A = Diagonal(p * t)
+    u1 = rand(N, K)
+    u2 = rand(N, K)
+
+    v1 = L * u1; @test v1 ≈ A * u1
+    v2 = L * u2; @test v2 ≈ A * u2; @test v1 ≈ A * u1
+    @test v1 + v2 ≈ A * (u1 + u2)
+
+    v1 .= 0.0
+    v2 .= 0.0
+
+    mul!(v1, L, u1); @test v1 ≈ A * u1
+    mul!(v2, L, u2); @test v2 ≈ A * u2; @test v1 ≈ A * u1
+    @test v1 + v2 ≈ A * (u1 + u2)
+
+    v1 = rand(N, K); w1 = copy(v1)
+    v2 = rand(N, K); w2 = copy(v2)
+    a1, a2, b1, b2 = rand(4)
+
+    mul!(v1, L, u1, a1, b1); @test v1 ≈ a1*A*u1 + b1*w1
+    mul!(v2, L, u2, a2, b2); @test v2 ≈ a2*A*u2 + b2*w2; @test v1 ≈ a1*A*u1 + b1*w1
+    @test v1 + v2 ≈ (a1*A*u1 + b1*w1) + (a2*A*u2 + b2*w2)
 end
 #
