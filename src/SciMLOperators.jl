@@ -5,7 +5,7 @@ using DocStringExtensions
 using LinearAlgebra
 import SparseArrays
 import StaticArraysCore
-import ArrayInterfaceCore
+import ArrayInterface
 import Tricks: static_hasmethod
 import Lazy: @forward
 import Setfield: @set!
