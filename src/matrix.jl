@@ -76,7 +76,7 @@ Base.copyto!(L::MatrixOperator, rhs) = (copyto!(L.A, rhs); L)
 Base.copyto!(L::MatrixOperator, rhs::Base.Broadcast.Broadcasted{<:StaticArraysCore.StaticArrayStyle}) = (copyto!(L.A, rhs); L)
 Base.Broadcast.broadcastable(L::MatrixOperator) = L
 Base.ndims(::Type{<:MatrixOperator{T,AType}}) where{T,AType} = ndims(AType)
-ArrayInterfaceCore.issingular(L::MatrixOperator) = ArrayInterfaceCore.issingular(L.A)
+ArrayInterface.issingular(L::MatrixOperator) = ArrayInterface.issingular(L.A)
 Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func)
 
 # operator application
