@@ -9,7 +9,7 @@ SCALINGNUMBERTYPES = (
                       :UniformScaling,
                      )
 
-#= 
+#=
 The identity operator must be listed here
 so that rules for combination with scalar
 operators take precedence over rules for
@@ -18,7 +18,7 @@ the two are combined together.
 =#
 SCALINGCOMBINETYPES = (
     :AbstractSciMLOperator,
-    :(IdentityOperator{N} where {N})
+    :IdentityOperator
 )
 
 Base.size(α::AbstractSciMLScalarOperator) = ()
@@ -229,7 +229,7 @@ has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 Lazy inversion of Scalar Operators
 """
 #=
-Keeping with the style, we avoid use of the generic InvertedOperator and instead 
+Keeping with the style, we avoid use of the generic InvertedOperator and instead
 have a specialized type for this purpose that subtypes AbstractSciMLScalarOperator.
 =#
 struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
@@ -246,10 +246,10 @@ for op in (
           )
     for T in SCALINGNUMBERTYPES[2:end]
         @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = α * inv(ScalarOperator(x))
-        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ScalarOperator(x) * inv(α) 
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ScalarOperator(x) * inv(α)
     end
 
-    @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = α * inv(β) 
+    @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = α * inv(β)
 end
 
 for op in (
