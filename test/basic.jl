@@ -25,17 +25,17 @@ K = 12
     u  = rand(N,K)
     α = rand()
     β = rand()
-    Id = IdentityOperator{N}()
+    Id = IdentityOperator(N)
 
     @test issquare(Id)
     @test islinear(Id)
-    @test IdentityOperator(u) isa IdentityOperator{N}
-    @test one(A) isa IdentityOperator{N}
+    @test IdentityOperator(u) isa IdentityOperator
+    @test one(A) isa IdentityOperator
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
 
     @test iscached(Id)
     @test size(Id) == (N, N)
-    @test Id' isa IdentityOperator{N}
+    @test Id' isa IdentityOperator
     @test isconstant(Id)
 
     for op in (
@@ -63,18 +63,18 @@ end
     u = rand(N,K)
     α = rand()
     β = rand()
-    Z = NullOperator{N}()
+    Z = NullOperator(N)
 
     @test issquare(Z)
     @test islinear(Z)
-    @test NullOperator(u) isa NullOperator{N}
+    @test NullOperator(u) isa NullOperator
     @test isconstant(Z)
-    @test zero(A) isa NullOperator{N}
+    @test zero(A) isa NullOperator
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 
     @test iscached(Z)
     @test size(Z) == (N, N)
-    @test Z' isa NullOperator{N}
+    @test Z' isa NullOperator
 
     @test Z * u ≈ zero(u)
 
@@ -229,7 +229,7 @@ end
     # We can now test that caching does not rely on matmul
     op = inner_op * factorize(MatrixOperator(rand(N, N)))
     @test !iscached(op)
-    @test_nowarn op = cache_operator(op, rand(N)) 
+    @test_nowarn op = cache_operator(op, rand(N))
     @test iscached(op)
     u = rand(N)
     @test ldiv!(rand(N), op, u) ≈ op \ u

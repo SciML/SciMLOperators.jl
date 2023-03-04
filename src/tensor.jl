@@ -43,7 +43,7 @@ end
 TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
 TensorProductOperator(op::AbstractSciMLOperator) = op
 TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
-TensorProductOperator(::IdentityOperator{No}, ::IdentityOperator{Ni}) where{No,Ni} = IdentityOperator{No*Ni}()
+TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator) = IdentityOperator(ii1.len * ii2.len)
 
 # overload ⊗ (\otimes)
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)

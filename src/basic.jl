@@ -1,25 +1,27 @@
 """
 $(TYPEDEF)
 """
-struct IdentityOperator{N} <: AbstractSciMLOperator{Bool} end
+struct IdentityOperator <: AbstractSciMLOperator{Bool}
+    len::Int
+end
 
 # constructors
-IdentityOperator(u::AbstractArray) = IdentityOperator{size(u,1)}()
+IdentityOperator(u::AbstractArray) = IdentityOperator(size(u,1))
 
 function Base.one(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
-    IdentityOperator{N}()
+    IdentityOperator(N)
 end
 
-Base.convert(::Type{AbstractMatrix}, ::IdentityOperator{N}) where{N} = Diagonal(ones(Bool, N))
+Base.convert(::Type{AbstractMatrix}, ii::IdentityOperator) = Diagonal(ones(Bool, ii.len))
 
 # traits
-Base.size(::IdentityOperator{N}) where{N} = (N, N)
+Base.size(ii::IdentityOperator) = (ii.len, ii.len)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
 Base.conj(A::IdentityOperator) = A
-LinearAlgebra.opnorm(::IdentityOperator{N}, p::Real=2) where{N} = true
+LinearAlgebra.opnorm(::IdentityOperator, p::Real=2) = true
 for pred in (
              :issymmetric, :ishermitian, :isposdef,
             )
@@ -38,29 +40,29 @@ has_ldiv!(::IdentityOperator) = true
 for op in (
            :*, :\,
           )
-    @eval function Base.$op(::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
-        @assert size(u, 1) == N
+    @eval function Base.$op(ii::IdentityOperator, u::AbstractVecOrMat)
+        @assert size(u, 1) == ii.len
         copy(u)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
-    @assert size(u, 1) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, ii::IdentityOperator, u::AbstractVecOrMat)
+    @assert size(u, 1) == ii.len
     copy!(v, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat, α, β) where{N}
-    @assert size(u, 1) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, ii::IdentityOperator, u::AbstractVecOrMat, α, β)
+    @assert size(u, 1) == ii.len
     mul!(v, I, u, α, β)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, ::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
-    @assert size(u, 1) == N
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, ii::IdentityOperator, u::AbstractVecOrMat)
+    @assert size(u, 1) == ii.len
     copy!(v, u)
 end
 
-function LinearAlgebra.ldiv!(::IdentityOperator{N}, u::AbstractVecOrMat) where{N}
-    @assert size(u, 1) == N
+function LinearAlgebra.ldiv!(ii::IdentityOperator, u::AbstractVecOrMat)
+    @assert size(u, 1) == ii.len
     u
 end
 
@@ -68,49 +70,51 @@ end
 for op in (
            :*, :∘,
           )
-    @eval function Base.$op(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
-        @assert size(A, 1) == N
+    @eval function Base.$op(ii::IdentityOperator, A::AbstractSciMLOperator)
+        @assert size(A, 1) == ii.len
         A
     end
 
-    @eval function Base.$op(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
-        @assert size(A, 2) == N
+    @eval function Base.$op(A::AbstractSciMLOperator, ii::IdentityOperator)
+        @assert size(A, 2) == ii.len
         A
     end
 end
 
-function Base.:\(::IdentityOperator{N}, A::AbstractSciMLOperator) where{N}
-    @assert size(A, 1) == N
+function Base.:\(::IdentityOperator, A::AbstractSciMLOperator)
+    @assert size(A, 1) == ii.len
     A
 end
 
-function Base.:/(A::AbstractSciMLOperator, ::IdentityOperator{N}) where{N}
-    @assert size(A, 2) == N
+function Base.:/(A::AbstractSciMLOperator, ::IdentityOperator)
+    @assert size(A, 2) == ii.len
     A
 end
 
 """
 $(TYPEDEF)
 """
-struct NullOperator{N} <: AbstractSciMLOperator{Bool} end
+struct NullOperator <: AbstractSciMLOperator{Bool}
+    len::Int
+end
 
 # constructors
-NullOperator(u::AbstractArray) = NullOperator{size(u,1)}()
+NullOperator(u::AbstractArray) = NullOperator(size(u,1))
 
 function Base.zero(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
-    NullOperator{N}()
+    NullOperator(N)
 end
 
-Base.convert(::Type{AbstractMatrix}, ::NullOperator{N}) where{N} = Diagonal(zeros(Bool, N))
+Base.convert(::Type{AbstractMatrix}, nn::NullOperator) = Diagonal(zeros(Bool, nn.len))
 
 # traits
-Base.size(::NullOperator{N}) where{N} = (N, N)
+Base.size(nn::NullOperator) = (nn.len, nn.len)
 Base.adjoint(A::NullOperator) = A
 Base.transpose(A::NullOperator) = A
 Base.conj(A::NullOperator) = A
-LinearAlgebra.opnorm(::NullOperator{N}, p::Real=2) where{N} = false
+LinearAlgebra.opnorm(::NullOperator, p::Real=2) = false
 for pred in (
              :issymmetric, :ishermitian,
             )
@@ -126,15 +130,15 @@ has_adjoint(::NullOperator) = true
 has_mul!(::NullOperator) = true
 
 # opeator application
-Base.:*(::NullOperator{N}, u::AbstractVecOrMat) where{N} = (@assert size(u, 1) == N; zero(u))
+Base.:*(nn::NullOperator, u::AbstractVecOrMat) = (@assert size(u, 1) == nn.len; zero(u))
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, ::NullOperator{N}, u::AbstractVecOrMat) where{N}
-    @assert size(u, 1) == size(v, 1) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, nn::NullOperator, u::AbstractVecOrMat)
+    @assert size(u, 1) == size(v, 1) == nn.len
     lmul!(false, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, ::NullOperator{N}, u::AbstractVecOrMat, α, β) where{N}
-    @assert size(u, 1) == size(v, 1) == N
+function LinearAlgebra.mul!(v::AbstractVecOrMat, nn::NullOperator, u::AbstractVecOrMat, α, β)
+    @assert size(u, 1) == size(v, 1) == nn.len
     lmul!(β, v)
 end
 
@@ -142,14 +146,14 @@ end
 for op in (
            :*, :∘,
           )
-    @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
-        @assert size(A, 1) == N
-        NullOperator{N}()
+    @eval function Base.$op(nn::NullOperator, A::AbstractSciMLOperator)
+        @assert size(A, 1) == nn.len
+        NullOperator(nn.len)
     end
 
-    @eval function Base.$op(A::AbstractSciMLOperator, ::NullOperator{N}) where{N}
-        @assert size(A, 2) == N
-        NullOperator{N}()
+    @eval function Base.$op(A::AbstractSciMLOperator, nn::NullOperator)
+        @assert size(A, 2) == nn.len
+        NullOperator(nn.len)
     end
 end
 
@@ -157,13 +161,13 @@ end
 for op in (
            :+, :-,
           )
-    @eval function Base.$op(::NullOperator{N}, A::AbstractSciMLOperator) where{N}
-        @assert size(A) == (N, N)
+    @eval function Base.$op(nn::NullOperator, A::AbstractSciMLOperator)
+        @assert size(A) == (nn.len, nn.len)
         A
     end
 
-    @eval function Base.$op(A::AbstractSciMLOperator, ::NullOperator{N}) where{N}
-        @assert size(A) == (N, N)
+    @eval function Base.$op(A::AbstractSciMLOperator, nn::NullOperator)
+        @assert size(A) == (nn.len, nn.len)
         A
     end
 end
@@ -198,7 +202,7 @@ for T in SCALINGNUMBERTYPES
         λ = ScalarOperator(λ) * L.λ
         ScaledOperator(λ, L.L)
     end
-    
+
     for LT in SCALINGCOMBINETYPES
         @eval Base.:*(λ::$T, L::$LT) = ScaledOperator(λ, L)
         @eval Base.:*(L::$LT, λ::$T) = ScaledOperator(λ, L)
@@ -347,14 +351,14 @@ for op in (
             @eval function Base.$op(L::$LT, λ::$T)
                 @assert issquare(L)
                 N  = size(L, 1)
-                Id = IdentityOperator{N}()
+                Id = IdentityOperator(N)
                 AddedOperator(L, $op(λ)*Id)
             end
 
             @eval function Base.$op(λ::$T, L::$LT)
                 @assert issquare(L)
                 N  = size(L, 1)
-                Id = IdentityOperator{N}()
+                Id = IdentityOperator(N)
                 AddedOperator(λ*Id, $op(L))
             end
         end
@@ -459,24 +463,24 @@ for op in (
            :*, :∘,
           )
     # identity
-    @eval function Base.$op(::IdentityOperator{N}, A::ComposedOperator) where{N}
-        @assert size(A, 1) == N
+    @eval function Base.$op(ii::IdentityOperator, A::ComposedOperator)
+        @assert size(A, 1) == ii.len
         A
     end
 
-    @eval function Base.$op(A::ComposedOperator, ::IdentityOperator{N}) where{N}
-        @assert size(A, 2) == N
+    @eval function Base.$op(A::ComposedOperator, ii::IdentityOperator)
+        @assert size(A, 2) == ii.len
         A
     end
 
     # null operator
-    @eval function Base.$op(::NullOperator{N}, A::ComposedOperator) where{N}
-        @assert size(A, 1) == N
+    @eval function Base.$op(nn::NullOperator, A::ComposedOperator)
+        @assert size(A, 1) == nn.len
         zero(A)
     end
 
-    @eval function Base.$op(A::ComposedOperator, ::NullOperator{N}) where{N}
-        @assert size(A, 2) == N
+    @eval function Base.$op(A::ComposedOperator, nn::NullOperator)
+        @assert size(A, 2) == nn.len
         zero(A)
     end
 
@@ -561,7 +565,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
             cache = (vec, cache...)
         end
     elseif has_ldiv(L)
-        m = size(L, 1) 
+        m = size(L, 1)
         k = size(u, 2)
         vec = u isa AbstractMatrix ? similar(u, (m, k)) : similar(u, (m,))
         cache = ()
