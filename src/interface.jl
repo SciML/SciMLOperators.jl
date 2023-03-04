@@ -28,6 +28,7 @@ end
 
 (L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
+(L::AbstractSciMLOperator)(du, u, p, t, α, β) = (update_coefficients!(L, u, p, t); mul!(du, L, u, α, β))
 
 ###
 # caching interface
