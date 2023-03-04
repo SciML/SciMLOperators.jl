@@ -23,8 +23,8 @@ M = rand(N,N)
 
 for (op_type, A) in
     (
-     (IdentityOperator, IdentityOperator{N}()),
-     (NullOperator, NullOperator{N}()),
+     (IdentityOperator, IdentityOperator(N)),
+     (NullOperator, NullOperator(N)),
      (MatrixOperator, MatrixOperator(rand(N,N))),
      (AffineOperator, AffineOperator(rand(N,N), rand(N,N), rand(N,K))),
      (ScaledOperator, rand() * MatrixOperator(rand(N,N))),
@@ -48,7 +48,7 @@ for (op_type, A) in
     @assert A isa op_type
 
     loss_mul = function(p)
-    
+
         v = Diagonal(p) * u0
 
         w = A * v
@@ -83,4 +83,3 @@ for (op_type, A) in
         end
     end
 end
-

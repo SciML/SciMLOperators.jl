@@ -254,7 +254,7 @@ end
 """
 function AddVector(b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC)
     N  = size(b, 1)
-    Id = IdentityOperator{N}()
+    Id = IdentityOperator(N)
 
     AffineOperator(Id, Id, b; update_func=update_func)
 end
@@ -265,7 +265,7 @@ end
 """
 function AddVector(B, b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC)
     N = size(B, 1)
-    Id = IdentityOperator{N}()
+    Id = IdentityOperator(N)
 
     AffineOperator(Id, B, b; update_func=update_func)
 end
