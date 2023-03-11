@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -33,11 +33,13 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
 
         iip = traits.isinplace
         oop = traits.outofplace
+        mul5 = traits.has_mul5
         T   = traits.T
 
         new{
             iip,
             oop,
+            mul5,
             T,
             typeof(op),
             typeof(op_adjoint),
@@ -88,6 +90,8 @@ function FunctionOperator(op,
 
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
+                          has_mul5::Union{Nothing,Bool}=nothing,
+                          cache::Union{Nothing, Bool, NTuple{2}}=nothing,
                           T::Union{Type{<:Number},Nothing}=nothing,
 
                           op_adjoint=nothing,
@@ -112,16 +116,37 @@ function FunctionOperator(op,
     T  = T isa Nothing ? promote_type(eltype.((input, output))...) : T
     t  = t isa Nothing ? zero(real(T)) : t
 
-    isinplace = if isinplace isa Nothing
+    isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
     else
         isinplace
     end
 
-    outofplace = if outofplace isa Nothing
+    outofplace = if isnothing(outofplace)
         static_hasmethod(op, typeof((input, p, t)))
     else
         outofplace
+    end
+
+    has_mul5 = if isnothing(has_mul5)
+        has_mul5 = true
+        for f in (
+                  op, op_adjoint, op_inverse, op_adjoint_inverse,
+                 )
+            if !isnothing(f)
+                has_mul5 *= static_hasmethod(f, typeof((output, input, p, t, t, t)))
+            end
+        end
+
+        has_mul5
+    end
+
+    need_cache = if isnothing(cache)
+        true
+    elseif cache isa Bool
+        need_cache = cache
+        cache = nothing
+        need_cache
     end
 
     if !isinplace & !outofplace
@@ -155,11 +180,11 @@ function FunctionOperator(op,
 
               isinplace = isinplace,
               outofplace = outofplace,
+              has_mul5 = has_mul5,
+              need_cache = need_cache,
               T = T,
               size = sz,
              )
-
-    cache = nothing
 
     L = FunctionOperator(
                          op,

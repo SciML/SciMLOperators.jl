@@ -34,7 +34,26 @@ end
 # caching interface
 ###
 
+getops(L) = ()
+
+need_self_cache(L) = false
+need_self_cache(::Union{
+                        # LinearAlgebra
+                        AbstractMatrix,
+                        UniformScaling,
+                        Factorization,
+
+                        # Base
+                        Number,
+
+                       }
+               ) = false
+
 function iscached(L::AbstractSciMLOperator)
+    #if !need_self_cache(L)
+    #    return false
+    #end
+
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
     isset = has_cache ? L.cache !== nothing : true
 
@@ -42,6 +61,7 @@ function iscached(L::AbstractSciMLOperator)
 end
 
 iscached(L) = true
+
 iscached(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
