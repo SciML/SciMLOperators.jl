@@ -94,9 +94,9 @@ end
     T2 = ⊗(C, D)
 
     # Introduce update function for D1
-    D1  = DiagonalOperator(p * ones(N2); update_func=(A, u, p, t) -> (A .= p))
+    D1  = DiagonalOperator(zeros(N2); update_func=(d, u, p, t) -> (d .= p))
     # Introduce update funcion for D2 dependent on kwarg "diag" 
-    D2  = DiagonalOperator(p*t * diag; update_func=(A, u, p, t; diag) -> (A .= p*t*diag),
+    D2  = DiagonalOperator(zeros(N2); update_func=(d, u, p, t; diag) -> (d .= p*t*diag),
                            accepted_kwargs=(:diag,))
 
     TT = [T1, T2]
