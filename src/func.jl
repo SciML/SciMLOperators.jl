@@ -176,8 +176,7 @@ function FunctionOperator(op,
                          traits,
                          p,
                          t,
-                         # automatically convert NamedTuple's to pairs 
-                         Base.Pairs{Symbol}(kwargs_for_op, keys(kwargs_for_op)),
+                         normalize_kwargs(kwargs_for_op),
                          cache
                         )
 
@@ -209,7 +208,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
     L.p = p
     L.t = t
-    L.kwargs = kwargs
+    L.kwargs = normalize_kwargs(kwargs)
 
     nothing
 end

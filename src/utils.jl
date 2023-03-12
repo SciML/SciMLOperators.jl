@@ -24,4 +24,7 @@ function (f_filter::FilterKwargs)(args...; kwargs...)
     filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in f_filter.accepted_kwargs if haskey(kwargs, kwarg))
     f_filter.f(args...; filtered_kwargs...)
 end
+# automatically convert NamedTuple's, etc. to a normalized kwargs representation (i.e. Base.Pairs) 
+normalize_kwargs(; kwargs...) = kwargs
+normalize_kwargs(kwargs) = normalize_kwargs(; kwargs...)
 #
