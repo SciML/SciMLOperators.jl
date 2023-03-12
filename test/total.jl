@@ -119,5 +119,8 @@ end
     v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
     # Test consistency with in-place five-arg mul!
     v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
+    # Test consistency with operator application form
+    @test op(u, p, t; diag, matrix) ≈ op * u 
+    v=rand(N2,K); @test op(v, u, p, t; diag, matrix) ≈ op * u 
 end
 #
