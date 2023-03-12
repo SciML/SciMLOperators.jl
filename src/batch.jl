@@ -1,6 +1,6 @@
 #
 """
-    BatchedDiagonalOperator(diag; update_func=nothing, accepted_kwarg_fields=())
+    BatchedDiagonalOperator(diag; update_func=nothing, accepted_kwargs=())
 
 Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
 Acts on `AbstractArray`s of the same size as `diag`. The update function is called
@@ -15,9 +15,9 @@ struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
     function BatchedDiagonalOperator(
                                      diag::AbstractArray;
                                      update_func=nothing,
-                                     accepted_kwarg_fields=()
+                                     accepted_kwargs=()
                                     )
-        _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+        _update_func = preprocess_update_func(update_func, accepted_kwargs)
         new{
             eltype(diag),
             typeof(diag),
@@ -28,8 +28,8 @@ struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
     end
 end
 
-function DiagonalOperator(u::AbstractArray; update_func=nothing, accepted_kwarg_fields=())
-    BatchedDiagonalOperator(u; update_func, accepted_kwarg_fields)
+function DiagonalOperator(u::AbstractArray; update_func=nothing, accepted_kwargs=())
+    BatchedDiagonalOperator(u; update_func, accepted_kwargs)
 end
 
 # traits

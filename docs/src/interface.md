@@ -61,4 +61,4 @@ matrix-free representations, hence their support in the SciMLOperators interface
 In rare cases, an operator may be used in a context where additional state is expected to be provided
 to `update_coefficients!` beyond `u`, `p`, and `t`. In this case, the operator may accept this additional
 state through arbitrary keyword arguments to `update_coefficients!`. When the caller provides these, they will be recursively propagated downwards through composed operators just like `u`, `p`, and `t`, and provided to the operator.
-For the [premade SciMLOperators](premade_operators.md), one can specify the keyword arguments used by an operator with an `accepted_kwarg_fields` argument that defaults to an empty tuple.
+For the [premade SciMLOperators](premade_operators.md), one can specify the keyword arguments used by an operator with an `accepted_kwargs` argument that defaults to an empty tuple.

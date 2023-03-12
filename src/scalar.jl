@@ -90,7 +90,7 @@ end
 Base.:+(α::AbstractSciMLScalarOperator) = α
 
 """
-    ScalarOperator(val; update_func=nothing, accepted_kwarg_fields=())
+    ScalarOperator(val; update_func=nothing, accepted_kwargs=())
 
     (α::ScalarOperator)(a::Number) = α * a
 
@@ -104,8 +104,8 @@ mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
     val::T
     update_func::F
 
-    function ScalarOperator(val::T; update_func=nothing, accepted_kwarg_fields=()) where {T}
-        _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+    function ScalarOperator(val::T; update_func=nothing, accepted_kwargs=()) where {T}
+        _update_func = preprocess_update_func(update_func, accepted_kwargs)
         new{T,typeof(_update_func)}(val, _update_func)
     end
 end

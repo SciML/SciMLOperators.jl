@@ -1,6 +1,6 @@
 #
 """
-    MatrixOperator(A; update_func=nothing, accepted_kwarg_fields=())
+    MatrixOperator(A; update_func=nothing, accepted_kwargs=())
 
 Represents a time-dependent linear operator given by an AbstractMatrix. The
 update function is called by `update_coefficients!` and is assumed to have
@@ -11,8 +11,8 @@ the following signature:
 struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLOperator{T}
     A::AType
     update_func::F
-    function MatrixOperator(A::AType; update_func=nothing, accepted_kwarg_fields=()) where {AType}
-        _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+    function MatrixOperator(A::AType; update_func=nothing, accepted_kwargs=()) where {AType}
+        _update_func = preprocess_update_func(update_func, accepted_kwargs)
         new{eltype(A),AType,typeof(_update_func)}(A, _update_func)
     end
 end
@@ -90,7 +90,7 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
 """
-    DiagonalOperator(diag; update_func=nothing, accepted_kwarg_fields=())
+    DiagonalOperator(diag; update_func=nothing, accepted_kwargs=())
 
 Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
 The update function is called by `update_coefficients!` and is assumed to have
@@ -107,8 +107,8 @@ an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of 
 `L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
 with leading length `size(u, 1) = N`.
 """
-function DiagonalOperator(diag::AbstractVector; update_func=nothing, accepted_kwarg_fields=())
-    _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+function DiagonalOperator(diag::AbstractVector; update_func=nothing, accepted_kwargs=())
+    _update_func = preprocess_update_func(update_func, accepted_kwargs)
     diag_update_func = if update_func_isconstant(_update_func)
         _update_func
     else
@@ -205,7 +205,7 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, B, b; update_func=nothing, accepted_kwarg_fields=())
+    L = AffineOperator(A, B, b; update_func=nothing, accepted_kwargs=())
     L(u) = A*u + B*b
 
 Represents a time-dependent affine operator. The update function is called
@@ -240,12 +240,12 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         B::Union{AbstractMatrix,AbstractSciMLOperator},
                         b::AbstractArray;
                         update_func=nothing,
-                        accepted_kwarg_fields=()
+                        accepted_kwargs=()
                        )
     @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
     of same size"
 
-    _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+    _update_func = preprocess_update_func(update_func, accepted_kwargs)
 
     A = A isa AbstractMatrix ? MatrixOperator(A) : A
     B = B isa AbstractMatrix ? MatrixOperator(B) : B
@@ -255,11 +255,11 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
 end
 
 """
-    L = AddVector(b; update_func=nothing, accepted_kwarg_fields=())
+    L = AddVector(b; update_func=nothing, accepted_kwargs=())
     L(u) = u + b
 """
-function AddVector(b::AbstractVecOrMat; update_func=nothing, accepted_kwarg_fields=())
-    _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+function AddVector(b::AbstractVecOrMat; update_func=nothing, accepted_kwargs=())
+    _update_func = preprocess_update_func(update_func, accepted_kwargs)
 
     N  = size(b, 1)
     Id = IdentityOperator(N)
@@ -268,11 +268,11 @@ function AddVector(b::AbstractVecOrMat; update_func=nothing, accepted_kwarg_fiel
 end
 
 """
-    L = AddVector(B, b; update_func=nothing, accepted_kwarg_fields=())
+    L = AddVector(B, b; update_func=nothing, accepted_kwargs=())
     L(u) = u + B*b
 """
-function AddVector(B, b::AbstractVecOrMat; update_func=nothing, accepted_kwarg_fields=())
-    _update_func = preprocess_update_func(update_func, accepted_kwarg_fields)
+function AddVector(B, b::AbstractVecOrMat; update_func=nothing, accepted_kwargs=())
+    _update_func = preprocess_update_func(update_func, accepted_kwargs)
 
     N = size(B, 1)
     Id = IdentityOperator(N)
