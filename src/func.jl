@@ -184,9 +184,10 @@ function FunctionOperator(op,
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
-    for op in getops(L)
-        op = update_coefficients(op, u, p, t; kwargs...)
-    end
+    op = update_coefficients(L.op, u, p, t; kwargs...)
+    op_adjoint = update_coefficients(L.op_adjoint, u, p, t; kwargs...)
+    op_inverse = update_coefficients(L.op_inverse, u, p, t; kwargs...)
+    op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t; kwargs...)
 
     FunctionOperator(op,
                      op_adjoint,
