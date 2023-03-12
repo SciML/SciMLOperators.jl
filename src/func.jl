@@ -238,9 +238,6 @@ function Base.adjoint(L::FunctionOperator)
     traits = L.traits
     @set! traits.size = reverse(size(L))
 
-    p = L.p
-    t = L.t
-
     cache = if iscached(L)
         cache = reverse(L.cache)
     else
@@ -252,8 +249,9 @@ function Base.adjoint(L::FunctionOperator)
                      op_inverse,
                      op_adjoint_inverse,
                      traits,
-                     p,
-                     t,
+                     L.p,
+                     L.t,
+                     L.kwargs,
                      cache,
                     )
 end
@@ -280,9 +278,6 @@ function Base.inv(L::FunctionOperator)
         (p::Real) -> 1 / traits.opnorm(p)
     end
 
-    p = L.p
-    t = L.t
-
     cache = if iscached(L)
         cache = reverse(L.cache)
     else
@@ -294,8 +289,9 @@ function Base.inv(L::FunctionOperator)
                      op_inverse,
                      op_adjoint_inverse,
                      traits,
-                     p,
-                     t,
+                     L.p,
+                     L.t,
+                     L.kwargs,
                      cache,
                     )
 end
