@@ -184,11 +184,10 @@ function FunctionOperator(op,
     ifcache ? cache_operator(L, input, output) : L
 end
 
-function update_coefficients(L::FunctionOperator, u, p, t)
-    op = update_coefficients(L.op, u, p, t)
-    op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
-    op_inverse = update_coefficients(L.op_inverse, u, p, t)
-    op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t)
+function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
+    for op in getops(L)
+        op = update_coefficients(op, u, p, t; kwargs...)
+    end
 
     FunctionOperator(op,
                      op_adjoint,
@@ -197,6 +196,7 @@ function update_coefficients(L::FunctionOperator, u, p, t)
                      L.traits,
                      p,
                      t,
+                     kwargs_for_op=kwargs,
                      L.cache
                     )
 end
