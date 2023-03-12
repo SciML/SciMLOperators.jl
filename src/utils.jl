@@ -19,7 +19,9 @@ struct FilterKwargs{F,K}
     accepted_kwargs::K
 end
 function (f_filter::FilterKwargs)(args...; kwargs...)
-    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in f_filter.accepted_kwargs)
+    # Filter keyword arguments to those accepted by function.
+    # Avoid throwing errors here if a keyword argument is not provided: defer this to the function call for a more readable error.
+    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in f_filter.accepted_kwargs if haskey(kwargs, kwarg))
     f_filter.f(args...; filtered_kwargs...)
 end
 #
