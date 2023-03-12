@@ -208,7 +208,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
     L.p = p
     L.t = t
-    L.kwargs = normalize_kwargs(kwargs)
+    L.kwargs = kwargs
 
     nothing
 end
