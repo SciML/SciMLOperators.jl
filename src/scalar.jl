@@ -90,7 +90,7 @@ end
 Base.:+(α::AbstractSciMLScalarOperator) = α
 
 """
-    ScalarOperator(val; update_func=nothing, accepted_kwargs=())
+    ScalarOperator(val; [update_func, accepted_kwargs])
 
     (α::ScalarOperator)(a::Number) = α * a
 
@@ -98,7 +98,7 @@ Represents a time-dependent scalar/scaling operator. The update function
 is called by `update_coefficients!` and is assumed to have the following
 signature:
 
-    update_func(oldval,u,p,t; <accepted kwarg fields>) -> newval
+    update_func(oldval,u,p,t; <accepted kwargs>) -> newval
 """
 mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
     val::T
@@ -121,7 +121,7 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
     update_func = (oldval,u,p,t; kwargs...) -> α.update_func(oldval |> conj,u,p,t; kwargs...) |> conj
-    ScalarOperator(val; update_func=update_func, accepted_kwargs=nothing)
+    ScalarOperator(val; update_func=update_func, accepted_kwargs=NoKwargFilter())
 end
 
 Base.one(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(one(T))
