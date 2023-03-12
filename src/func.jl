@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -17,6 +17,8 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
     p::P
     """ Time """
     t::Tt
+    """ Keyword arguments """
+    kwargs::K
     """ Cache """
     cache::C
 
@@ -28,6 +30,7 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
                               traits,
                               p,
                               t,
+                              kwargs_for_op,
                               cache
                              )
 
@@ -46,6 +49,7 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
             typeof(traits),
             typeof(p),
             typeof(t),
+            typeof(kwargs_for_op),
             typeof(cache),
            }(
              op,
@@ -55,6 +59,7 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
              traits,
              p,
              t,
+             kwargs_for_op,
              cache,
             )
     end
@@ -82,6 +87,7 @@ function FunctionOperator(op,
     FunctionOperator(op, input, output; kwargs...)
 end
 
+# TODO: document constructor and revisit design as needed (e.g. for "kwargs_for_op")
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
                           output::AbstractVecOrMat =  input;
@@ -96,6 +102,7 @@ function FunctionOperator(op,
 
                           p=nothing,
                           t::Union{Number,Nothing}=nothing,
+                          kwargs_for_op=(),
 
                           ifcache::Bool = true,
 
@@ -169,7 +176,9 @@ function FunctionOperator(op,
                          traits,
                          p,
                          t,
-                         cache,
+                         # automatically convert NamedTuple's to pairs 
+                         pairs(kwargs_for_op),
+                         cache
                         )
 
     ifcache ? cache_operator(L, input, output) : L
@@ -200,6 +209,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
     L.p = p
     L.t = t
+    L.kwargs = kwargs
 
     nothing
 end
@@ -326,22 +336,22 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 
 # operator application
 Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op(u, L.p, L.t)
-Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op_inverse(u, L.p, L.t)
+Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op_inverse(u, L.p, L.t; L.kwargs...)
 
 function Base.:*(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     _, co = L.cache
     du = zero(co)
-    L.op(du, u, L.p, L.t)
+    L.op(du, u, L.p, L.t; L.kwargs...)
 end
 
 function Base.:\(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     ci, _ = L.cache
     du = zero(ci)
-    L.op_inverse(du, u, L.p, L.t)
+    L.op_inverse(du, u, L.p, L.t; L.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
-    L.op(v, u, L.p, L.t)
+    L.op(v, u, L.p, L.t; L.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, args...)
@@ -358,7 +368,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::A
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
-    L.op_inverse(v, u, L.p, L.t)
+    L.op_inverse(v, u, L.p, L.t; L.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractVecOrMat)

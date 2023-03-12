@@ -94,18 +94,20 @@ end
     u = rand(N,K)
     p = rand(N)
     t = rand()
+    scale = rand()
 
-    f(du,u,p,t) = mul!(du, Diagonal(p*t), u)
+    # Accept a kwarg "scale" in operator action
+    f(du,u,p,t; scale) = begin @show scale; mul!(du, Diagonal(p*t*scale), u) end
 
-    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t))
+    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), kwargs_for_op=(;scale=zero(scale)))
 
-    ans = @. u * p * t
-    @test L(u,p,t) ≈ ans
-    v=copy(u); @test L(v,u,p,t) ≈ ans
+    ans = @. u * p * t * scale 
+    @test L(u,p,t; scale) ≈ ans
+    v=copy(u); @test L(v,u,p,t; scale) ≈ ans
 
     # test that output isn't accidentally mutated by passing an internal cache.
 
-    A = Diagonal(p * t)
+    A = Diagonal(p * t * scale)
     u1 = rand(N, K)
     u2 = rand(N, K)
 
