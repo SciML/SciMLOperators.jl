@@ -19,7 +19,9 @@ function (::AbstractSciMLOperator) end
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 function preprocess_update_func(update_func, accepted_kwargs)
     update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
-    return FilterKwargs(update_func, accepted_kwargs)
+    # accepted_kwargs can be passed as nothing to indicate that we should not filter 
+    # (e.g. if the function already accepts all kwargs...). 
+    return (accepted_kwargs === nothing) ? update_func : FilterKwargs(update_func, accepted_kwargs)
 end
 function update_func_isconstant(update_func)
     if update_func isa FilterKwargs

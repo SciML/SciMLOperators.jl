@@ -42,7 +42,7 @@ for op in (
             MatrixOperator($op(L.A))
         else
             update_func = (A,u,p,t; kwargs...) -> $op(L.update_func($op(L.A),u,p,t; kwargs...))
-            MatrixOperator($op(L.A); update_func = update_func)
+            MatrixOperator($op(L.A); update_func = update_func, accepted_kwargs=nothing)
         end
     end
 end
@@ -79,7 +79,7 @@ Base.copyto!(L::MatrixOperator, rhs::Base.Broadcast.Broadcasted{<:StaticArraysCo
 Base.Broadcast.broadcastable(L::MatrixOperator) = L
 Base.ndims(::Type{<:MatrixOperator{T,AType}}) where{T,AType} = ndims(AType)
 ArrayInterface.issingular(L::MatrixOperator) = ArrayInterface.issingular(L.A)
-Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func)
+Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func, accepted_kwargs=nothing)
 
 # operator application
 Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
@@ -114,7 +114,7 @@ function DiagonalOperator(diag::AbstractVector; update_func=nothing, accepted_kw
     else
         (A, u, p, t; kwargs...) -> (_update_func(A.diag, u, p, t; kwargs...); A)
     end
-    MatrixOperator(Diagonal(diag); update_func=diag_update_func)
+    MatrixOperator(Diagonal(diag); update_func=diag_update_func, accepted_kwargs=nothing)
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
@@ -264,7 +264,7 @@ function AddVector(b::AbstractVecOrMat; update_func=nothing, accepted_kwargs=())
     N  = size(b, 1)
     Id = IdentityOperator(N)
 
-    AffineOperator(Id, Id, b; update_func=_update_func)
+    AffineOperator(Id, Id, b; update_func=_update_func, accepted_kwargs=nothing)
 end
 
 """
@@ -277,7 +277,7 @@ function AddVector(B, b::AbstractVecOrMat; update_func=nothing, accepted_kwargs=
     N = size(B, 1)
     Id = IdentityOperator(N)
 
-    AffineOperator(Id, B, b; update_func=_update_func)
+    AffineOperator(Id, B, b; update_func=_update_func, accepted_kwargs=nothing)
 end
 
 getops(L::AffineOperator) = (L.A, L.B, L.b)

@@ -121,7 +121,7 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
     update_func = (oldval,u,p,t; kwargs...) -> α.update_func(oldval |> conj,u,p,t; kwargs...) |> conj
-    ScalarOperator(val; update_func=update_func)
+    ScalarOperator(val; update_func=update_func, accepted_kwargs=nothing)
 end
 
 Base.one(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(one(T))
