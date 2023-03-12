@@ -99,7 +99,7 @@ end
     # Accept a kwarg "scale" in operator action
     f(du,u,p,t; scale) = begin @show scale; mul!(du, Diagonal(p*t*scale), u) end
 
-    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), kwargs_for_op=(;scale=zero(scale)))
+    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), accepted_kwargs=(;scale=zero(scale)))
 
     ans = @. u * p * t * scale 
     @test L(u,p,t; scale) ≈ ans

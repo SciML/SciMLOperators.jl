@@ -30,7 +30,7 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: Ab
                               traits,
                               p,
                               t,
-                              kwargs_for_op,
+                              accepted_kwargs,
                               cache
                              )
 
@@ -49,7 +49,7 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: Ab
             typeof(traits),
             typeof(p),
             typeof(t),
-            typeof(kwargs_for_op),
+            typeof(accepted_kwargs),
             typeof(cache),
            }(
              op,
@@ -59,7 +59,7 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: Ab
              traits,
              p,
              t,
-             kwargs_for_op,
+             accepted_kwargs,
              cache,
             )
     end
@@ -87,7 +87,7 @@ function FunctionOperator(op,
     FunctionOperator(op, input, output; kwargs...)
 end
 
-# TODO: document constructor and revisit design as needed (e.g. for "kwargs_for_op")
+# TODO: document constructor and revisit design as needed (e.g. for "accepted_kwargs")
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
                           output::AbstractVecOrMat =  input;
@@ -102,7 +102,7 @@ function FunctionOperator(op,
 
                           p=nothing,
                           t::Union{Number,Nothing}=nothing,
-                          kwargs_for_op=(),
+                          accepted_kwargs=(),
 
                           ifcache::Bool = true,
 
@@ -176,7 +176,7 @@ function FunctionOperator(op,
                          traits,
                          p,
                          t,
-                         normalize_kwargs(kwargs_for_op),
+                         normalize_kwargs(accepted_kwargs),
                          cache
                         )
 
@@ -195,7 +195,7 @@ function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
                      L.traits,
                      p,
                      t,
-                     kwargs_for_op=kwargs,
+                     accepted_kwargs=kwargs,
                      L.cache
                     )
 end
