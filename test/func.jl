@@ -97,7 +97,7 @@ end
     scale = rand()
 
     # Accept a kwarg "scale" in operator action
-    f(du,u,p,t; scale) = begin @show scale; mul!(du, Diagonal(p*t*scale), u) end
+    f(du,u,p,t; scale) = mul!(du, Diagonal(p*t*scale), u)
 
     L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), accepted_kwargs=(;scale=zero(scale)))
 
