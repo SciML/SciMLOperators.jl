@@ -177,7 +177,7 @@ function FunctionOperator(op,
                          p,
                          t,
                          # automatically convert NamedTuple's to pairs 
-                         pairs(kwargs_for_op),
+                         Base.Pairs{Symbol}(kwargs_for_op, keys(kwargs_for_op)),
                          cache
                         )
 
