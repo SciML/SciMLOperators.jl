@@ -251,6 +251,19 @@ end
 
     L = cache_operator(L, u)
     v = rand(N); @test L(v, u, p, t) ≈ ans
+
+    Ai = inv(A)
+    Bi = inv(B)
+    Ci = inv(C)
+
+    Li = inv(L)
+    for op in (Ai, Bi, Ci, Li)
+        @test op isa SciMLOperators.InvertedOperator
+    end
+
+    ans = Ai(Bi(Ci(u, p, t), p, t), p, t)
+    @test_broken Li(u, p, t) ≈ ans
+    v = rand(N); @test_broken Li(v, u, p, t) ≈ ans
 end
 
 @testset "Adjoint, Transpose" begin
