@@ -235,6 +235,24 @@ end
     @test ldiv!(rand(N), op, u) ≈ op \ u
 end
 
+@testset "ComposedOperator nonlinear operator composition test" begin
+    u = rand(N)
+    p = nothing
+    t = 0.0
+
+    A = DiagonalOperator(zeros(N); update_func = (d, u, p, t) -> copy!(d, u)) # ret u .^2
+    B = DiagonalOperator(zeros(N); update_func = (d, u, p, t) -> copy!(d, u))
+    C = DiagonalOperator(zeros(N); update_func = (d, u, p, t) -> copy!(d, u))
+    L = A ∘ B ∘ C
+
+    ans = A(B(C(u, p, t), p, t), p, t)
+
+    @test L(u, p, t) ≈ ans
+
+    L = cache_operator(L, u)
+    v = rand(N); @test L(v, u, p, t) ≈ ans
+end
+
 @testset "Adjoint, Transpose" begin
 
     for (op,
