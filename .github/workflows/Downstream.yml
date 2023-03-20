@@ -16,7 +16,9 @@ jobs:
         julia-version: [1,1.6]
         os: [ubuntu-latest]
         package:
-          - {user: SciML, repo: OrdinaryDiffEq.jl, group: InterfaceII}
+          - {user: SciML, repo: SciMLBase.jl, group: InterfaceII}
+          - {user: SciML, repo: DiffEqBase.jl, group: InterfaceII}
+          - {user: SciML, repo: LinearSolve.jl, group: InterfaceII}
 
     steps:
       - uses: actions/checkout@v3
