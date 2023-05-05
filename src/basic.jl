@@ -176,6 +176,7 @@ end
     ScaledOperator
 
     (λ L)*(u) = λ * L(u)
+
 """
 struct ScaledOperator{T,
                       λType,
@@ -579,9 +580,6 @@ function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    # TODO - use similar instead of *, \
-    # similar(array, [element_type=eltype(array)], [dims=size(array)])
-    # similar(u, Float32, (2,3))
     if has_mul(L)
         vec = zero(u)
         cache = (vec,)
