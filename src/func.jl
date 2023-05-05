@@ -91,7 +91,7 @@ function FunctionOperator(op,
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
                           has_mul5::Union{Nothing,Bool}=nothing,
-                          cache::Union{Nothing, Bool, NTuple{2}}=nothing,
+                          cache::Union{Nothing, NTuple{2}}=nothing,
                           T::Union{Type{<:Number},Nothing}=nothing,
 
                           op_adjoint=nothing,
@@ -113,8 +113,8 @@ function FunctionOperator(op,
                          )
 
     sz = (size(output, 1), size(input, 1))
-    T  = T isa Nothing ? promote_type(eltype.((input, output))...) : T
-    t  = t isa Nothing ? zero(real(T)) : t
+    T  = isnothing(T) ? promote_type(eltype.((input, output))...) : T
+    t  = isnothing(t) ? zero(real(T)) : t
 
     isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
@@ -139,14 +139,6 @@ function FunctionOperator(op,
         end
 
         has_mul5
-    end
-
-    need_cache = if isnothing(cache)
-        true
-    elseif cache isa Bool
-        need_cache = cache
-        cache = nothing
-        need_cache
     end
 
     if !isinplace & !outofplace
@@ -181,7 +173,7 @@ function FunctionOperator(op,
               isinplace = isinplace,
               outofplace = outofplace,
               has_mul5 = has_mul5,
-              need_cache = need_cache,
+              ifcache = ifcache,
               T = T,
               size = sz,
              )
@@ -197,7 +189,11 @@ function FunctionOperator(op,
                          cache,
                         )
 
-    ifcache ? cache_operator(L, input, output) : L
+    if ifcache & isnothing(L.cache)
+        L = cache_operator(L, input, output)
+    end
+
+    L
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t)
@@ -229,7 +225,13 @@ function update_coefficients!(L::FunctionOperator, u, p, t)
     nothing
 end
 
+function iscached(L::FunctionOperator)
+    L.traits.ifcache ? !isnothing(L.cache) : !L.traits.ifcache
+    !isnothing(L.cache)
+end
+
 function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+    L.traits.ifcache && @warn "you are allocating cache for a FunctionOperator for which ifcache = false."
     @set! L.cache = zero.((u, v))
     L
 end
@@ -373,13 +375,17 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::
     @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, false}, u::AbstractVecOrMat, α, β) where{oop}
     _, co = L.cache
 
     copy!(co, v)
     mul!(v, L, u)
     lmul!(α, v)
     axpy!(β, co, v)
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, true}, u::AbstractVecOrMat, α, β) where{oop}
+    L.op(v, u, L.p, L.t, α, β)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)

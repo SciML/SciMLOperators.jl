@@ -39,7 +39,7 @@ getops(L) = ()
 function iscached(L::AbstractSciMLOperator)
 
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
-    isset = has_cache ? L.cache !== nothing : true
+    isset = has_cache ? !isnothing(L.cache) : true
 
     return isset & all(iscached, getops(L)) 
 end
