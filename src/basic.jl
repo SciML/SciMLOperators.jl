@@ -557,7 +557,6 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    # TODO - if uniform size, allocate only one cache vector
 
     K = size(u, 2)
     cache = (zero(u),)
@@ -575,7 +574,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
-    if !iscached(L)
+    if isnothing(L.cache)
         L = cache_self(L, u)
     end
 
