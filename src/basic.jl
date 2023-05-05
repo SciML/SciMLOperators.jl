@@ -560,15 +560,6 @@ function (L::ComposedOperator)(v, u, p, t)
     v
 end
 
-function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
-    v = u
-    for op in L.ops
-        v = op \ v
-    end
-
-    v
-end
-
 function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
     v = u
     for op in reverse(L.ops)
@@ -578,7 +569,19 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
     v
 end
 
+function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
+    v = u
+    for op in L.ops
+        v = op \ v
+    end
+
+    v
+end
+
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
+    # TODO - use similar instead of *, \
+    # similar(array, [element_type=eltype(array)], [dims=size(array)])
+    # similar(u, Float32, (2,3))
     if has_mul(L)
         vec = zero(u)
         cache = (vec,)
