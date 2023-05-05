@@ -36,23 +36,7 @@ end
 
 getops(L) = ()
 
-need_self_cache(L) = false
-need_self_cache(::Union{
-                        # LinearAlgebra
-                        AbstractMatrix,
-                        UniformScaling,
-                        Factorization,
-
-                        # Base
-                        Number,
-
-                       }
-               ) = false
-
 function iscached(L::AbstractSciMLOperator)
-    #if !need_self_cache(L)
-    #    return false
-    #end
 
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
     isset = has_cache ? L.cache !== nothing : true
@@ -82,22 +66,22 @@ arguments:
     in :: AbstractVecOrMat input prototype to L
     out :: (optional) AbstractVecOrMat output prototype to L
 """
-cache_operator
+function cache_operator end
 
 cache_operator(L, u) = L
-cache_operatro(L, u, v) = L
-cache_self(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
-cache_internals(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
+cache_operator(L, u, v) = L
+cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
+cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
 
-function cache_operator(L::AbstractSciMLOperator,
-                        u::AbstractVecOrMat,
-                        v::AbstractVecOrMat)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+
     L = cache_self(L, u, v)
     L = cache_internals(L, u, v)
     L
 end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
+
     L = cache_self(L, u)
     L = cache_internals(L, u)
     L
