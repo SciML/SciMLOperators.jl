@@ -24,7 +24,6 @@ SCALINGCOMBINETYPES = (
 Base.size(α::AbstractSciMLScalarOperator) = ()
 Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
 Base.transpose(α::AbstractSciMLScalarOperator) = α
-Base.resize!(α::AbstractSciMLScalarOperator, n::Integer) = α
 
 has_mul!(::AbstractSciMLScalarOperator) = true
 islinear(::AbstractSciMLScalarOperator) = true
