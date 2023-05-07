@@ -279,7 +279,7 @@ islinear(::AffineOperator) = false
 
 Base.size(L::AffineOperator) = size(L.A)
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
-function Base.resize!(L::AddedOperator, n::Integer)
+function Base.resize!(L::AffineOperator, n::Integer)
 
     resize!(L.A, n)
     resize!(L.B, n)
