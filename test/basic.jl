@@ -37,6 +37,7 @@ K = 12
     @test size(Id) == (N, N)
     @test Id' isa IdentityOperator
     @test isconstant(Id)
+    @test_throws MethodError resize!(Id, N)
 
     for op in (
                *, \,
@@ -69,6 +70,8 @@ end
     @test islinear(Z)
     @test NullOperator(u) isa NullOperator
     @test isconstant(Z)
+    @test_throws MethodError resize!(Z, N)
+
     @test zero(A) isa NullOperator
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 

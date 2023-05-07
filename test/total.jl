@@ -97,4 +97,37 @@ end
     v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
     v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
 end
+
+@testset "Resize! test" begin
+    M1 = 4
+    M2 = 12
+    u = rand(N)
+
+    f(u, p, t) = 2u
+    f(v, u, p, t) = (copy!(v, u); lmul!(2, v))
+
+    fi(u, p, t) = 0.5 * u
+    fi(v, u, p, t) = (copy!(v, u); lmul!(0.5, v))
+
+    F = FunctionOperator(f, u, u; islinear = true, op_inverse = fi)
+
+
+    for (L, LT) in (
+                    (F, FunctionOperator),
+                    (F + F, SciMLOperators.AddedOperator),
+                   )
+        @test L isa LT
+        resize!(L, M1); @test size(L) == (M1, M1)
+        resize!(L, M2); @test size(L) == (M2, M2)
+    end
+
+    # AddedOperator
+    # ScaledOperator
+    # ComposedOperator
+    # AdjointOperator
+    # TransposeOperator
+    # InvertedOperator
+    # AffineOperator
+    # FunctionOperator
+end
 #

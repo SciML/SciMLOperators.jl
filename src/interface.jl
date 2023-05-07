@@ -244,7 +244,7 @@ function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
 end
 
 function Base.resize!(L::AbstractSciMLOperator, n::Integer)
-    @error "Base.resize! not defined for SciMLOperator of type $L."
+    throw(MethodError(resize!, typeof.((L, n))))
 end
 
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))

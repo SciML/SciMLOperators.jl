@@ -293,9 +293,9 @@ end
 
 function Base.resize!(L::FunctionOperator, n::Integer)
 
-    for op in L.ops
-        resize!(op, n)
-    end
+    # for op in L.ops
+    #     resize!(op, n)
+    # end
 
     for v in L.cache
         resize!(v, n)
