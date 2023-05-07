@@ -52,7 +52,7 @@ Base.conj(L::MatrixOperator) = MatrixOperator(
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
 update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); nothing)
 
-getops(L::MatrixOperator) = (L.A)
+getops(L::MatrixOperator) = (L.A,)
 isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 

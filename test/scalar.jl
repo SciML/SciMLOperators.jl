@@ -63,11 +63,11 @@ end
 @testset "ScalarOperator update test" begin
     u = ones(N,K)
     v = zeros(N,K)
-    p = rand()
-    t = rand()
+    p = 2.0
+    t = 4.0
 
-    α = ScalarOperator(0.0; update_func=(a,u,p,t) -> p)
-    β = ScalarOperator(0.0; update_func=(a,u,p,t) -> t)
+    α = ScalarOperator(NaN; update_func=(a,u,p,t) -> p)
+    β = ScalarOperator(NaN; update_func=(a,u,p,t) -> t)
 
     @test !isconstant(α)
     @test !isconstant(β)

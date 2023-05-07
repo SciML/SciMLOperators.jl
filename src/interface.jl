@@ -17,16 +17,21 @@ function (::AbstractSciMLOperator) end
 
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 
-update_coefficients!(L,u,p,t) = nothing
 update_coefficients(L,u,p,t) = L
+update_coefficients!(L,u,p,t) = L
+
+function update_coefficients(L::AbstractSciMLOperator, u, p, t)
+    @error "Vedant hasn't implemented OOP update_coeffs yet for $L"
+end
+
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
     for op in getops(L)
         update_coefficients!(op, u, p, t)
     end
-    nothing
+    L
 end
 
-(L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
+(L::AbstractSciMLOperator)(u, p, t) = (L = update_coefficients(L, u, p, t); L * u)
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 
 ###
