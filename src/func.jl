@@ -291,6 +291,19 @@ function Base.inv(L::FunctionOperator)
                     )
 end
 
+function Base.resize!(L::FunctionOperator, n::Integer)
+
+    for op in L.ops
+        resize!(op, n)
+    end
+
+    for v in L.cache
+        resize!(v, n)
+    end
+
+    L
+end
+
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
     L.traits.opnorm === nothing && error("""
       M.opnorm is nothing, please define opnorm as a function that takes one

@@ -21,6 +21,7 @@ Base.size(ii::IdentityOperator) = (ii.len, ii.len)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
 Base.conj(A::IdentityOperator) = A
+
 LinearAlgebra.opnorm(::IdentityOperator, p::Real=2) = true
 for pred in (
              :issymmetric, :ishermitian, :isposdef,
@@ -230,6 +231,7 @@ for op in (
     @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
 Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
+Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 getops(L::ScaledOperator) = (L.λ, L.L,)
@@ -377,6 +379,12 @@ for op in (
     @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
 end
 Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
+function Base.resize!(L::AddedOperator, n::Integer)
+    for op in L.ops
+        resize!(op, n)
+    end
+    L
+end
 
 getops(L::AddedOperator) = L.ops
 islinear(L::AddedOperator) = all(islinear, getops(L))
@@ -509,6 +517,19 @@ for op in (
                                                           )
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
+function Base.resize!(L::ComposedOperator, n::Integer)
+
+    for op in L.ops
+        resize!(op, n)
+    end
+
+    for v in L.cache
+        resize!(v, n)
+    end
+
+    L
+end
+
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 getops(L::ComposedOperator) = L.ops
@@ -667,6 +688,13 @@ Base.size(L::InvertedOperator) = size(L.L) |> reverse
 Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
+function Base.resize!(L::InvertedOperator, n::Integer)
+
+    resize!(L.L, n)
+    resize!(L.cache, n)
+
+    L
+end
 
 getops(L::InvertedOperator) = (L.L,)
 islinear(L::InvertedOperator) = islinear(L.L)

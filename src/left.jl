@@ -79,6 +79,7 @@ for (op, LType, VType) in (
 
     # traits
     @eval Base.size(L::$LType) = size(L.L) |> reverse
+    @eval Base.resize!(L::$LType, n::Integer) = (resize!(L.L, n); L)
     @eval Base.$op(L::$LType) = L.L
 
     @eval getops(L::$LType) = (L.L,)
