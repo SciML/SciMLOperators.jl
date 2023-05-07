@@ -293,13 +293,17 @@ end
 
 function Base.resize!(L::FunctionOperator, n::Integer)
 
-    # for op in L.ops
-    #     resize!(op, n)
-    # end
+    for op in getops(L)
+        if static_hasmethod(resize!, typeof((op, n)))
+            resize!(op, n)
+        end
+    end
 
     for v in L.cache
         resize!(v, n)
     end
+
+    L.traits = (; L.traits..., size = (n, n),)
 
     L
 end
