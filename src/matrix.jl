@@ -172,7 +172,7 @@ Base.size(L::InvertibleOperator) = size(L.F)
 Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F))
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
 Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.F))
-Base.resize!(L::InvertibleOperator) = (resize!(L.F, n); L)
+Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.F, n); L)
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
