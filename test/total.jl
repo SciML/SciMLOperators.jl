@@ -101,31 +101,62 @@ end
 @testset "Resize! test" begin
     M1 = 4
     M2 = 12
-    u = rand(N)
 
-    f(u, p, t) = 2u
+    u = rand(N)
+    u1 = rand(M1)
+    u2 = rand(M2)
+
+    f(u, p, t) = 2 * u
     f(v, u, p, t) = (copy!(v, u); lmul!(2, v))
 
     fi(u, p, t) = 0.5 * u
     fi(v, u, p, t) = (copy!(v, u); lmul!(0.5, v))
 
-    F = FunctionOperator(f, u, u; islinear = true, op_inverse = fi)
+    F = FunctionOperator(f, u, u; islinear = true, op_inverse = fi, issymmetric = true)
 
+    multest(L, u) = @test mul!(zero(u), L, u) ≈ L * u
+
+    function multest(L::SciMLOperators.AdjointOperator, u)
+        @test mul!(adjoint(zero(u)), adjoint(u), L) ≈ adjoint(u) * L
+    end
+
+    function multest(L::SciMLOperators.TransposedOperator, u)
+        @test mul!(transpose(zero(u)), transpose(u), L) ≈ transpose(u) * L
+    end
+
+    function multest(L::SciMLOperators.InvertedOperator, u)
+        @test ldiv!(zero(u), L, u) ≈ L \ u
+    end
 
     for (L, LT) in (
                     (F, FunctionOperator),
                     (F + F, SciMLOperators.AddedOperator),
+                    (F * 2, SciMLOperators.ScaledOperator),
+                    (F ∘ F, SciMLOperators.ComposedOperator),
+                    (AffineOperator(F, F, u), AffineOperator),
+                    (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
+                    (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
+                    (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
+                    (SciMLOperators.InvertibleOperator(F), SciMLOperators.InvertibleOperator),
                    )
+
+        @info "$LT"
+
+        L = deepcopy(L)
+        L = cache_operator(L, u)
+
         @test L isa LT
+        @test size(L) == (N, N)
+        multest(L, u)
+
         resize!(L, M1); @test size(L) == (M1, M1)
+        multest(L, u1)
+
         resize!(L, M2); @test size(L) == (M2, M2)
+        multest(L, u2)
+
     end
 
-    # AddedOperator
-    # ScaledOperator
-    # ComposedOperator
-    # AdjointOperator
-    # TransposeOperator
     # InvertedOperator
     # AffineOperator
     # FunctionOperator
