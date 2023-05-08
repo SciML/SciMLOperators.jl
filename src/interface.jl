@@ -21,7 +21,9 @@ update_coefficients(L,u,p,t) = L
 update_coefficients!(L,u,p,t) = L
 
 function update_coefficients(L::AbstractSciMLOperator, u, p, t)
-    @error "Vedant hasn't implemented OOP update_coeffs yet for $L"
+    @error """Out-of-place update method not implemented for $L.
+    Please file an issue at https://github.com/SciML/SciMLOperators.jl
+    with a minimal example."""
 end
 
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
