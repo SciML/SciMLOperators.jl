@@ -61,10 +61,10 @@ K = 12
 end
 
 @testset "ScalarOperator update test" begin
-    u = rand(N,K)
-    v = rand(N,K)
-    p = rand()
-    t = rand()
+    u = ones(N,K)
+    v = zeros(N,K)
+    p = 2.0
+    t = 4.0
     a = rand()
     b = rand()
 

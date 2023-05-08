@@ -95,17 +95,18 @@ Base.:+(α::AbstractSciMLScalarOperator) = α
     (α::ScalarOperator)(a::Number) = α * a
 
 Represents a time-dependent scalar/scaling operator. The update function
-is called by `update_coefficients!` and is assumed to have the following
-signature:
+is called by `update_coefficients`/ `update_coefficients!` and is assumed
+to have the following signature:
 
     update_func(oldval,u,p,t) -> newval
 """
 mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
     val::T
     update_func::F
+end
 
-    ScalarOperator(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T} =
-        new{T,typeof(update_func)}(val, update_func)
+function ScalarOperator(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T}
+    ScalarOperator(val, update_func)
 end
 
 # constructors
@@ -136,7 +137,8 @@ isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
 has_ldiv(α::ScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
-update_coefficients!(L::ScalarOperator,u,p,t) = (L.val = L.update_func(L.val,u,p,t); nothing)
+update_coefficients(L::ScalarOperator, u, p, t) = @set! L.val = L.update_func(L.val, u, p, t)
+update_coefficients!(L::ScalarOperator, u, p, t) = (L.val = L.update_func(L.val,u,p,t); L)
 
 """
 Lazy addition of Scalar Operators
@@ -176,6 +178,13 @@ function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
 end
 
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
+
+function update_coefficients(L::AddedScalarOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
 
 getops(α::AddedScalarOperator) = α.ops
 has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
@@ -220,6 +229,13 @@ end
 
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
+
+function update_coefficients(L::ComposedScalarOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
 
 getops(α::ComposedScalarOperator) = α.ops
 has_ldiv(α::ComposedScalarOperator) = all(has_ldiv, α.ops)
@@ -268,6 +284,11 @@ function Base.convert(::Type{Number}, α::InvertedScalarOperator{T}) where{T}
 end
 
 Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
+
+function update_coefficients(L::InvertedScalarOperator, u, p, t)
+    @set! L.λ = update_coefficients(L.λ, u, p, t)
+    L
+end
 
 getops(α::InvertedScalarOperator) = (α.λ,)
 has_ldiv(α::InvertedScalarOperator) = has_mul(α.λ)

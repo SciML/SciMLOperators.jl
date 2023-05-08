@@ -234,6 +234,12 @@ Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
 Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
+function update_coefficients(L::ScaledOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
+    @set! L.λ = update_coefficients(L.λ, u, p, t)
+
+    L
+end
 getops(L::ScaledOperator) = (L.λ, L.L,)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 islinear(L::ScaledOperator) = islinear(L.L)
@@ -386,6 +392,13 @@ function Base.resize!(L::AddedOperator, n::Integer)
     L
 end
 
+function update_coefficients(L::AddedOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
+
 getops(L::AddedOperator) = L.ops
 islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -531,6 +544,13 @@ function Base.resize!(L::ComposedOperator, n::Integer)
 end
 
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
+
+function update_coefficients(L::ComposedOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
 
 getops(L::ComposedOperator) = L.ops
 islinear(L::ComposedOperator) = all(islinear, L.ops)
@@ -684,6 +704,12 @@ function Base.resize!(L::InvertedOperator, n::Integer)
 
     resize!(L.L, n)
     resize!(L.cache, n)
+
+    L
+end
+
+function update_coefficients(L::InvertedOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
 
     L
 end

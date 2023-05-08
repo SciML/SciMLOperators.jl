@@ -105,6 +105,7 @@ end
     p = rand(N)
     t = rand()
 
+    f(u, p, t) = Diagonal(p * t) * u
     f(du,u,p,t) = mul!(du, Diagonal(p*t), u)
 
     L = FunctionOperator(f, u, u; p=zero(p), t=zero(t))

@@ -197,32 +197,26 @@ function FunctionOperator(op,
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t)
-    op = update_coefficients(L.op, u, p, t)
-    op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
-    op_inverse = update_coefficients(L.op_inverse, u, p, t)
-    op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t)
+    @set! L.op = update_coefficients(L.op, u, p, t)
+    @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
+    @set! L.op_inverse = update_coefficients(L.op_inverse, u, p, t)
+    @set! L.op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t)
 
-    FunctionOperator(op,
-                     op_adjoint,
-                     op_inverse,
-                     op_adjoint_inverse,
-                     L.traits,
-                     p,
-                     t,
-                     L.cache
-                    )
+    @set! L.p = p
+    @set! L.t = t
+
+    L
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t)
-    ops = getops(L)
-    for op in ops
+    for op in getops(L)
         update_coefficients!(op, u, p, t)
     end
 
     L.p = p
     L.t = t
 
-    nothing
+    L
 end
 
 function iscached(L::FunctionOperator)

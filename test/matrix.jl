@@ -69,7 +69,8 @@ end
     β = rand()
 
     L = MatrixOperator(zeros(N,N);
-                       update_func = (A,u,p,t) -> (A .= p*p'; nothing)
+                       update_func = (A,u,p,t) -> p*p',
+                       update_func! = (A,u,p,t) -> A .= p*p',
                       )
 
     @test !isconstant(L)
@@ -88,7 +89,8 @@ end
     β = rand()
 
     D = DiagonalOperator(zeros(N);
-                         update_func = (diag,u,p,t) -> (diag .= p*t; nothing)
+                         update_func = (diag,u,p,t) -> p*t,
+                         update_func! = (diag,u,p,t) -> diag .= p*t,
                         )
 
     @test !isconstant(D)
@@ -121,6 +123,27 @@ end
     @test L \ u ≈ d .\ u
     v=rand(N,K); @test ldiv!(v, L, u) ≈ d .\ u
     v=copy(u); @test ldiv!(L, u) ≈ d .\ v
+end
+
+@testset "Batched DiagonalOperator update test" begin
+    u = rand(N,K)
+    d = zeros(N,K)
+    p = rand(N,K)
+    t = rand()
+
+
+    D = DiagonalOperator(d;
+                         update_func = (diag,u,p,t) -> p*t,
+                         update_func! = (diag,u,p,t) -> diag .= p*t,
+                        )
+
+    @test !isconstant(D)
+    @test issquare(D)
+    @test islinear(D)
+
+    ans = (p*t) .* u
+    @test D(u,p,t) ≈ ans
+    v=copy(u); @test D(v,u,p,t) ≈ ans
 end
 
 @testset "AffineOperator" begin
@@ -175,27 +198,23 @@ end
 @testset "AffineOperator update test" begin
     A = rand(N,N)
     B = rand(N,N)
-    b = rand(N,K)
     u = rand(N,K)
-    p = rand(N)
+    p = rand(N,K)
     t = rand()
     α = rand()
     β = rand()
 
-    L = AffineOperator(A, B, b;
-                       update_func = (b,u,p,t) -> (b .= Diagonal(p*t)*b; nothing)
+    L = AffineOperator(A, B, zeros(N, K);
+                       update_func = (b,u,p,t) -> p * t,
+                       update_func! = (b,u,p,t) -> b .= p * t,
                       )
 
     @test !isconstant(L)
 
-    b = Diagonal(p*t)*b
+    b = p * t
     ans = A * u + B * b
     @test L(u,p,t) ≈ ans
-    b = Diagonal(p*t)*b
-    ans = A * u + B * b
     v=copy(u); @test L(v,u,p,t) ≈ ans
-    b = Diagonal(p*t)*b
-    ans = A * u + B * b
     v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
