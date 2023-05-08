@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -33,11 +33,13 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: Abst
 
         iip = traits.isinplace
         oop = traits.outofplace
+        mul5 = traits.has_mul5
         T   = traits.T
 
         new{
             iip,
             oop,
+            mul5,
             T,
             typeof(op),
             typeof(op_adjoint),
@@ -88,6 +90,8 @@ function FunctionOperator(op,
 
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
+                          has_mul5::Union{Nothing,Bool}=nothing,
+                          cache::Union{Nothing, NTuple{2}}=nothing,
                           T::Union{Type{<:Number},Nothing}=nothing,
 
                           op_adjoint=nothing,
@@ -109,19 +113,32 @@ function FunctionOperator(op,
                          )
 
     sz = (size(output, 1), size(input, 1))
-    T  = T isa Nothing ? promote_type(eltype.((input, output))...) : T
-    t  = t isa Nothing ? zero(real(T)) : t
+    T  = isnothing(T) ? promote_type(eltype.((input, output))...) : T
+    t  = isnothing(t) ? zero(real(T)) : t
 
-    isinplace = if isinplace isa Nothing
+    isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
     else
         isinplace
     end
 
-    outofplace = if outofplace isa Nothing
+    outofplace = if isnothing(outofplace)
         static_hasmethod(op, typeof((input, p, t)))
     else
         outofplace
+    end
+
+    has_mul5 = if isnothing(has_mul5)
+        has_mul5 = true
+        for f in (
+                  op, op_adjoint, op_inverse, op_adjoint_inverse,
+                 )
+            if !isnothing(f)
+                has_mul5 *= static_hasmethod(f, typeof((output, input, p, t, t, t)))
+            end
+        end
+
+        has_mul5
     end
 
     if !isinplace & !outofplace
@@ -155,11 +172,11 @@ function FunctionOperator(op,
 
               isinplace = isinplace,
               outofplace = outofplace,
+              has_mul5 = has_mul5,
+              ifcache = ifcache,
               T = T,
               size = sz,
              )
-
-    cache = nothing
 
     L = FunctionOperator(
                          op,
@@ -172,7 +189,11 @@ function FunctionOperator(op,
                          cache,
                         )
 
-    ifcache ? cache_operator(L, input, output) : L
+    if ifcache & isnothing(L.cache)
+        L = cache_operator(L, input, output)
+    end
+
+    L
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t)
@@ -204,7 +225,13 @@ function update_coefficients!(L::FunctionOperator, u, p, t)
     nothing
 end
 
+function iscached(L::FunctionOperator)
+    L.traits.ifcache ? !isnothing(L.cache) : !L.traits.ifcache
+    !isnothing(L.cache)
+end
+
 function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+    L.traits.ifcache && @warn "you are allocating cache for a FunctionOperator for which ifcache = false."
     @set! L.cache = zero.((u, v))
     L
 end
@@ -365,13 +392,17 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::
     @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, false}, u::AbstractVecOrMat, α, β) where{oop}
     _, co = L.cache
 
     copy!(co, v)
     mul!(v, L, u)
     lmul!(α, v)
     axpy!(β, co, v)
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, true}, u::AbstractVecOrMat, α, β) where{oop}
+    L.op(v, u, L.p, L.t, α, β)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)

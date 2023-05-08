@@ -61,10 +61,12 @@ K = 12
 end
 
 @testset "ScalarOperator update test" begin
-    u = ones(N,K)
-    v = zeros(N,K)
+    u = rand(N,K)
+    v = rand(N,K)
     p = rand()
     t = rand()
+    a = rand()
+    b = rand()
 
     α = ScalarOperator(0.0; update_func=(a,u,p,t) -> p)
     β = ScalarOperator(0.0; update_func=(a,u,p,t) -> t)
@@ -72,15 +74,31 @@ end
     @test !isconstant(α)
     @test !isconstant(β)
 
-    @test α(u,p,t)   ≈ p * u
-    @test α(v,u,p,t) ≈ p * u
+    @test convert(Number, α) ≈ 0.0
+    @test convert(Number, β) ≈ 0.0
+
+    update_coefficients!(α, u, p, t)
+    update_coefficients!(β, u, p, t)
+
+    @test convert(Number, α) ≈ p
+    @test convert(Number, β) ≈ t
+
+    @test α(u, p, t) ≈ p * u
+    v=rand(N,K); @test α(v, u, p, t) ≈ p * u
+    v=rand(N,K); w=copy(v); @test α(v, u, p, t, a, b) ≈ a*p*u + b*w
+
+    @test β(u, p, t) ≈ t * u
+    v=rand(N,K); @test β(v, u, p, t) ≈ t * u
+    v=rand(N,K); w=copy(v); @test β(v, u, p, t, a, b) ≈ a*t*u + b*w
 
     num = α + 2 / β * 3 - 4
     val = p + 2 / t * 3 - 4
 
-    @test num(u,p,t)   ≈ val * u
-    @test num(v,u,p,t) ≈ val * u
-
     @test convert(Number, num) ≈ val
+
+    @test num(u, p, t) ≈ val * u
+    v=rand(N,K); @test num(v, u, p, t) ≈ val * u
+    v=rand(N,K); w=copy(v); @test num(v, u, p, t, a, b) ≈ a*val*u + b*w
+
 end
 #

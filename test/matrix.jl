@@ -65,22 +65,27 @@ end
     p = rand(N)
     t = rand()
 
+    α = rand()
+    β = rand()
+
     L = MatrixOperator(zeros(N,N);
                        update_func = (A,u,p,t) -> (A .= p*p'; nothing)
                       )
 
     @test !isconstant(L)
 
-    A = p*p'
-    ans = A * u
-    @test L(u,p,t) ≈ ans
-    v=copy(u); @test L(v,u,p,t) ≈ ans
+    A = p * p'
+    @test L(u, p, t) ≈ A * u
+    v=copy(u); @test L(v, u, p, t) ≈ A * u
+    v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*A*u + β*w
 end
 
 @testset "DiagonalOperator update test" begin
     u = rand(N,K)
     p = rand(N)
     t = rand()
+    α = rand()
+    β = rand()
 
     D = DiagonalOperator(zeros(N);
                          update_func = (diag,u,p,t) -> (diag .= p*t; nothing)
@@ -93,6 +98,7 @@ end
     ans = Diagonal(p*t) * u
     @test D(u,p,t) ≈ ans
     v=copy(u); @test D(v,u,p,t) ≈ ans
+    v=rand(N,K); w=copy(v); @test D(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
 @testset "Batched Diagonal Operator" begin
@@ -173,6 +179,8 @@ end
     u = rand(N,K)
     p = rand(N)
     t = rand()
+    α = rand()
+    β = rand()
 
     L = AffineOperator(A, B, b;
                        update_func = (b,u,p,t) -> (b .= Diagonal(p*t)*b; nothing)
@@ -186,6 +194,9 @@ end
     b = Diagonal(p*t)*b
     ans = A * u + B * b
     v=copy(u); @test L(v,u,p,t) ≈ ans
+    b = Diagonal(p*t)*b
+    ans = A * u + B * b
+    v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
 @testset "TensorProductOperator" begin

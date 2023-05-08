@@ -28,19 +28,24 @@ end
 
 (L::AbstractSciMLOperator)(u, p, t) = (update_coefficients!(L, u, p, t); L * u)
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
+(L::AbstractSciMLOperator)(du, u, p, t, α, β) = (update_coefficients!(L, u, p, t); mul!(du, L, u, α, β))
 
 ###
 # caching interface
 ###
 
+getops(L) = ()
+
 function iscached(L::AbstractSciMLOperator)
+
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
-    isset = has_cache ? L.cache !== nothing : true
+    isset = has_cache ? !isnothing(L.cache) : true
 
     return isset & all(iscached, getops(L)) 
 end
 
 iscached(L) = true
+
 iscached(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
@@ -61,22 +66,22 @@ arguments:
     in :: AbstractVecOrMat input prototype to L
     out :: (optional) AbstractVecOrMat output prototype to L
 """
-cache_operator
+function cache_operator end
 
 cache_operator(L, u) = L
-cache_operatro(L, u, v) = L
-cache_self(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
-cache_internals(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
+cache_operator(L, u, v) = L
+cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
+cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
 
-function cache_operator(L::AbstractSciMLOperator,
-                        u::AbstractVecOrMat,
-                        v::AbstractVecOrMat)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+
     L = cache_self(L, u, v)
     L = cache_internals(L, u, v)
     L
 end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
+
     L = cache_self(L, u)
     L = cache_internals(L, u)
     L
