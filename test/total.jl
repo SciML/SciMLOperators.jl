@@ -140,8 +140,6 @@ end
                     (SciMLOperators.InvertibleOperator(F), SciMLOperators.InvertibleOperator),
                    )
 
-        @info "$LT"
-
         L = deepcopy(L)
         L = cache_operator(L, u)
 
