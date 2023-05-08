@@ -39,6 +39,8 @@ K = 19
     @test isconstant(FF)
     @test isconstant(FFt)
 
+    @test_throws MethodError resize!(AA, N)
+
     @test eachindex(A)  === eachindex(AA)
     @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
 
@@ -63,6 +65,9 @@ end
     p = rand(N)
     t = rand()
 
+    α = rand()
+    β = rand()
+
     L = MatrixOperator(zeros(N,N);
                        update_func = (A,u,p,t) -> p*p',
                        update_func! = (A,u,p,t) -> A .= p*p',
@@ -70,16 +75,18 @@ end
 
     @test !isconstant(L)
 
-    A = p*p'
-    ans = A * u
-    @test L(u,p,t) ≈ ans
-    v=copy(u); @test L(v,u,p,t) ≈ ans
+    A = p * p'
+    @test L(u, p, t) ≈ A * u
+    v=copy(u); @test L(v, u, p, t) ≈ A * u
+    v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*A*u + β*w
 end
 
 @testset "DiagonalOperator update test" begin
     u = rand(N,K)
     p = rand(N)
     t = rand()
+    α = rand()
+    β = rand()
 
     D = DiagonalOperator(zeros(N);
                          update_func = (diag,u,p,t) -> p*t,
@@ -93,6 +100,7 @@ end
     ans = Diagonal(p*t) * u
     @test D(u,p,t) ≈ ans
     v=copy(u); @test D(v,u,p,t) ≈ ans
+    v=rand(N,K); w=copy(v); @test D(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
 @testset "Batched Diagonal Operator" begin
@@ -103,6 +111,7 @@ end
 
     L = DiagonalOperator(d)
     @test isconstant(L)
+    @test_throws MethodError resize!(L, N)
 
     @test issquare(L)
     @test islinear(L)
@@ -192,6 +201,8 @@ end
     u = rand(N,K)
     p = rand(N,K)
     t = rand()
+    α = rand()
+    β = rand()
 
     L = AffineOperator(A, B, zeros(N, K);
                        update_func = (b,u,p,t) -> p * t,
@@ -204,6 +215,9 @@ end
     ans = A * u + B * b
     @test L(u,p,t) ≈ ans
     v=copy(u); @test L(v,u,p,t) ≈ ans
+    b = Diagonal(p*t)*b
+    ans = A * u + B * b
+    v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
 @testset "TensorProductOperator" begin

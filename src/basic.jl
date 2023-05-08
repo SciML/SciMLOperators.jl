@@ -21,6 +21,7 @@ Base.size(ii::IdentityOperator) = (ii.len, ii.len)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
 Base.conj(A::IdentityOperator) = A
+
 LinearAlgebra.opnorm(::IdentityOperator, p::Real=2) = true
 for pred in (
              :issymmetric, :ishermitian, :isposdef,
@@ -230,6 +231,7 @@ for op in (
     @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
 Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
+Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
 function update_coefficients(L::ScaledOperator, u, p, t)
@@ -383,6 +385,12 @@ for op in (
     @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
 end
 Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
+function Base.resize!(L::AddedOperator, n::Integer)
+    for op in L.ops
+        resize!(op, n)
+    end
+    L
+end
 
 function update_coefficients(L::AddedOperator, u, p, t)
     for i in 1:length(L.ops)
@@ -522,6 +530,19 @@ for op in (
                                                           )
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
+function Base.resize!(L::ComposedOperator, n::Integer)
+
+    for op in L.ops
+        resize!(op, n)
+    end
+
+    for v in L.cache
+        resize!(v, n)
+    end
+
+    L
+end
+
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 function update_coefficients(L::ComposedOperator, u, p, t)
@@ -577,24 +598,16 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    if has_mul(L)
-        vec = zero(u)
-        cache = (vec,)
-        for i in reverse(2:length(L.ops))
-            vec   = L.ops[i] * vec
-            cache = (vec, cache...)
-        end
-    elseif has_ldiv(L)
-        m = size(L, 1)
-        k = size(u, 2)
-        vec = u isa AbstractMatrix ? similar(u, (m, k)) : similar(u, (m,))
-        cache = ()
-        for i in 1:length(L.ops)
-            vec   = L.ops[i] \ vec
-            cache = (cache..., vec)
-        end
-    else
-        error("ComposedOperator cannot be cached without supporting either mul or ldiv.")
+
+    K = size(u, 2)
+    cache = (zero(u),)
+    for i in reverse(2:length(L.ops))
+
+        M = size(L.ops[i], 1)
+        T = promote_type(eltype.((L.ops[i], cache[1]))...)
+        sz = u isa AbstractMatrix ? (M, K) : (M,)
+
+        cache = (similar(u, T, sz), cache...)
     end
 
     @set! L.cache = cache
@@ -602,7 +615,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
-    if !iscached(L)
+    if isnothing(L.cache)
         L = cache_self(L, u)
     end
 
@@ -687,6 +700,13 @@ Base.size(L::InvertedOperator) = size(L.L) |> reverse
 Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
+function Base.resize!(L::InvertedOperator, n::Integer)
+
+    resize!(L.L, n)
+    resize!(L.cache, n)
+
+    L
+end
 
 function update_coefficients(L::InvertedOperator, u, p, t)
     @set! L.L = update_coefficients(L.L, u, p, t)
