@@ -31,7 +31,7 @@ function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
     L
 end
 
-(L::AbstractSciMLOperator)(u, p, t) = (L = update_coefficients(L, u, p, t); L * u)
+(L::AbstractSciMLOperator)(u, p, t) = update_coefficients(L, u, p, t) * u
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 
 ###

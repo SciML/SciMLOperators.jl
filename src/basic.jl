@@ -232,6 +232,12 @@ end
 Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
+function update_coefficients(L::ScaledOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
+    @set! L.λ = update_coefficients(L.λ, u, p, t)
+
+    L
+end
 getops(L::ScaledOperator) = (L.λ, L.L,)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 islinear(L::ScaledOperator) = islinear(L.L)
@@ -378,6 +384,13 @@ for op in (
 end
 Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
 
+function update_coefficients(L::AddedOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
+
 getops(L::AddedOperator) = L.ops
 islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
@@ -510,6 +523,13 @@ for op in (
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
+
+function update_coefficients(L::ComposedOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
 
 getops(L::ComposedOperator) = L.ops
 islinear(L::ComposedOperator) = all(islinear, L.ops)
@@ -667,6 +687,12 @@ Base.size(L::InvertedOperator) = size(L.L) |> reverse
 Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
+
+function update_coefficients(L::InvertedOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
+
+    L
+end
 
 getops(L::InvertedOperator) = (L.L,)
 islinear(L::InvertedOperator) = islinear(L.L)
