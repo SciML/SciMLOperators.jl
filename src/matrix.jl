@@ -8,15 +8,28 @@ the following signature:
 
     update_func(A::AbstractMatrix,u,p,t) -> [modifies A]
 """
-struct MatrixOperator{T,AType<:AbstractMatrix{T},F} <: AbstractSciMLOperator{T}
+struct MatrixOperator{T,AType<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{T}
     A::AType
     update_func::F
-    MatrixOperator(A::AType; update_func=DEFAULT_UPDATE_FUNC) where{AType} =
-        new{eltype(A),AType,typeof(update_func)}(A, update_func)
+    update_func!::F!
+
+    function MatrixOperator(A, update_func = DEFAULT_UPDATE_FUNC,
+                            update_func! = DEFAULT_UPDATE_FUNC)
+        new{
+            eltype(A),
+            typeof(A),
+            typeof(update_func),
+            typeof(update_func!),
+           }(
+             A, update_func
+            )
+    end
 end
 
 # constructors
-Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T} = MatrixOperator(similar(L.A, T, dims))
+function Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where{T}
+    MatrixOperator(similar(L.A, T, dims))
+end
 
 # traits
 @forward MatrixOperator.A (
@@ -39,18 +52,28 @@ for op in (
         if isconstant(L)
             MatrixOperator($op(L.A))
         else
-            update_func = (A,u,p,t) -> $op(L.update_func($op(L.A),u,p,t))
-            MatrixOperator($op(L.A); update_func = update_func)
+            update_func = (A,u,p,t) -> $op(L.update_func($op(L.A), u, p, t))
+            update_func! = (A,u,p,t) -> $op(L.update_func!($op(L.A), u, p, t))
+            MatrixOperator($op(L.A); update_func = update_func,
+                           update_func! = update_func!)
         end
     end
 end
-Base.conj(L::MatrixOperator) = MatrixOperator(
-                                              conj(L.A);
-                                              update_func= (A,u,b,t) -> conj(L.update_func(conj(L.A),u,p,t))
-                                             )
+
+function Base.conj(L::MatrixOperator)
+    update_func = (A, u, p, t) -> conj(L.update_func(conj(L.A), u, p, t))
+    update_func! = (A, u, p, t) -> conj(L.update_func!(conj(L.A), u, p, t))
+
+    MatrixOperator(conj(L.A); update_func = update_func,
+                   update_func! = update_func!)
+end
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
-update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func(L.A,u,p,t); nothing)
+
+function update_coefficients(L::MatrixOperator, u, p, t)
+    @set! L.A = L.update_func(L.A, u, p, t)
+end
+update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func!(L.A,u,p,t); L)
 
 getops(L::MatrixOperator) = (L.A,)
 isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
