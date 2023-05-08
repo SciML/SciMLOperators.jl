@@ -77,14 +77,7 @@ has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
 function update_coefficients(L::MatrixOperator, u, p, t)
     @set! L.A = L.update_func(L.A, u, p, t)
 end
-function update_coefficients!(L::MatrixOperator,u,p,t)
-    L_A = L.A
-    L_func! = L.update_func!
-    args = (u, p, t)
-    L_func!(L_A, args...)
-    # L.update_func!(L.A,u,p,t)
-    L
-end
+update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func!(L.A, u, p, t); L)
 
 getops(L::MatrixOperator) = (L.A,)
 function isconstant(L::MatrixOperator)
