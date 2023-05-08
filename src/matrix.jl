@@ -13,8 +13,7 @@ struct MatrixOperator{T,AType<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{
     update_func::F
     update_func!::F!
 
-    function MatrixOperator(A, update_func = DEFAULT_UPDATE_FUNC,
-                            update_func! = DEFAULT_UPDATE_FUNC)
+    function MatrixOperator(A, update_func, update_func!)
         new{
             eltype(A),
             typeof(A),
@@ -24,6 +23,11 @@ struct MatrixOperator{T,AType<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{
              A, update_func
             )
     end
+end
+
+function MatrixOperator(A; update_func = DEFAULT_UPDATE_FUNC,
+                        update_func! = DEFAULT_UPDATE_FUNC)
+    MatrixOperator(A, update_func, update_func!)
 end
 
 # constructors
@@ -76,7 +80,9 @@ end
 update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func!(L.A,u,p,t); L)
 
 getops(L::MatrixOperator) = (L.A,)
-isconstant(L::MatrixOperator) = L.update_func == DEFAULT_UPDATE_FUNC
+function isconstant(L::MatrixOperator)
+    L.update_func == L.update_func! == DEFAULT_UPDATE_FUNC
+end
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
@@ -128,13 +134,23 @@ an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of 
 `L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
 with leading length `size(u, 1) = N`.
 """
-function DiagonalOperator(diag::AbstractVector; update_func = DEFAULT_UPDATE_FUNC)
+function DiagonalOperator(diag::AbstractVector; update_func = DEFAULT_UPDATE_FUNC, 
+                          update_func! = DEFAULT_UPDATE_FUNC)
+
     diag_update_func = if update_func == DEFAULT_UPDATE_FUNC
         DEFAULT_UPDATE_FUNC
     else
-        (A, u, p, t) -> (update_func(A.diag, u, p, t); A)
+        (A, u, p, t) -> (d = update_func(A.diag, u, p, t); Diagonal(d))
     end
-    MatrixOperator(Diagonal(diag); update_func=diag_update_func)
+
+    diag_update_func! = if update_func! == DEFAULT_UPDATE_FUNC
+        DEFAULT_UPDATE_FUNC
+    else
+        (A, u, p, t) -> (update_func!(A.diag, u, p, t); A)
+    end
+
+    MatrixOperator(Diagonal(diag); update_func = diag_update_func,
+                   update_func! = diag_update_func!)
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
@@ -198,6 +214,11 @@ Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.F))
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
+function update_coefficients(L::InvertibleOperator, u, p, t)
+    @set! L.F = update_coefficients(L.F, u, p, t)
+    L
+end
+
 getops(L::InvertibleOperator) = (L.F,)
 islinear(L::InvertibleOperator) = islinear(L.F)
 
@@ -233,15 +254,16 @@ by `update_coefficients!` and is assumed to have the following signature:
 
     update_func(b::AbstractArray,u,p,t) -> [modifies b]
 """
-struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
-    A::AType
-    B::BType
-    b::bType
+struct AffineOperator{T,AT,BT,bT,C,F,F!} <: AbstractSciMLOperator{T}
+    A::AT
+    B::BT
+    b::bT
 
-    cache::cType
+    cache::C
     update_func::F # updates b
+    update_func!::F! # updates b
 
-    function AffineOperator(A, B, b, cache, update_func)
+    function AffineOperator(A, B, b, cache, update_func, update_func!)
         T = promote_type(eltype.((A,B,b))...)
 
         new{T,
@@ -250,8 +272,9 @@ struct AffineOperator{T,AType,BType,bType,cType,F} <: AbstractSciMLOperator{T}
             typeof(b),
             typeof(cache),
             typeof(update_func),
+            typeof(update_func!),
            }(
-             A, B, b, cache, update_func,
+             A, B, b, cache, update_func, update_func!,
             )
     end
 end
@@ -260,6 +283,7 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         B::Union{AbstractMatrix,AbstractSciMLOperator},
                         b::AbstractArray;
                         update_func = DEFAULT_UPDATE_FUNC,
+                        update_func! = DEFAULT_UPDATE_FUNC,
                        )
     @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
     of same size"
@@ -268,35 +292,48 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
     B = B isa AbstractMatrix ? MatrixOperator(B) : B
     cache = B * b
 
-    AffineOperator(A, B, b, cache, update_func)
+    AffineOperator(A, B, b, cache, update_func, update_func!)
 end
 
 """
     L = AddVector(b[; update_func])
     L(u) = u + b
 """
-function AddVector(b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC)
+function AddVector(b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC,
+                   update_func! = DEFAULT_UPDATE_FUNC)
     N  = size(b, 1)
     Id = IdentityOperator(N)
 
-    AffineOperator(Id, Id, b; update_func=update_func)
+    AffineOperator(Id, Id, b; update_func = update_func, update_func! = update_func!)
 end
 
 """
     L = AddVector(B, b[; update_func])
     L(u) = u + B*b
 """
-function AddVector(B, b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC)
+function AddVector(B, b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC,
+                   update_func! = DEFAULT_UPDATE_FUNC)
     N = size(B, 1)
     Id = IdentityOperator(N)
 
-    AffineOperator(Id, B, b; update_func=update_func)
+    AffineOperator(Id, B, b; update_func = update_func, update_func! = update_func!)
 end
 
-getops(L::AffineOperator) = (L.A, L.B, L.b)
+function update_coefficients(L::AffineOperator, u, p, t)
+    @set! L.A = update_coefficients(L.A, u, p, t)
+    @set! L.B = update_coefficients(L.B, u, p, t)
+    @set! L.b = L.update_func(L.b, u, p, t)
 
-update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func(L.b,u,p,t); nothing)
-isconstant(L::AffineOperator) = (L.update_func == DEFAULT_UPDATE_FUNC) & all(isconstant, (L.A, L.B))
+    L
+end
+
+update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func!(L.b,u,p,t); L)
+
+getops(L::AffineOperator) = (L.A, L.B, L.b)
+function isconstant(L::AffineOperator)
+    (L.update_func == L.update_func! == DEFAULT_UPDATE_FUNC) &
+    all(isconstant, (L.A, L.B))
+end
 islinear(::AffineOperator) = false
 
 Base.size(L::AffineOperator) = size(L.A)

@@ -79,6 +79,13 @@ for op in (
 end
 Base.conj(L::TensorProductOperator) = TensorProductOperator(conj.(L.ops)...; cache=L.cache)
 
+function update_coefficients(L::TensorProductOperator, u, p, t)
+    for i in 1:length(L.ops)
+        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    end
+    L
+end
+
 getops(L::TensorProductOperator) = L.ops
 islinear(L::TensorProductOperator) = reduce(&, islinear.(L.ops))
 Base.iszero(L::TensorProductOperator) = reduce(|, iszero.(L.ops))

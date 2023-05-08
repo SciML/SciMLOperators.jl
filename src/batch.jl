@@ -8,26 +8,32 @@ by `update_coefficients!` and is assumed to have the following signature:
 
     update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
 """
-struct BatchedDiagonalOperator{T,D,F} <: AbstractSciMLOperator{T}
+struct BatchedDiagonalOperator{T,D,F,F!} <: AbstractSciMLOperator{T}
     diag::D
     update_func::F
+    update_func!::F!
 
-    function BatchedDiagonalOperator(
-                                     diag::AbstractArray;
-                                     update_func=DEFAULT_UPDATE_FUNC
-                                    )
+    function BatchedDiagonalOperator(diag::AbstractArray, update_func, update_func!)
         new{
             eltype(diag),
             typeof(diag),
-            typeof(update_func)
+            typeof(update_func),
+            typeof(update_func!),
            }(
-             diag, update_func,
+             diag, update_func, update_func!,
             )
     end
 end
 
-function DiagonalOperator(u::AbstractArray; update_func=DEFAULT_UPDATE_FUNC)
-    BatchedDiagonalOperator(u; update_func=update_func)
+function BatchedDiagonalOperator(diag::AbstractArray;
+                                 update_func = DEFAULT_UPDATE_FUNC,
+                                 update_func! = DEFAULT_UPDATE_FUNC)
+    BatchedDiagonalOperator(diag, update_func, update_func!)
+end
+
+function DiagonalOperator(u::AbstractArray; update_func = DEFAULT_UPDATE_FUNC,
+                          update_func! = DEFAULT_UPDATE_FUNC)
+    BatchedDiagonalOperator(u; update_func = update_func, update_func! = update_func!)
 end
 
 # traits
@@ -45,6 +51,21 @@ function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     BatchedDiagonalOperator(diag; update_func=update_func)
 end
 
+function update_coefficients(L::BatchedDiagonalOperator,u,p,t)
+    @set! L.diag = L.update_func(L.diag,u,p,t)
+end
+update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func!(L.diag,u,p,t); L)
+
+getops(L::BatchedDiagonalOperator) = (L.diag,)
+
+function isconstant(L::BatchedDiagonalOperator)
+    L.update_func == L.update_func! == DEFAULT_UPDATE_FUNC
+end
+islinear(::BatchedDiagonalOperator) = true
+has_adjoint(L::BatchedDiagonalOperator) = true
+has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
+has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
+
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
 function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
     if isreal(L)
@@ -56,16 +77,6 @@ function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
     end
 end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
-
-isconstant(L::BatchedDiagonalOperator) = L.update_func == DEFAULT_UPDATE_FUNC
-islinear(::BatchedDiagonalOperator) = true
-has_adjoint(L::BatchedDiagonalOperator) = true
-has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
-has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
-
-getops(L::BatchedDiagonalOperator) = (L.diag,)
-
-update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func(L.diag,u,p,t); nothing)
 
 # operator application
 Base.:*(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .* u
