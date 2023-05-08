@@ -215,8 +215,6 @@ end
     ans = A * u + B * b
     @test L(u,p,t) ≈ ans
     v=copy(u); @test L(v,u,p,t) ≈ ans
-    b = Diagonal(p*t)*b
-    ans = A * u + B * b
     v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
