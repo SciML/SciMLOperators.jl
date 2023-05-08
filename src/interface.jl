@@ -243,6 +243,10 @@ function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
     convert(AbstractMatrix,L)[I...]
 end
 
+function Base.resize!(L::AbstractSciMLOperator, n::Integer)
+    throw(MethodError(resize!, typeof.((L, n))))
+end
+
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
 LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
 for pred in (

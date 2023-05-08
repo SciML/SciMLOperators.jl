@@ -172,6 +172,7 @@ Base.size(L::InvertibleOperator) = size(L.F)
 Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F))
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
 Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.F))
+Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.F, n); L)
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
@@ -278,6 +279,15 @@ islinear(::AffineOperator) = false
 
 Base.size(L::AffineOperator) = size(L.A)
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))
+function Base.resize!(L::AffineOperator, n::Integer)
+
+    resize!(L.A, n)
+    resize!(L.B, n)
+    resize!(L.b, n)
+
+    L
+end
+
 has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
 has_mul(L::AffineOperator) = has_mul(L.A)
 has_mul!(L::AffineOperator) = has_mul!(L.A)

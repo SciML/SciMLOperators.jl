@@ -39,6 +39,8 @@ K = 19
     @test isconstant(FF)
     @test isconstant(FFt)
 
+    @test_throws MethodError resize!(AA, N)
+
     @test eachindex(A)  === eachindex(AA)
     @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
 
@@ -101,6 +103,7 @@ end
 
     L = DiagonalOperator(d)
     @test isconstant(L)
+    @test_throws MethodError resize!(L, N)
 
     @test issquare(L)
     @test islinear(L)
