@@ -8,8 +8,8 @@ the following signature:
 
     update_func(A::AbstractMatrix,u,p,t) -> [modifies A]
 """
-struct MatrixOperator{T,AType<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{T}
-    A::AType
+struct MatrixOperator{T,AT<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{T}
+    A::AT
     update_func::F
     update_func!::F!
 
@@ -20,7 +20,7 @@ struct MatrixOperator{T,AType<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{
             typeof(update_func),
             typeof(update_func!),
            }(
-             A, update_func
+             A, update_func, update_func!
             )
     end
 end
@@ -77,7 +77,7 @@ has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
 function update_coefficients(L::MatrixOperator, u, p, t)
     @set! L.A = L.update_func(L.A, u, p, t)
 end
-update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func!(L.A,u,p,t); L)
+update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func!(L.A, u, p, t); L)
 
 getops(L::MatrixOperator) = (L.A,)
 function isconstant(L::MatrixOperator)
