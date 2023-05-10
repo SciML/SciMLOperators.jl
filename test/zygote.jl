@@ -29,7 +29,7 @@ for (op_type, A) in
      (AffineOperator, AffineOperator(rand(N,N), rand(N,N), rand(N,K))),
      (ScaledOperator, rand() * MatrixOperator(rand(N,N))),
      (InvertedOperator, InvertedOperator(rand(N,N) |> MatrixOperator)),
-     (InvertibleOperator, InvertibleOperator(rand(N,N) |> MatrixOperator)),
+     (InvertibleOperator, InvertibleOperator(MatrixOperator(M), MatrixOperator(inv(M)))),
      (BatchedDiagonalOperator, DiagonalOperator(rand(N,K))),
      (AddedOperator, MatrixOperator(rand(N,N)) + MatrixOperator(rand(N,N))),
      (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))),
