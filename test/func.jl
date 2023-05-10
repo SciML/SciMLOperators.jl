@@ -2,7 +2,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator, ⊗
+using SciMLOperators: ⊗
 
 Random.seed!(0)
 N = 8
