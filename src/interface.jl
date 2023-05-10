@@ -126,7 +126,7 @@ has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
-has_mul!(L::AbstractSciMLOperator) = false # mul!(du, L, u)
+has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
