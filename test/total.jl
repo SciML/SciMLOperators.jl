@@ -137,7 +137,7 @@ end
                     (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
                     (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
                     (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
-                    (SciMLOperators.InvertibleOperator(F), SciMLOperators.InvertibleOperator),
+                    (SciMLOperators.InvertibleOperator(F, F), SciMLOperators.InvertibleOperator),
                    )
 
         L = deepcopy(L)
