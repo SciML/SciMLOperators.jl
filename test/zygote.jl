@@ -21,13 +21,13 @@ u0 = rand(N, K)
 ps = rand(N)
 
 s = rand()
-v = rand(N)
-M = rand(N,N)
+v = rand(N, K)
+M = rand(N, N)
 
-sca_update_func = (a, u, p, t) -> copy(s)
-vec_update_func = (b, u, p, t) -> copy(v)
-mat_update_func = (A, u, p, t) -> copy(M)
-inv_update_func = (A, u, p, t) -> inv(M)
+sca_update_func = (a, u, p, t) -> sum(p) * s
+vec_update_func = (b, u, p, t) -> Diagonal(p) * v
+mat_update_func = (A, u, p, t) -> Diagonal(p) * M
+inv_update_func = (A, u, p, t) -> inv(M) * inv(Diagonal(p))
 
 α = ScalarOperator(zero(Float32), update_func = sca_update_func)
 L_dia = DiagonalOperator(zeros(N, K); update_func = vec_update_func)
@@ -35,29 +35,30 @@ L_mat = MatrixOperator(zeros(N,N); update_func = mat_update_func)
 L_aff = AffineOperator(L_mat, L_mat, zeros(N, K); update_func = vec_update_func)
 L_sca = α * L_mat
 L_inv = InvertibleOperator(MatrixOperator(M))
+L_fun = FunctionOperator((u,p,t) -> M * u, u0, u0; op_inverse=(u,p,t) -> M \ u)
 
 for (op_type, A) in
     (
      (IdentityOperator, IdentityOperator(N)),
      (NullOperator, NullOperator(N)),
-     (MatrixOperator, MatrixOperator(rand(N,N))),
-     (AffineOperator, AffineOperator(rand(N,N), rand(N,N), rand(N,K))),
-     (ScaledOperator, rand() * MatrixOperator(rand(N,N))),
-     (InvertedOperator, InvertedOperator(rand(N,N) |> MatrixOperator)),
-     (InvertibleOperator, InvertibleOperator(rand(N,N) |> MatrixOperator)),
-     (BatchedDiagonalOperator, DiagonalOperator(rand(N,K))),
-     (AddedOperator, MatrixOperator(rand(N,N)) + MatrixOperator(rand(N,N))),
-     (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))),
+     (MatrixOperator, L_mat),
+     (AffineOperator, L_aff),
+     (ScaledOperator, L_sca),
+     (InvertedOperator, InvertedOperator(L_mat)),
+     (InvertibleOperator, L_inv),
+     (BatchedDiagonalOperator, L_dia),
+     (AddedOperator, L_mat + L_dia),
+     (ComposedOperator, L_mat * L_dia),
      (TensorProductOperator, TensorProductOperator(rand(n,n), rand(n,n))),
-     (FunctionOperator, FunctionOperator((u,p,t)->M*u, u0, u0; op_inverse=(u,p,t)->M\u)),
+     (FunctionOperator, L_fun),
 
      ## ignore wrappers
-     #(AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
-     #(TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
+     # (AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
+     # (TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
 
-     (ScalarOperator, ScalarOperator(rand())),
-     (AddedScalarOperator, ScalarOperator(rand()) + ScalarOperator(rand())),
-     (ComposedScalarOperator, ScalarOperator(rand()) * ScalarOperator(rand())),
+     (ScalarOperator, α),
+     (AddedScalarOperator, α + α),
+     (ComposedScalarOperator, α * α),
     )
 
     @assert A isa op_type
@@ -66,8 +67,7 @@ for (op_type, A) in
 
         v = Diagonal(p) * u0
 
-        A = update_coefficients(A, v, p, t)
-        w = A * v
+        w = A(v, p, t)
 
         l = sum(w)
     end
@@ -82,7 +82,6 @@ for (op_type, A) in
         l = sum(w)
     end
 
-    # A = update_coefficients(A, v, ps, t)
     @testset "$op_type" begin
         l_mul = loss_mul(ps)
         g_mul = Zygote.gradient(loss_mul, ps)[1]
