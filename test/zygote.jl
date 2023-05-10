@@ -16,10 +16,25 @@ n = 3
 N = n*n
 K = 12
 
+t = rand()
 u0 = rand(N, K)
 ps = rand(N)
 
+s = rand()
+v = rand(N)
 M = rand(N,N)
+
+sca_update_func = (a, u, p, t) -> copy(s)
+vec_update_func = (b, u, p, t) -> copy(v)
+mat_update_func = (A, u, p, t) -> copy(M)
+inv_update_func = (A, u, p, t) -> inv(M)
+
+α = ScalarOperator(zero(Float32), update_func = sca_update_func)
+L_dia = DiagonalOperator(zeros(N, K); update_func = vec_update_func)
+L_mat = MatrixOperator(zeros(N,N); update_func = mat_update_func)
+L_aff = AffineOperator(L_mat, L_mat, zeros(N, K); update_func = vec_update_func)
+L_sca = α * L_mat
+L_inv = InvertibleOperator(MatrixOperator(M))
 
 for (op_type, A) in
     (
@@ -51,6 +66,7 @@ for (op_type, A) in
 
         v = Diagonal(p) * u0
 
+        A = update_coefficients(A, v, p, t)
         w = A * v
 
         l = sum(w)
@@ -60,11 +76,13 @@ for (op_type, A) in
 
         v = Diagonal(p) * u0
 
+        A = update_coefficients(A, v, p, t)
         w = A \ v
 
         l = sum(w)
     end
 
+    # A = update_coefficients(A, v, ps, t)
     @testset "$op_type" begin
         l_mul = loss_mul(ps)
         g_mul = Zygote.gradient(loss_mul, ps)[1]
