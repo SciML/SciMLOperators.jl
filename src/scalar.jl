@@ -180,10 +180,12 @@ end
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
 function update_coefficients(L::AddedScalarOperator, u, p, t)
-    for i in 1:length(L.ops)
-        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
     end
-    L
+
+    @set! L.ops = ops
 end
 
 getops(α::AddedScalarOperator) = α.ops
@@ -231,10 +233,12 @@ Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
 
 function update_coefficients(L::ComposedScalarOperator, u, p, t)
-    for i in 1:length(L.ops)
-        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
     end
-    L
+
+    @set! L.ops = ops
 end
 
 getops(α::ComposedScalarOperator) = α.ops

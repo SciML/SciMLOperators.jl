@@ -393,10 +393,12 @@ function Base.resize!(L::AddedOperator, n::Integer)
 end
 
 function update_coefficients(L::AddedOperator, u, p, t)
-    for i in 1:length(L.ops)
-        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
     end
-    L
+
+    @set! L.ops = ops
 end
 
 getops(L::AddedOperator) = L.ops
@@ -546,10 +548,12 @@ end
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 function update_coefficients(L::ComposedOperator, u, p, t)
-    for i in 1:length(L.ops)
-        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
     end
-    L
+
+    @set! L.ops = ops
 end
 
 getops(L::ComposedOperator) = L.ops
