@@ -226,6 +226,7 @@ issquare(::Union{
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
+Base.length(L::AbstractSciMLOperator) = prod(size(L))
 Base.ndims(L::AbstractSciMLOperator) = length(size(L))
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
