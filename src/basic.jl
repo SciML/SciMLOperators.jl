@@ -606,10 +606,19 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
     K = size(u, 2)
     cache = (zero(u),)
     for i in reverse(2:length(L.ops))
+        op = L.ops[i]
 
-        M = size(L.ops[i], 1)
-        T = promote_type(eltype.((L.ops[i], cache[1]))...)
+        M = size(op, 1)
         sz = u isa AbstractMatrix ? (M, K) : (M,)
+
+        T = if op isa FunctionOperator # 
+            # FunctionOperator isn't guaranteed to play by the rules of
+            # `promote_type`. For example, an rFFT is a complex operation
+            # that accepts and complex vector and returns a real one.
+            op.traits.eltypes[2]
+        else
+            promote_type(eltype.((op, cache[1]))...)
+        end
 
         cache = (similar(u, T, sz), cache...)
     end
@@ -623,12 +632,12 @@ function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
         L = cache_self(L, u)
     end
 
-    vecs = L.cache
+    ops = ()
     for i in reverse(1:length(L.ops))
-        @set! L.ops[i] = cache_operator(L.ops[i], vecs[i])
+        ops = (cache_operator(L.ops[i], L.cache[i]), ops...)
     end
 
-    L
+    @set! L.ops = ops
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
