@@ -214,10 +214,11 @@ end
 for op in (
            :*, :∘,
           )
-    @eval Base.$op(ops::AbstractSciMLScalarOperator...) = ComposedScalarOperator(ops...)
-    @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
-    @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
+    @eval Base.$op(ops::AbstractSciMLScalarOperator...) = reduce($op, ops)
+    @eval Base.$op(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A, B)
     @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
+    @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
+    @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
 
     for T in SCALINGNUMBERTYPES[2:end]
         @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = ComposedScalarOperator(α, ScalarOperator(x))

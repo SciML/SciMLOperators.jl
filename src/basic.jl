@@ -82,12 +82,12 @@ for op in (
     end
 end
 
-function Base.:\(::IdentityOperator, A::AbstractSciMLOperator)
+function Base.:\(ii::IdentityOperator, A::AbstractSciMLOperator)
     @assert size(A, 1) == ii.len
     A
 end
 
-function Base.:/(A::AbstractSciMLOperator, ::IdentityOperator)
+function Base.:/(A::AbstractSciMLOperator, ii::IdentityOperator)
     @assert size(A, 2) == ii.len
     A
 end
@@ -471,16 +471,15 @@ function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
 end
 
 # constructors
-Base.:∘(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
-Base.:∘(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
-Base.:∘(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
-Base.:∘(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
-
-Base.:*(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
-Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
-Base.:*(A::ComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
-Base.:*(A::AbstractSciMLOperator, B::ComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
-Base.:*(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
+for op in (
+           :*, :∘,
+          )
+    @eval Base.$op(ops::AbstractSciMLOperator...) = reduce($op, ops)
+    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(A, B)
+    @eval Base.$op(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
+    @eval Base.$op(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
+    @eval Base.$op(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
+end
 
 for op in (
            :*, :∘,
