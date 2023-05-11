@@ -120,7 +120,7 @@ has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
-has_mul!(L::AbstractSciMLOperator) = false # mul!(du, L, u)
+has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
@@ -220,6 +220,7 @@ issquare(::Union{
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
+Base.length(L::AbstractSciMLOperator) = prod(size(L))
 Base.ndims(L::AbstractSciMLOperator) = length(size(L))
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))

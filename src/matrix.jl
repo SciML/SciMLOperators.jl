@@ -158,25 +158,28 @@ const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ? LinearAlge
 const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? LinearAlgebra.TransposeFactorization : Transpose
 
 """
-    InvertibleOperator(F)
+    InvertibleOperator(L, F)
 
-Like MatrixOperator, but stores a Factorization instead.
-
-Supports left division and `ldiv!` when applied to an array.
+Stores an operator and its factorization (or inverse operator).
+Supports left division and `ldiv!` via `F`, and operator application
+via `L`.
 """
-struct InvertibleOperator{T,FType} <: AbstractSciMLOperator{T}
-    F::FType
+struct InvertibleOperator{T,LT,FT} <: AbstractSciMLOperator{T}
+    L::LT
+    F::FT
 
-    function InvertibleOperator(F)
+    function InvertibleOperator(L, F)
         @assert has_ldiv(F) | has_ldiv!(F) "$F is not invertible"
-        new{eltype(F),typeof(F)}(F)
+        T = promote_type(eltype(L), eltype(F))
+
+        new{T,typeof(L),typeof(F)}(L, F)
     end
 end
 
 # constructor
 function LinearAlgebra.factorize(L::AbstractSciMLOperator)
     fact = factorize(convert(AbstractMatrix, L))
-    InvertibleOperator(fact)
+    InvertibleOperator(L, fact)
 end
 
 for fact in (
@@ -190,40 +193,36 @@ for fact in (
             )
 
     @eval LinearAlgebra.$fact(L::AbstractSciMLOperator, args...) =
-        InvertibleOperator($fact(convert(AbstractMatrix, L), args...))
+        InvertibleOperator(L, $fact(convert(AbstractMatrix, L), args...))
     @eval LinearAlgebra.$fact(L::AbstractSciMLOperator; kwargs...) =
-        InvertibleOperator($fact(convert(AbstractMatrix, L); kwargs...))
+        InvertibleOperator(L, $fact(convert(AbstractMatrix, L); kwargs...))
 end
 
 function Base.convert(::Type{<:Factorization}, L::InvertibleOperator{T,<:Factorization}) where{T}
     L.F
 end
 
-Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator) =
-    convert(AbstractMatrix, L.F)
-Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator{<:Any,<:Union{Adjoint,AdjointFact}}) =
-    adjoint(convert(AbstractMatrix, adjoint(L.F)))
-Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator{<:Any,<:Union{Transpose,TransposeFact}}) =
-    transpose(convert(AbstractMatrix, transpose(L.F)))
+Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator) = convert(AbstractMatrix, L.L)
 
 # traits
-Base.size(L::InvertibleOperator) = size(L.F)
-Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.F))
-Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.F')
-Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.F))
-Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.F, n); L)
+Base.size(L::InvertibleOperator) = size(L.L)
+Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.L), transpose(L.F))
+Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.L', L.F')
+Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.L), conj(L.F))
+Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.L, n); resize!(L.F, n); L)
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p=2) where{T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 function update_coefficients(L::InvertibleOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
     @set! L.F = update_coefficients(L.F, u, p, t)
     L
 end
 
-getops(L::InvertibleOperator) = (L.F,)
-islinear(L::InvertibleOperator) = islinear(L.F)
+getops(L::InvertibleOperator) = (L.L, L.F,)
+islinear(L::InvertibleOperator) = islinear(L.L)
 
-@forward InvertibleOperator.F (
+@forward InvertibleOperator.L (
                                # LinearAlgebra
                                LinearAlgebra.issymmetric,
                                LinearAlgebra.ishermitian,
@@ -234,15 +233,16 @@ islinear(L::InvertibleOperator) = islinear(L.F)
                                has_adjoint,
                                has_mul,
                                has_mul!,
-                               has_ldiv,
-                               has_ldiv!,
                               )
 
+has_ldiv(L::InvertibleOperator) = has_mul(L.F)
+has_ldiv!(L::InvertibleOperator) = has_ldiv!(L.F)
+
 # operator application
-Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.F * x
+Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.L * x
 Base.:\(L::InvertibleOperator, x::AbstractVecOrMat) = L.F \ x
-LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat) = mul!(v, L.F, u)
-LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat,α, β) = mul!(v, L.F, u, α, β)
+LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat) = mul!(v, L.L, u)
+LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat,α, β) = mul!(v, L.L, u, α, β)
 LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(v, L.F, u)
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 

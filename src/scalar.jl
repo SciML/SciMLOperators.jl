@@ -21,6 +21,7 @@ SCALINGCOMBINETYPES = (
     :IdentityOperator
 )
 
+Base.length(::AbstractSciMLScalarOperator) = 1
 Base.size(α::AbstractSciMLScalarOperator) = ()
 Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
 Base.transpose(α::AbstractSciMLScalarOperator) = α
@@ -110,7 +111,7 @@ function ScalarOperator(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T}
 end
 
 # constructors
-Base.convert(::Type{Number}, α::ScalarOperator) = α.val
+Base.convert(T::Type{<:Number}, α::ScalarOperator) = convert(T, α.val)
 Base.convert(::Type{ScalarOperator}, α::Number) = ScalarOperator(α)
 
 ScalarOperator(α::AbstractSciMLScalarOperator) = α
@@ -173,8 +174,8 @@ for op in (
     end
 end
 
-function Base.convert(::Type{Number}, α::AddedScalarOperator{T}) where{T}
-    sum(op -> convert(Number, op), α.ops)
+function Base.convert(T::Type{<:Number}, α::AddedScalarOperator)
+    sum(convert.(T, α.ops))
 end
 
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
@@ -224,9 +225,9 @@ for op in (
     end
 end
 
-function Base.convert(::Type{Number}, α::ComposedScalarOperator{T}) where{T}
+function Base.convert(T::Type{<:Number}, α::ComposedScalarOperator)
     iszero(α) && return zero(T)
-    prod( op -> convert(Number, op), α.ops; init=one(T))
+    prod(convert.(T, α.ops))
 end
 
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
@@ -283,8 +284,8 @@ for op in (
     @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = inv(α) * β
 end
 
-function Base.convert(::Type{Number}, α::InvertedScalarOperator{T}) where{T}
-    return inv(convert(Number, α.λ))
+function Base.convert(T::Type{<:Number}, α::InvertedScalarOperator)
+    inv(convert(Number, α.λ))
 end
 
 Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
