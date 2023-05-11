@@ -1,6 +1,14 @@
 #
-using SciMLOperators, LinearAlgebra
-using Random
+using SciMLOperators
+using SciMLOperators: AbstractSciMLScalarOperator,
+                      ComposedScalarOperator,
+                      AddedScalarOperator,
+                      InvertedScalarOperator,
+                      IdentityOperator,
+                      AddedOperator,
+                      ScaledOperator
+
+using LinearAlgebra, Random
 
 Random.seed!(0)
 N = 8
@@ -38,31 +46,31 @@ K = 12
 
     # Test that ScalarOperator's remain AbstractSciMLScalarOperator's under common ops
     β = α + α
-    @test β isa SciMLOperators.AddedScalarOperator
+    @test β isa AddedScalarOperator
     @test β * u ≈ x * u + x * u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ x + x
 
     β = α * α
-    @test β isa SciMLOperators.ComposedScalarOperator
+    @test β isa ComposedScalarOperator
     @test β * u ≈ x * x * u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ x * x
 
     β = inv(α)
-    @test β isa SciMLOperators.InvertedScalarOperator
+    @test β isa InvertedScalarOperator
     @test β * u ≈ 1 / x * u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ 1 / x
 
     β = α * inv(α)
-    @test β isa SciMLOperators.ComposedScalarOperator
+    @test β isa ComposedScalarOperator
     @test β * u ≈ u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ true
 
     β = α / α
-    @test β isa SciMLOperators.ComposedScalarOperator
+    @test β isa ComposedScalarOperator
     @test β * u ≈ u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ true
@@ -76,6 +84,14 @@ K = 12
         @test all(map(T -> (T isa SciMLOperators.ScaledOperator), (α / op, op / α, op \ α, α \ op)))
         @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
         @test (op / α) * u ≈ (α \ op) * u ≈ 1/α * op * u
+    end
+
+    # ensure composedscalaroperators doesn't nest
+    α = ScalarOperator(rand())
+    L = α * (α * α) * α
+    @test L isa ComposedScalarOperator
+    for op in L.ops
+        @test !isa(op, ComposedScalarOperator)
     end
 end
 
