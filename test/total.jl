@@ -35,11 +35,17 @@ K = 12
     ik = im * DiagonalOperator(k)
     Dx = ftr \ ik * ftr
     Dx = cache_operator(Dx, x)
+    D2x = cache_operator(Dx * Dx, x)
 
-    u  = @. sin(5x)cos(7x);
-    du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+    u   = @. sin(5x)cos(7x);
+    du  = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+    d2u = @. 5(-5sin(5x)cos(7x) -7cos(5x)sin(7x)) +
+           - 7(5cos(5x)sin(7x) + 7sin(5x)cos(7x))
 
     @test ≈(Dx * u, du; atol=1e-8)
+    @test ≈(D2x * u, d2u; atol=1e-8)
+
+    v = copy(u); @test ≈(mul!(v, D2x, u), d2u; atol=1e-8)
     v = copy(u); @test ≈(mul!(v, Dx, u), du; atol=1e-8)
 
     itr = inv(ftr)
