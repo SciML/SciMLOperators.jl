@@ -20,12 +20,6 @@ DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 update_coefficients(L,u,p,t) = L
 update_coefficients!(L,u,p,t) = L
 
-function update_coefficients(L::AbstractSciMLOperator, u, p, t)
-    @error """Out-of-place update method not implemented for $L.
-    Please file an issue at https://github.com/SciML/SciMLOperators.jl
-    with a minimal example."""
-end
-
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
     for op in getops(L)
         update_coefficients!(op, u, p, t)

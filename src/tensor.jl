@@ -80,10 +80,12 @@ end
 Base.conj(L::TensorProductOperator) = TensorProductOperator(conj.(L.ops)...; cache=L.cache)
 
 function update_coefficients(L::TensorProductOperator, u, p, t)
-    for i in 1:length(L.ops)
-        @set! L.ops[i] = update_coefficients(L.ops[i], u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
     end
-    L
+
+    @set! L.ops = ops
 end
 
 getops(L::TensorProductOperator) = L.ops
