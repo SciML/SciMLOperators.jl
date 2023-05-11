@@ -18,7 +18,7 @@ K = 12
     @test issquare(α)
     @test islinear(α)
 
-    @test convert(Number, α) isa Number
+    @test convert(Float32, α) isa Float32
     @test convert(ScalarOperator, a) isa ScalarOperator
 
     @test size(α) == ()
@@ -37,16 +37,35 @@ K = 12
     @test axpy!(aa,X,Y) ≈ a*X+Z
 
     # Test that ScalarOperator's remain AbstractSciMLScalarOperator's under common ops
-    @test α + α isa SciMLOperators.AddedScalarOperator
-    (α + α) * u ≈ x * u + x * u
-    @test α * α isa SciMLOperators.ComposedScalarOperator
-    (α * α) * u ≈ x * x * u
-    @test inv(α) isa SciMLOperators.InvertedScalarOperator
-    inv(α) * u ≈ 1/x * u
-    @test α * inv(α) isa SciMLOperators.ComposedScalarOperator
-    α * inv(α) * u ≈ u
-    @test α / α isa SciMLOperators.ComposedScalarOperator
-    α * α * u ≈ u
+    β = α + α
+    @test β isa SciMLOperators.AddedScalarOperator
+    @test β * u ≈ x * u + x * u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ x + x
+
+    β = α * α
+    @test β isa SciMLOperators.ComposedScalarOperator
+    @test β * u ≈ x * x * u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ x * x
+
+    β = inv(α)
+    @test β isa SciMLOperators.InvertedScalarOperator
+    @test β * u ≈ 1 / x * u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ 1 / x
+
+    β = α * inv(α)
+    @test β isa SciMLOperators.ComposedScalarOperator
+    @test β * u ≈ u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ true
+
+    β = α / α
+    @test β isa SciMLOperators.ComposedScalarOperator
+    @test β * u ≈ u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ true
 
     # Test combination with other operators
     for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator(N))
@@ -73,6 +92,9 @@ end
 
     @test !isconstant(α)
     @test !isconstant(β)
+
+    @test convert(Float32, α) isa Float32
+    @test convert(Float32, β) isa Float32
 
     @test convert(Number, α) ≈ 0.0
     @test convert(Number, β) ≈ 0.0
