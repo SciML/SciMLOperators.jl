@@ -39,7 +39,7 @@ L_sca = α * L_mat
 # https://github.com/SciML/SciMLOperators.jl/pull/179
 L_inv = InvertibleOperator(MatrixOperator(M))
 L_fun = FunctionOperator((u,p,t) -> Diagonal(p) * u, u0, u0;
-                         op_inverse=(u,p,t) -> Diagonal(p) \ u)
+                        op_inverse=(u,p,t) -> inv(Diagonal(p)) * u)
 
 Ti = MatrixOperator(zeros(n, n); update_func = tsr_update_func)
 To = deepcopy(Ti)
