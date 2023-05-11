@@ -45,7 +45,7 @@ Ti = MatrixOperator(zeros(n, n); update_func = tsr_update_func)
 To = deepcopy(Ti)
 L_tsr = TensorProductOperator(To, Ti)
 
-for (op_type, A) in
+for (LType, L) in
     (
      (IdentityOperator, IdentityOperator(N)),
      (NullOperator, NullOperator(N)),
@@ -69,12 +69,12 @@ for (op_type, A) in
      (ComposedScalarOperator, α * α),
     )
 
-    @assert A isa op_type
+    @assert L isa LType
 
     loss_mul = function(p)
 
         v = Diagonal(p) * u0
-        w = A(v, p, t)
+        w = L(v, p, t)
         l = sum(w)
     end
 
@@ -82,23 +82,23 @@ for (op_type, A) in
 
         v = Diagonal(p) * u0
 
-        A = update_coefficients(A, v, p, t)
-        w = A \ v
+        L = update_coefficients(L, v, p, t)
+        w = L \ v
 
         l = sum(w)
     end
 
-    @testset "$op_type" begin
+    @testset "$LType" begin
         l_mul = loss_mul(ps)
         g_mul = Zygote.gradient(loss_mul, ps)[1]
 
-        if A isa NullOperator
+        if L isa NullOperator
             @test isa(g_mul, Nothing)
         else
             @test !isa(g_mul, Nothing)
         end
 
-        if has_ldiv(A)
+        if has_ldiv(L)
             l_div = loss_div(ps)
             g_div = Zygote.gradient(loss_div, ps)[1]
 
