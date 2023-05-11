@@ -86,10 +86,11 @@ end
 
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
-                          output::AbstractVecOrMat =  input;
+                          output::AbstractVecOrMat = input;
 
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
+                          isconstant::Bool = false,
                           has_mul5::Union{Nothing,Bool}=nothing,
                           cache::Union{Nothing, NTuple{2}}=nothing,
                           T::Union{Type{<:Number},Nothing}=nothing,
@@ -112,8 +113,10 @@ function FunctionOperator(op,
                           isposdef::Bool = false,
                          )
 
+    # store eltype of input/output for caching with ComposedOperator.
+    eltypes = eltype.((input, output))
     sz = (size(output, 1), size(input, 1))
-    T  = isnothing(T) ? promote_type(eltype.((input, output))...) : T
+    T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
 
     isinplace = if isnothing(isinplace)
@@ -164,6 +167,7 @@ function FunctionOperator(op,
 
     traits = (;
               islinear = islinear,
+              isconstant = isconstant,
 
               opnorm = opnorm,
               issymmetric = issymmetric,
@@ -176,6 +180,7 @@ function FunctionOperator(op,
               ifcache = ifcache,
               T = T,
               size = sz,
+              eltypes = eltypes,
              )
 
     L = FunctionOperator(
@@ -197,6 +202,11 @@ function FunctionOperator(op,
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t)
+
+    if isconstant(L)
+        return L
+    end
+
     @set! L.op = update_coefficients(L.op, u, p, t)
     @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
     @set! L.op_inverse = update_coefficients(L.op_inverse, u, p, t)
@@ -209,6 +219,11 @@ function update_coefficients(L::FunctionOperator, u, p, t)
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t)
+
+    if isconstant(L)
+        return L
+    end
+
     for op in getops(L)
         update_coefficients!(op, u, p, t)
     end
@@ -250,6 +265,7 @@ function Base.adjoint(L::FunctionOperator)
 
     traits = L.traits
     @set! traits.size = reverse(size(L))
+    @set! traits.eltypes = reverse(traits.eltypes)
 
     p = L.p
     t = L.t
@@ -284,6 +300,7 @@ function Base.inv(L::FunctionOperator)
 
     traits = L.traits
     @set! traits.size = reverse(size(L))
+    @set! traits.eltypes = reverse(traits.eltypes)
 
     @set! traits.opnorm = if traits.opnorm isa Number
         1 / traits.opnorm
@@ -353,8 +370,8 @@ function getops(L::FunctionOperator)
     ops
 end
 
-#TODO - isconstant(L::FunctionOperator)
 islinear(L::FunctionOperator) = L.traits.islinear
+isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(L::FunctionOperator{iip}) where{iip} = true
 has_mul!(L::FunctionOperator{iip}) where{iip} = iip
