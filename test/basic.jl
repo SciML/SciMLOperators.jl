@@ -221,6 +221,14 @@ end
     v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
 
+    # ensure composedoperators don't nest
+    A = MatrixOperator(rand(N, N))
+    L = A * (A * A) * A
+    @test L isa ComposedOperator
+    for op in L.ops
+        @test !isa(op, ComposedOperator)
+    end
+
     # Test caching of composed operator when inner ops do not support Base.:*
     # ComposedOperator caching was modified in PR # 174
     inner_op = qr(MatrixOperator(rand(N, N)))
