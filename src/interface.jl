@@ -3,18 +3,6 @@
 # Operator interface
 ###
 
-"""
-Function call and multiplication:
-    - L(du, u, p, t) for in-place operator evaluation,
-    - du = L(u, p, t) for out-of-place operator evaluation
-
-If the operator is not a constant, update it with (u,p,t). A mutating form, i.e.
-update_coefficients!(A,u,p,t) that changes the internal coefficients, and a
-out-of-place form B = update_coefficients(A,u,p,t).
-
-"""
-function (::AbstractSciMLOperator) end
-
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 
 update_coefficients(L,u,p,t) = L
@@ -42,7 +30,7 @@ function iscached(L::AbstractSciMLOperator)
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
     isset = has_cache ? !isnothing(L.cache) : true
 
-    return isset & all(iscached, getops(L)) 
+    return isset & all(iscached, getops(L))
 end
 
 iscached(L) = true
