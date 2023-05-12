@@ -198,7 +198,7 @@ for fact in (
         InvertibleOperator(L, $fact(convert(AbstractMatrix, L); kwargs...))
 end
 
-function Base.convert(::Type{<:Factorization}, L::InvertibleOperator{T,<:Factorization}) where{T}
+function Base.convert(::Type{<:Factorization}, L::InvertibleOperator{T,LT,<:Factorization}) where{T,LT}
     L.F
 end
 
