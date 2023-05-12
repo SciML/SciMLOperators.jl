@@ -330,8 +330,9 @@ AddedOperator(L::AbstractSciMLOperator) = L
 # constructors
 Base.:+(A::AbstractSciMLOperator, B::AbstractMatrix) = A + MatrixOperator(B)
 Base.:+(A::AbstractMatrix, B::AbstractSciMLOperator) = MatrixOperator(A) + B
-Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
 
+Base.:+(ops::AbstractSciMLOperator...) = reduce(+, ops)
+Base.:+(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, B)
 Base.:+(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, B.ops...)
 Base.:+(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., B)
 Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
