@@ -20,6 +20,20 @@ import SparseArrays: sparse, issparse
 
 """
 $(TYPEDEF)
+
+## Interface
+
+An `L::AbstractSciMLOperator` can be called like a function. This behaves
+like multiplication by the linear operator represented by the
+`AbstractSciMLOperator`. Possible signatures are
+
+- `L(du, u, p, t)` for in-place operator evaluation
+- `du = L(u, p, t)` for out-of-place operator evaluation
+
+If the operator is not a constant, update it with `(u, p, t)`.
+A mutating form, i.e. `update_coefficients!(L, u, p, t)` that changes the
+internal coefficients, and an out-of-place form
+`L_new = update_coefficients(L, u, p, t)`.
 """
 abstract type AbstractSciMLOperator{T} end
 
