@@ -171,6 +171,15 @@ end
 
     v=rand(N,K); @test mul!(v, op, u) ≈ (A+B) * u
     v=rand(N,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(A+B)*u + β*w
+
+    # ensure AddedOperator doesn't nest
+    A = MatrixOperator(rand(N, N))
+    L = A + (A + A) + A
+    @test L isa AddedOperator
+    for op in L.ops
+        @test !isa(op, AddedOperator)
+    end
+
 end
 
 @testset "ComposedOperator" begin
@@ -220,6 +229,14 @@ end
     @test iscached(op)
     v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
+
+    # ensure composedoperators doesn't nest
+    A = MatrixOperator(rand(N, N))
+    L = A * (A * A) * A
+    @test L isa ComposedOperator
+    for op in L.ops
+        @test !isa(op, ComposedOperator)
+    end
 
     # Test caching of composed operator when inner ops do not support Base.:*
     # ComposedOperator caching was modified in PR # 174
