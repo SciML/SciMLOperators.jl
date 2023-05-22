@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator, ⊗
+using SciMLOperators: InvertibleOperator, InvertedOperator, ⊗
 using FFTW
 
 Random.seed!(0)
@@ -58,6 +58,32 @@ K = 19
 
     v=rand(N,K); @test mul!(v, AA, u) ≈ A * u
     v=rand(N,K); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
+end
+
+@testset "InvertibleOperator test" begin
+    u = rand(N,K)
+    p = nothing
+    t = 0
+    α = rand()
+    β = rand()
+
+    d = rand(N, K)
+    D  = DiagonalOperator(d)
+    Di = DiagonalOperator(inv.(d)) |> InvertedOperator
+
+    L = InvertibleOperator(D, Di)
+    L = cache_operator(L, u)
+
+    @test iscached(L)
+
+    @test L * u ≈ d .* u
+    @test L \ u ≈ d .\ u
+
+    v=rand(N,K); @test mul!(v, L, u) ≈ d .* u
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(d .* u) + β*w
+
+    v=rand(N,K); @test ldiv!(v, L, u) ≈ d .\ u
+    v=copy(u); @test ldiv!(L, v) ≈ d .\ u
 end
 
 @testset "MatrixOperator update test" begin
