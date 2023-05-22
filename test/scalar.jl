@@ -93,6 +93,20 @@ K = 12
     for op in L.ops
         @test !isa(op, ComposedScalarOperator)
     end
+
+end
+
+@testset "ScalarOperator scalar argument test" begin
+    a = rand()
+    u = rand()
+    v = rand()
+    p = nothing
+    t = 0.0
+
+    α = ScalarOperator(a)
+    @test α(u, p, t) ≈ u * a
+    @test_throws ArgumentError α(v, u, p, t)
+    @test_throws ArgumentError α(v, u, p, t, 1, 2)
 end
 
 @testset "ScalarOperator update test" begin
