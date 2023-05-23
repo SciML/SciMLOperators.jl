@@ -19,6 +19,12 @@ end
 (L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
 (L::AbstractSciMLOperator)(du, u, p, t, α, β) = (update_coefficients!(L, u, p, t); mul!(du, L, u, α, β))
 
+function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...)
+    msg = """Nonallocating L(v, u, p, t) type methods are not available for
+    subtypes of `Number`."""
+    throw(ArgumentError(msg))
+end
+
 ###
 # caching interface
 ###

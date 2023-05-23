@@ -3,6 +3,11 @@
 # AbstractSciMLScalarOperator interface
 ###
 
+function (L::AbstractSciMLScalarOperator)(u::Number, p, t)
+    L = update_coefficients(L, u, p, t)
+    convert(Number, L) * u
+end
+
 SCALINGNUMBERTYPES = (
                       :AbstractSciMLScalarOperator,
                       :Number,
