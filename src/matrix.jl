@@ -238,6 +238,14 @@ islinear(L::InvertibleOperator) = islinear(L.L)
 has_ldiv(L::InvertibleOperator) = has_mul(L.F)
 has_ldiv!(L::InvertibleOperator) = has_ldiv!(L.F)
 
+function cache_internals(L::InvertibleOperator, u::AbstractVecOrMat)
+
+    @set! L.L = cache_operator(L.L, u)
+    @set! L.F = cache_operator(L.F, u)
+
+    L
+end
+
 # operator application
 Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.L * x
 Base.:\(L::InvertibleOperator, x::AbstractVecOrMat) = L.F \ x
