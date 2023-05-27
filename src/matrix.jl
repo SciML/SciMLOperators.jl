@@ -155,10 +155,10 @@ function DiagonalOperator(diag::AbstractVector;
                          )
 
     diag_update_func = update_func_isconstant(update_func) ? update_func :
-        (A, u, p, t; kwargs...) -> (update_func(A.diag, u, p, t; kwargs...); A)
+        (A, u, p, t; kwargs...) -> update_func(A.diag, u, p, t; kwargs...) |> Diagonal
 
     diag_update_func! = update_func_isconstant(update_func!) ? update_func! :
-        (A, u, p, t; kwargs...) -> (update_func!(A.diag, u, p, t; kwargs...); A)
+        (A, u, p, t; kwargs...) -> update_func!(A.diag, u, p, t; kwargs...)
 
     MatrixOperator(Diagonal(diag);
                    update_func = diag_update_func,
