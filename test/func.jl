@@ -2,7 +2,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator, ⊗
+using SciMLOperators: ⊗
 
 Random.seed!(0)
 N = 8
@@ -17,12 +17,15 @@ K = 12
 
     A = rand(N,N) |> Symmetric
     F = lu(A)
+    Ai = inv(A)
 
     f1(u, p, t)  = A * u
     f1i(u, p, t) = A \ u
 
     f2(du, u, p, t)  = mul!(du, A, u)
+    f2(du, u, p, t, α, β)  = mul!(du, A, u, α, β)
     f2i(du, u, p, t) = ldiv!(du, F, u)
+    f2i(du, u, p, t, α, β) = mul!(du, Ai, u, α, β)
 
     # out of place
     op1 = FunctionOperator(f1, u, A*u;
@@ -51,6 +54,7 @@ K = 12
                            ishermitian=true,
                            isposdef=true,
                           )
+
     @test issquare(op1)
     @test issquare(op2)
 
@@ -76,6 +80,12 @@ K = 12
     @test !iscached(op1)
     @test !iscached(op2)
 
+    @test !op1.traits.has_mul5
+    @test op2.traits.has_mul5
+
+    # 5-arg mul! (w/o cache)
+    v = rand(N,K); w=copy(v); @test α*(A*u)+ β*w ≈ mul!(v, op2, u, α, β)
+
     op1 = cache_operator(op1, u, A * u)
     op2 = cache_operator(op2, u, A * u)
 
@@ -98,6 +108,7 @@ end
 
     # Accept a kwarg "scale" in operator action
     f(du,u,p,t; scale) = mul!(du, Diagonal(p*t*scale), u)
+    f(u, p, t; scale) = Diagonal(p * t * scale) * u
 
     L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), accepted_kwargs=(;scale=zero(scale)))
 

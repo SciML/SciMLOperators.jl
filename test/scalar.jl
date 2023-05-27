@@ -1,6 +1,14 @@
 #
-using SciMLOperators, LinearAlgebra
-using Random
+using SciMLOperators
+using SciMLOperators: AbstractSciMLScalarOperator,
+                      ComposedScalarOperator,
+                      AddedScalarOperator,
+                      InvertedScalarOperator,
+                      IdentityOperator,
+                      AddedOperator,
+                      ScaledOperator
+
+using LinearAlgebra, Random
 
 Random.seed!(0)
 N = 8
@@ -18,7 +26,7 @@ K = 12
     @test issquare(α)
     @test islinear(α)
 
-    @test convert(Number, α) isa Number
+    @test convert(Float32, α) isa Float32
     @test convert(ScalarOperator, a) isa ScalarOperator
 
     @test size(α) == ()
@@ -37,16 +45,35 @@ K = 12
     @test axpy!(aa,X,Y) ≈ a*X+Z
 
     # Test that ScalarOperator's remain AbstractSciMLScalarOperator's under common ops
-    @test α + α isa SciMLOperators.AddedScalarOperator
-    (α + α) * u ≈ x * u + x * u
-    @test α * α isa SciMLOperators.ComposedScalarOperator
-    (α * α) * u ≈ x * x * u
-    @test inv(α) isa SciMLOperators.InvertedScalarOperator
-    inv(α) * u ≈ 1/x * u
-    @test α * inv(α) isa SciMLOperators.ComposedScalarOperator
-    α * inv(α) * u ≈ u
-    @test α / α isa SciMLOperators.ComposedScalarOperator
-    α * α * u ≈ u
+    β = α + α
+    @test β isa AddedScalarOperator
+    @test β * u ≈ x * u + x * u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ x + x
+
+    β = α * α
+    @test β isa ComposedScalarOperator
+    @test β * u ≈ x * x * u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ x * x
+
+    β = inv(α)
+    @test β isa InvertedScalarOperator
+    @test β * u ≈ 1 / x * u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ 1 / x
+
+    β = α * inv(α)
+    @test β isa ComposedScalarOperator
+    @test β * u ≈ u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ true
+
+    β = α / α
+    @test β isa ComposedScalarOperator
+    @test β * u ≈ u
+    @inferred convert(Float32, β)
+    @test convert(Number, β) ≈ true
 
     # Test combination with other operators
     for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator(N))
@@ -58,13 +85,37 @@ K = 12
         @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
         @test (op / α) * u ≈ (α \ op) * u ≈ 1/α * op * u
     end
+
+    # ensure composedscalaroperators doesn't nest
+    α = ScalarOperator(rand())
+    L = α * (α * α) * α
+    @test L isa ComposedScalarOperator
+    for op in L.ops
+        @test !isa(op, ComposedScalarOperator)
+    end
+
+end
+
+@testset "ScalarOperator scalar argument test" begin
+    a = rand()
+    u = rand()
+    v = rand()
+    p = nothing
+    t = 0.0
+
+    α = ScalarOperator(a)
+    @test α(u, p, t) ≈ u * a
+    @test_throws ArgumentError α(v, u, p, t)
+    @test_throws ArgumentError α(v, u, p, t, 1, 2)
 end
 
 @testset "ScalarOperator update test" begin
     u = ones(N,K)
     v = zeros(N,K)
-    p = rand()
-    t = rand()
+    p = 2.0
+    t = 4.0
+    a = rand()
+    b = rand()
 
     α = ScalarOperator(0.0; update_func=(a,u,p,t) -> p)
     β = ScalarOperator(0.0; update_func=(a,u,p,t) -> t)
@@ -72,19 +123,35 @@ end
     @test !isconstant(α)
     @test !isconstant(β)
 
-    @test α(u,p,t)   ≈ p * u
-    @test α(v,u,p,t) ≈ p * u
+    @test convert(Float32, α) isa Float32
+    @test convert(Float32, β) isa Float32
+
+    @test convert(Number, α) ≈ 0.0
+    @test convert(Number, β) ≈ 0.0
+
+    update_coefficients!(α, u, p, t)
+    update_coefficients!(β, u, p, t)
+
+    @test convert(Number, α) ≈ p
+    @test convert(Number, β) ≈ t
+
+    @test α(u, p, t) ≈ p * u
+    v=rand(N,K); @test α(v, u, p, t) ≈ p * u
+    v=rand(N,K); w=copy(v); @test α(v, u, p, t, a, b) ≈ a*p*u + b*w
+
+    @test β(u, p, t) ≈ t * u
+    v=rand(N,K); @test β(v, u, p, t) ≈ t * u
+    v=rand(N,K); w=copy(v); @test β(v, u, p, t, a, b) ≈ a*t*u + b*w
 
     num = α + 2 / β * 3 - 4
     val = p + 2 / t * 3 - 4
 
-    @test num(u,p,t)   ≈ val * u
-    @test num(v,u,p,t) ≈ val * u
-
     @test convert(Number, num) ≈ val
 
-    # Test scalar operator which expects keyword argument to update, modeled in the style of a DiffEq W-operator.
-    γ = ScalarOperator(0.0; update_func=(args...; dtgamma) -> dtgamma, accepted_kwargs=(:dtgamma,))
+    # Test scalar operator which expects keyword argument to update,
+    # modeled in the style of a DiffEq W-operator.
+    γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
+                       accepted_kwargs=(:dtgamma,))
 
     dtgamma = rand()
     @test γ(u,p,t; dtgamma) ≈ dtgamma * u

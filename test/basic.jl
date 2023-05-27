@@ -37,6 +37,7 @@ K = 12
     @test size(Id) == (N, N)
     @test Id' isa IdentityOperator
     @test isconstant(Id)
+    @test_throws MethodError resize!(Id, N)
 
     for op in (
                *, \,
@@ -69,6 +70,8 @@ end
     @test islinear(Z)
     @test NullOperator(u) isa NullOperator
     @test isconstant(Z)
+    @test_throws MethodError resize!(Z, N)
+
     @test zero(A) isa NullOperator
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
 
@@ -168,6 +171,15 @@ end
 
     v=rand(N,K); @test mul!(v, op, u) ≈ (A+B) * u
     v=rand(N,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(A+B)*u + β*w
+
+    # ensure AddedOperator doesn't nest
+    A = MatrixOperator(rand(N, N))
+    L = A + (A + A) + A
+    @test L isa AddedOperator
+    for op in L.ops
+        @test !isa(op, AddedOperator)
+    end
+
 end
 
 @testset "ComposedOperator" begin
@@ -218,15 +230,17 @@ end
     v=rand(N,K); @test ldiv!(v, op, u) ≈ (A * B * C) \ u
     v=copy(u);   @test ldiv!(op, u)    ≈ (A * B * C) \ v
 
+    # ensure composedoperators doesn't nest
+    A = MatrixOperator(rand(N, N))
+    L = A * (A * A) * A
+    @test L isa ComposedOperator
+    for op in L.ops
+        @test !isa(op, ComposedOperator)
+    end
+
     # Test caching of composed operator when inner ops do not support Base.:*
-    # See issue #129
+    # ComposedOperator caching was modified in PR # 174
     inner_op = qr(MatrixOperator(rand(N, N)))
-    # We use the QR factorization of a non-square matrix, which does
-    # not support * as verified below.
-    @test !has_mul(inner_op)
-    @test has_ldiv(inner_op)
-    @test_throws MethodError inner_op * u
-    # We can now test that caching does not rely on matmul
     op = inner_op * factorize(MatrixOperator(rand(N, N)))
     @test !iscached(op)
     @test_nowarn op = cache_operator(op, rand(N))

@@ -16,43 +16,65 @@ n = 3
 N = n*n
 K = 12
 
+t = rand()
 u0 = rand(N, K)
 ps = rand(N)
 
-M = rand(N,N)
+s = rand()
+v = rand(N, K)
+M = rand(N, N)
+Mi= inv(M)
 
-for (op_type, A) in
+sca_update_func = (a, u, p, t) -> sum(p) * s
+vec_update_func = (b, u, p, t) -> Diagonal(p) * v
+mat_update_func = (A, u, p, t) -> Diagonal(p) * M
+inv_update_func = (A, u, p, t) -> Mi * inv(Diagonal(p))
+tsr_update_func = (A, u, p, t) -> reshape(p, n, n) |> copy
+
+α = ScalarOperator(zero(Float32), update_func = sca_update_func)
+L_dia = DiagonalOperator(zeros(N, K); update_func = vec_update_func)
+L_mat = MatrixOperator(zeros(N, N); update_func = mat_update_func)
+L_mi  = MatrixOperator(zeros(N, N); update_func = inv_update_func)
+L_aff = AffineOperator(L_mat, L_mat, zeros(N, K); update_func = vec_update_func)
+L_sca = α * L_mat
+L_inv = InvertibleOperator(L_mat, L_mi)
+L_fun = FunctionOperator((u,p,t) -> Diagonal(p) * u, u0, u0;
+                         op_inverse = (u,p,t) -> inv(Diagonal(p)) * u)
+
+Ti = MatrixOperator(zeros(n, n); update_func = tsr_update_func)
+To = deepcopy(Ti)
+L_tsr = TensorProductOperator(To, Ti)
+
+for (LType, L) in
     (
      (IdentityOperator, IdentityOperator(N)),
      (NullOperator, NullOperator(N)),
-     (MatrixOperator, MatrixOperator(rand(N,N))),
-     (AffineOperator, AffineOperator(rand(N,N), rand(N,N), rand(N,K))),
-     (ScaledOperator, rand() * MatrixOperator(rand(N,N))),
-     (InvertedOperator, InvertedOperator(rand(N,N) |> MatrixOperator)),
-     (InvertibleOperator, InvertibleOperator(rand(N,N) |> MatrixOperator)),
-     (BatchedDiagonalOperator, DiagonalOperator(rand(N,K))),
-     (AddedOperator, MatrixOperator(rand(N,N)) + MatrixOperator(rand(N,N))),
-     (ComposedOperator, MatrixOperator(rand(N,N)) * MatrixOperator(rand(N,N))),
-     (TensorProductOperator, TensorProductOperator(rand(n,n), rand(n,n))),
-     (FunctionOperator, FunctionOperator((u,p,t)->M*u, u0, u0; op_inverse=(u,p,t)->M\u)),
+     (MatrixOperator, L_mat),
+     (AffineOperator, L_aff),
+     (ScaledOperator, L_sca),
+     (InvertedOperator, InvertedOperator(L_mat)),
+     (InvertibleOperator, L_inv),
+     (BatchedDiagonalOperator, L_dia),
+     (AddedOperator, L_mat + L_dia),
+     (ComposedOperator, L_mat * L_dia),
+     (TensorProductOperator, L_tsr),
+     (FunctionOperator, L_fun),
 
      ## ignore wrappers
-     #(AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
-     #(TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
+     # (AdjointOperator, AdjointOperator(rand(N,N) |> MatrixOperator) |> adjoint),
+     # (TransposedOperator, TransposedOperator(rand(N,N) |> MatrixOperator) |> transpose),
 
-     (ScalarOperator, ScalarOperator(rand())),
-     (AddedScalarOperator, ScalarOperator(rand()) + ScalarOperator(rand())),
-     (ComposedScalarOperator, ScalarOperator(rand()) * ScalarOperator(rand())),
+     (ScalarOperator, α),
+     (AddedScalarOperator, α + α),
+     (ComposedScalarOperator, α * α),
     )
 
-    @assert A isa op_type
+    @assert L isa LType
 
     loss_mul = function(p)
 
         v = Diagonal(p) * u0
-
-        w = A * v
-
+        w = L(v, p, t)
         l = sum(w)
     end
 
@@ -60,22 +82,23 @@ for (op_type, A) in
 
         v = Diagonal(p) * u0
 
-        w = A \ v
+        L = update_coefficients(L, v, p, t)
+        w = L \ v
 
         l = sum(w)
     end
 
-    @testset "$op_type" begin
+    @testset "$LType" begin
         l_mul = loss_mul(ps)
         g_mul = Zygote.gradient(loss_mul, ps)[1]
 
-        if A isa NullOperator
+        if L isa NullOperator
             @test isa(g_mul, Nothing)
         else
             @test !isa(g_mul, Nothing)
         end
 
-        if has_ldiv(A)
+        if has_ldiv(L)
             l_div = loss_div(ps)
             g_div = Zygote.gradient(loss_div, ps)[1]
 

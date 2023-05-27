@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator, ⊗
+using SciMLOperators: InvertibleOperator, InvertedOperator, ⊗
 using FFTW
 
 Random.seed!(0)
@@ -39,6 +39,8 @@ K = 19
     @test isconstant(FF)
     @test isconstant(FFt)
 
+    @test_throws MethodError resize!(AA, N)
+
     @test eachindex(A)  === eachindex(AA)
     @test eachindex(A') === eachindex(AAt) === eachindex(MatrixOperator(At))
 
@@ -58,30 +60,63 @@ K = 19
     v=rand(N,K); w=copy(v); @test mul!(v, AA, u, α, β) ≈ α*A*u + β*w
 end
 
+@testset "InvertibleOperator test" begin
+    u = rand(N,K)
+    p = nothing
+    t = 0
+    α = rand()
+    β = rand()
+
+    d = rand(N, K)
+    D  = DiagonalOperator(d)
+    Di = DiagonalOperator(inv.(d)) |> InvertedOperator
+
+    L = InvertibleOperator(D, Di)
+    L = cache_operator(L, u)
+
+    @test iscached(L)
+
+    @test L * u ≈ d .* u
+    @test L \ u ≈ d .\ u
+
+    v=rand(N,K); @test mul!(v, L, u) ≈ d .* u
+    v=rand(N,K); w=copy(v); @test mul!(v, L, u, α, β) ≈ α*(d .* u) + β*w
+
+    v=rand(N,K); @test ldiv!(v, L, u) ≈ d .\ u
+    v=copy(u); @test ldiv!(L, v) ≈ d .\ u
+end
+
 @testset "MatrixOperator update test" begin
     u = rand(N,K)
     p = rand(N)
     t = rand()
 
+    α = rand()
+    β = rand()
+
     L = MatrixOperator(zeros(N,N);
-                       update_func = (A,u,p,t) -> (A .= p*p'; nothing)
+                       update_func = (A,u,p,t) -> p*p',
+                       update_func! = (A,u,p,t) -> A .= p*p',
                       )
 
     @test !isconstant(L)
 
-    A = p*p'
-    ans = A * u
-    @test L(u,p,t) ≈ ans
-    v=copy(u); @test L(v,u,p,t) ≈ ans
+    A = p * p'
+    @test L(u, p, t) ≈ A * u
+    v=copy(u); @test L(v, u, p, t) ≈ A * u
+    v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*A*u + β*w
 end
 
 @testset "DiagonalOperator update test" begin
     u = rand(N,K)
     p = rand(N)
     t = rand()
+    α = rand()
+    β = rand()
 
     D = DiagonalOperator(zeros(N);
-                         update_func = (diag,u,p,t) -> (diag .= p*t; nothing)
+                         update_func = (diag,u,p,t) -> p*t,
+                         update_func! = (diag,u,p,t) -> diag .= p*t,
                         )
 
     @test !isconstant(D)
@@ -91,6 +126,7 @@ end
     ans = Diagonal(p*t) * u
     @test D(u,p,t) ≈ ans
     v=copy(u); @test D(v,u,p,t) ≈ ans
+    v=rand(N,K); w=copy(v); @test D(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
 @testset "Batched Diagonal Operator" begin
@@ -101,6 +137,7 @@ end
 
     L = DiagonalOperator(d)
     @test isconstant(L)
+    @test_throws MethodError resize!(L, N)
 
     @test issquare(L)
     @test islinear(L)
@@ -112,6 +149,27 @@ end
     @test L \ u ≈ d .\ u
     v=rand(N,K); @test ldiv!(v, L, u) ≈ d .\ u
     v=copy(u); @test ldiv!(L, u) ≈ d .\ v
+end
+
+@testset "Batched DiagonalOperator update test" begin
+    u = rand(N,K)
+    d = zeros(N,K)
+    p = rand(N,K)
+    t = rand()
+
+
+    D = DiagonalOperator(d;
+                         update_func = (diag,u,p,t) -> p*t,
+                         update_func! = (diag,u,p,t) -> diag .= p*t,
+                        )
+
+    @test !isconstant(D)
+    @test issquare(D)
+    @test islinear(D)
+
+    ans = (p*t) .* u
+    @test D(u,p,t) ≈ ans
+    v=copy(u); @test D(v,u,p,t) ≈ ans
 end
 
 @testset "AffineOperator" begin
@@ -166,23 +224,24 @@ end
 @testset "AffineOperator update test" begin
     A = rand(N,N)
     B = rand(N,N)
-    b = rand(N,K)
     u = rand(N,K)
-    p = rand(N)
+    p = rand(N,K)
     t = rand()
+    α = rand()
+    β = rand()
 
-    L = AffineOperator(A, B, b;
-                       update_func = (b,u,p,t) -> (b .= Diagonal(p*t)*b; nothing)
+    L = AffineOperator(A, B, zeros(N, K);
+                       update_func = (b,u,p,t) -> p * t,
+                       update_func! = (b,u,p,t) -> b .= p * t,
                       )
 
     @test !isconstant(L)
 
-    b = Diagonal(p*t)*b
+    b = p * t
     ans = A * u + B * b
     @test L(u,p,t) ≈ ans
-    b = Diagonal(p*t)*b
-    ans = A * u + B * b
     v=copy(u); @test L(v,u,p,t) ≈ ans
+    v=rand(N,K); w=copy(v); @test L(v, u, p, t, α, β) ≈ α*ans + β*w
 end
 
 @testset "TensorProductOperator" begin

@@ -21,6 +21,7 @@ Base.size(ii::IdentityOperator) = (ii.len, ii.len)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
 Base.conj(A::IdentityOperator) = A
+
 LinearAlgebra.opnorm(::IdentityOperator, p::Real=2) = true
 for pred in (
              :issymmetric, :ishermitian, :isposdef,
@@ -81,12 +82,12 @@ for op in (
     end
 end
 
-function Base.:\(::IdentityOperator, A::AbstractSciMLOperator)
+function Base.:\(ii::IdentityOperator, A::AbstractSciMLOperator)
     @assert size(A, 1) == ii.len
     A
 end
 
-function Base.:/(A::AbstractSciMLOperator, ::IdentityOperator)
+function Base.:/(A::AbstractSciMLOperator, ii::IdentityOperator)
     @assert size(A, 2) == ii.len
     A
 end
@@ -230,8 +231,15 @@ for op in (
     @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
 Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
+Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real=2) = abs(L.λ) * opnorm(L.L, p)
 
+function update_coefficients(L::ScaledOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
+    @set! L.λ = update_coefficients(L.λ, u, p, t)
+
+    L
+end
 getops(L::ScaledOperator) = (L.λ, L.L,)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 islinear(L::ScaledOperator) = islinear(L.L)
@@ -322,8 +330,9 @@ AddedOperator(L::AbstractSciMLOperator) = L
 # constructors
 Base.:+(A::AbstractSciMLOperator, B::AbstractMatrix) = A + MatrixOperator(B)
 Base.:+(A::AbstractMatrix, B::AbstractSciMLOperator) = MatrixOperator(A) + B
-Base.:+(ops::AbstractSciMLOperator...) = AddedOperator(ops...)
 
+Base.:+(ops::AbstractSciMLOperator...) = reduce(+, ops)
+Base.:+(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, B)
 Base.:+(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, B.ops...)
 Base.:+(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., B)
 Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
@@ -377,6 +386,21 @@ for op in (
     @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
 end
 Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
+function Base.resize!(L::AddedOperator, n::Integer)
+    for op in L.ops
+        resize!(op, n)
+    end
+    L
+end
+
+function update_coefficients(L::AddedOperator, u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
+    end
+
+    @set! L.ops = ops
+end
 
 getops(L::AddedOperator) = L.ops
 islinear(L::AddedOperator) = all(islinear, getops(L))
@@ -448,16 +472,15 @@ function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
 end
 
 # constructors
-Base.:∘(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
-Base.:∘(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
-Base.:∘(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
-Base.:∘(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
-
-Base.:*(ops::AbstractSciMLOperator...) = ComposedOperator(ops...)
-Base.:*(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ∘(A, B)
-Base.:*(A::ComposedOperator, B::AbstractSciMLOperator) = ∘(A.ops[1:end-1]..., A.ops[end] * B)
-Base.:*(A::AbstractSciMLOperator, B::ComposedOperator) = ∘(A * B.ops[1], B.ops[2:end]...)
-Base.:*(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
+for op in (
+           :*, :∘,
+          )
+    @eval Base.$op(ops::AbstractSciMLOperator...) = reduce($op, ops)
+    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(A, B)
+    @eval Base.$op(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops..., B)
+    @eval Base.$op(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A, B.ops...)
+    @eval Base.$op(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops..., B.ops...)
+end
 
 for op in (
            :*, :∘,
@@ -509,7 +532,29 @@ for op in (
                                                           )
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache=L.cache)
+function Base.resize!(L::ComposedOperator, n::Integer)
+
+    for op in L.ops
+        resize!(op, n)
+    end
+
+    for v in L.cache
+        resize!(v, n)
+    end
+
+    L
+end
+
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
+
+function update_coefficients(L::ComposedOperator, u, p, t)
+    ops = ()
+    for op in L.ops
+        ops = (ops...,  update_coefficients(op, u, p, t))
+    end
+
+    @set! L.ops = ops
+end
 
 getops(L::ComposedOperator) = L.ops
 islinear(L::ComposedOperator) = all(islinear, L.ops)
@@ -557,24 +602,25 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
-    if has_mul(L)
-        vec = zero(u)
-        cache = (vec,)
-        for i in reverse(2:length(L.ops))
-            vec   = L.ops[i] * vec
-            cache = (vec, cache...)
+
+    K = size(u, 2)
+    cache = (zero(u),)
+    for i in reverse(2:length(L.ops))
+        op = L.ops[i]
+
+        M = size(op, 1)
+        sz = u isa AbstractMatrix ? (M, K) : (M,)
+
+        T = if op isa FunctionOperator # 
+            # FunctionOperator isn't guaranteed to play by the rules of
+            # `promote_type`. For example, an rFFT is a complex operation
+            # that accepts and complex vector and returns a real one.
+            op.traits.eltypes[2]
+        else
+            promote_type(eltype.((op, cache[1]))...)
         end
-    elseif has_ldiv(L)
-        m = size(L, 1)
-        k = size(u, 2)
-        vec = u isa AbstractMatrix ? similar(u, (m, k)) : similar(u, (m,))
-        cache = ()
-        for i in 1:length(L.ops)
-            vec   = L.ops[i] \ vec
-            cache = (cache..., vec)
-        end
-    else
-        error("ComposedOperator cannot be cached without supporting either mul or ldiv.")
+
+        cache = (similar(u, T, sz), cache...)
     end
 
     @set! L.cache = cache
@@ -582,16 +628,16 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
-    if !iscached(L)
+    if isnothing(L.cache)
         L = cache_self(L, u)
     end
 
-    vecs = L.cache
+    ops = ()
     for i in reverse(1:length(L.ops))
-        @set! L.ops[i] = cache_operator(L.ops[i], vecs[i])
+        ops = (cache_operator(L.ops[i], L.cache[i]), ops...)
     end
 
-    L
+    @set! L.ops = ops
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
@@ -667,6 +713,19 @@ Base.size(L::InvertedOperator) = size(L.L) |> reverse
 Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache=L.cache)
+function Base.resize!(L::InvertedOperator, n::Integer)
+
+    resize!(L.L, n)
+    resize!(L.cache, n)
+
+    L
+end
+
+function update_coefficients(L::InvertedOperator, u, p, t)
+    @set! L.L = update_coefficients(L.L, u, p, t)
+
+    L
+end
 
 getops(L::InvertedOperator) = (L.L,)
 islinear(L::InvertedOperator) = islinear(L.L)

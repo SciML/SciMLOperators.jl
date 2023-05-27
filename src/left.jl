@@ -32,8 +32,8 @@ end
 
 function LinearAlgebra.ldiv!(u::AbstractVecOrMat, L::AbstractSciMLOperator)
     op = (u isa Transpose) ? transpose : adjoint
-    ldiv!(op(v), op(L), op(u))
-    v
+    ldiv!(op(L), op(u))
+    u
 end
 
 ###
@@ -60,7 +60,7 @@ AbstractAdjointVecOrMat    = Adjoint{  T,<:AbstractVecOrMat} where{T}
 AbstractTransposedVecOrMat = Transpose{T,<:AbstractVecOrMat} where{T}
 
 has_adjoint(::AdjointOperator) = true
-#has_adjoint(::TransposedOperator) = ??
+has_adjoint(L::TransposedOperator) = isreal(L) & has_adjoint(L.L)
 
 islinear(L::AdjointOperator) = islinear(L.L)
 islinear(L::TransposedOperator) = islinear(L.L)
@@ -79,6 +79,7 @@ for (op, LType, VType) in (
 
     # traits
     @eval Base.size(L::$LType) = size(L.L) |> reverse
+    @eval Base.resize!(L::$LType, n::Integer) = (resize!(L.L, n); L)
     @eval Base.$op(L::$LType) = L.L
 
     @eval getops(L::$LType) = (L.L,)

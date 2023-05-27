@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -36,11 +36,13 @@ mutable struct FunctionOperator{iip,oop,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: Ab
 
         iip = traits.isinplace
         oop = traits.outofplace
+        mul5 = traits.has_mul5
         T   = traits.T
 
         new{
             iip,
             oop,
+            mul5,
             T,
             typeof(op),
             typeof(op_adjoint),
@@ -90,10 +92,13 @@ end
 # TODO: document constructor and revisit design as needed (e.g. for "accepted_kwargs")
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
-                          output::AbstractVecOrMat =  input;
+                          output::AbstractVecOrMat = input;
 
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
+                          isconstant::Bool = false,
+                          has_mul5::Union{Nothing,Bool}=nothing,
+                          cache::Union{Nothing, NTuple{2}}=nothing,
                           T::Union{Type{<:Number},Nothing}=nothing,
 
                           op_adjoint=nothing,
@@ -102,7 +107,7 @@ function FunctionOperator(op,
 
                           p=nothing,
                           t::Union{Number,Nothing}=nothing,
-                          accepted_kwargs=(),
+                          accepted_kwargs = (),
 
                           ifcache::Bool = true,
 
@@ -115,20 +120,35 @@ function FunctionOperator(op,
                           isposdef::Bool = false,
                          )
 
+    # store eltype of input/output for caching with ComposedOperator.
+    eltypes = eltype.((input, output))
     sz = (size(output, 1), size(input, 1))
-    T  = T isa Nothing ? promote_type(eltype.((input, output))...) : T
-    t  = t isa Nothing ? zero(real(T)) : t
+    T  = isnothing(T) ? promote_type(eltypes...) : T
+    t  = isnothing(t) ? zero(real(T)) : t
 
-    isinplace = if isinplace isa Nothing
+    isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
     else
         isinplace
     end
 
-    outofplace = if outofplace isa Nothing
+    outofplace = if isnothing(outofplace)
         static_hasmethod(op, typeof((input, p, t)))
     else
         outofplace
+    end
+
+    has_mul5 = if isnothing(has_mul5)
+        has_mul5 = true
+        for f in (
+                  op, op_adjoint, op_inverse, op_adjoint_inverse,
+                 )
+            if !isnothing(f)
+                has_mul5 *= static_hasmethod(f, typeof((output, input, p, t, t, t)))
+            end
+        end
+
+        has_mul5
     end
 
     if !isinplace & !outofplace
@@ -154,6 +174,7 @@ function FunctionOperator(op,
 
     traits = (;
               islinear = islinear,
+              isconstant = isconstant,
 
               opnorm = opnorm,
               issymmetric = issymmetric,
@@ -162,11 +183,12 @@ function FunctionOperator(op,
 
               isinplace = isinplace,
               outofplace = outofplace,
+              has_mul5 = has_mul5,
+              ifcache = ifcache,
               T = T,
               size = sz,
+              eltypes = eltypes,
              )
-
-    cache = nothing
 
     L = FunctionOperator(
                          op,
@@ -180,41 +202,52 @@ function FunctionOperator(op,
                          cache
                         )
 
-    ifcache ? cache_operator(L, input, output) : L
+    if ifcache & isnothing(L.cache)
+        L = cache_operator(L, input, output)
+    end
+
+    L
 end
 
 function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
-    op = update_coefficients(L.op, u, p, t; kwargs...)
-    op_adjoint = update_coefficients(L.op_adjoint, u, p, t; kwargs...)
-    op_inverse = update_coefficients(L.op_inverse, u, p, t; kwargs...)
-    op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t; kwargs...)
 
-    FunctionOperator(op,
-                     op_adjoint,
-                     op_inverse,
-                     op_adjoint_inverse,
-                     L.traits,
-                     p,
-                     t,
-                     accepted_kwargs=kwargs,
-                     L.cache
-                    )
+    @set! L.p = p
+    @set! L.t = t
+
+    isconstant(L) && return L
+
+    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in L.kwargs if haskey(kwargs, kwarg))
+
+    @set! L.op = update_coefficients(L.op, u, p, t; filtered_kwargs...)
+    @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t; filtered_kwargs...)
+    @set! L.op_inverse = update_coefficients(L.op_inverse, u, p, t; filtered_kwargs...)
+    @set! L.op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t; filtered_kwargs...)
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
-    ops = getops(L)
-    for op in ops
-        update_coefficients!(op, u, p, t; kwargs...)
+
+    isconstant(L) && return
+
+    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in L.kwargs if haskey(kwargs, kwarg))
+
+    for op in getops(L)
+        update_coefficients!(op, u, p, t; filtered_kwargs...)
     end
 
     L.p = p
     L.t = t
-    L.kwargs = kwargs
 
-    nothing
+    L
+end
+
+function iscached(L::FunctionOperator)
+    L.traits.ifcache ? !isnothing(L.cache) : !L.traits.ifcache
+    !isnothing(L.cache)
 end
 
 function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+    !L.traits.ifcache && @warn """Cache is being allocated for a FunctionOperator
+        created with kwarg ifcache = false."""
     @set! L.cache = zero.((u, v))
     L
 end
@@ -238,6 +271,7 @@ function Base.adjoint(L::FunctionOperator)
 
     traits = L.traits
     @set! traits.size = reverse(size(L))
+    @set! traits.eltypes = reverse(traits.eltypes)
 
     cache = if iscached(L)
         cache = reverse(L.cache)
@@ -270,6 +304,7 @@ function Base.inv(L::FunctionOperator)
 
     traits = L.traits
     @set! traits.size = reverse(size(L))
+    @set! traits.eltypes = reverse(traits.eltypes)
 
     @set! traits.opnorm = if traits.opnorm isa Number
         1 / traits.opnorm
@@ -297,14 +332,31 @@ function Base.inv(L::FunctionOperator)
                     )
 end
 
+function Base.resize!(L::FunctionOperator, n::Integer)
+
+    for op in getops(L)
+        if static_hasmethod(resize!, typeof((op, n)))
+            resize!(op, n)
+        end
+    end
+
+    for v in L.cache
+        resize!(v, n)
+    end
+
+    L.traits = (; L.traits..., size = (n, n),)
+
+    L
+end
+
 function LinearAlgebra.opnorm(L::FunctionOperator, p)
     L.traits.opnorm === nothing && error("""
       M.opnorm is nothing, please define opnorm as a function that takes one
       argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
       defined")`
     """)
-    opn = L.opnorm
-    return opn isa Number ? opn : L.opnorm(p)
+    opn = L.traits.opnorm
+    return opn isa Number ? opn : L.traits.opnorm(p)
 end
 LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
@@ -320,11 +372,11 @@ function getops(L::FunctionOperator)
     ops
 end
 
-#TODO - isconstant(L::FunctionOperator)
 islinear(L::FunctionOperator) = L.traits.islinear
+isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
-has_mul(L::FunctionOperator{iip}) where{iip} = true
-has_mul!(L::FunctionOperator{iip}) where{iip} = iip
+has_mul(::FunctionOperator{iip}) where{iip} = true
+has_mul!(::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
@@ -354,13 +406,17 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::
     @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, false}, u::AbstractVecOrMat, α, β) where{oop}
     _, co = L.cache
 
     copy!(co, v)
     mul!(v, L, u)
     lmul!(α, v)
     axpy!(β, co, v)
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, true}, u::AbstractVecOrMat, α, β) where{oop}
+    L.op(v, u, L.p, L.t, α, β; L.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)

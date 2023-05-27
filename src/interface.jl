@@ -40,28 +40,40 @@ end
 
 update_coefficients!(L,u,p,t; kwargs...) = nothing
 update_coefficients(L,u,p,t; kwargs...) = L
+
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
     end
-    nothing
+    L
 end
 
-(L::AbstractSciMLOperator)(u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); L * u)
+(L::AbstractSciMLOperator)(u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
 (L::AbstractSciMLOperator)(du, u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
+(L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
+
+function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs...)
+    msg = """Nonallocating L(v, u, p, t) type methods are not available for
+    subtypes of `Number`."""
+    throw(ArgumentError(msg))
+end
 
 ###
 # caching interface
 ###
 
-function iscached(L::AbstractSciMLOperator)
-    has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
-    isset = has_cache ? L.cache !== nothing : true
+getops(L) = ()
 
-    return isset & all(iscached, getops(L)) 
+function iscached(L::AbstractSciMLOperator)
+
+    has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
+    isset = has_cache ? !isnothing(L.cache) : true
+
+    return isset & all(iscached, getops(L))
 end
 
 iscached(L) = true
+
 iscached(::Union{
                  # LinearAlgebra
                  AbstractMatrix,
@@ -82,22 +94,22 @@ arguments:
     in :: AbstractVecOrMat input prototype to L
     out :: (optional) AbstractVecOrMat output prototype to L
 """
-cache_operator
+function cache_operator end
 
 cache_operator(L, u) = L
-cache_operatro(L, u, v) = L
-cache_self(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
-cache_internals(L::AbstractSciMLOperator, uv::AbstractVecOrMat...) = L
+cache_operator(L, u, v) = L
+cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
+cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
 
-function cache_operator(L::AbstractSciMLOperator,
-                        u::AbstractVecOrMat,
-                        v::AbstractVecOrMat)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+
     L = cache_self(L, u, v)
     L = cache_internals(L, u, v)
     L
 end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
+
     L = cache_self(L, u)
     L = cache_internals(L, u)
     L
@@ -135,7 +147,7 @@ has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
-has_mul!(L::AbstractSciMLOperator) = false # mul!(du, L, u)
+has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
@@ -235,6 +247,7 @@ issquare(::Union{
         ) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
+Base.length(L::AbstractSciMLOperator) = prod(size(L))
 Base.ndims(L::AbstractSciMLOperator) = length(size(L))
 Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
@@ -262,6 +275,10 @@ Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLOperator, I::Var
 end
 function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
     convert(AbstractMatrix,L)[I...]
+end
+
+function Base.resize!(L::AbstractSciMLOperator, n::Integer)
+    throw(MethodError(resize!, typeof.((L, n))))
 end
 
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
