@@ -9,12 +9,6 @@ that, SciMLOperators.jl provides definitions for the basic standard operators
 which are used in building blocks for most tasks, both simplifying the use of operators
 while also demonstrating to users how such operators can be built and used in practice.
 
-!!! warn
-
-    SciMLOperators is not ready for prime time use yet. Be warned that any user is testing
-    an early and possibly buggy form. This note will be removed when the library is officially
-    released.
-
 ## Why SciMLOperators?
 
 SciMLOperators.jl has the design that is required in order to be used in all scenarios
