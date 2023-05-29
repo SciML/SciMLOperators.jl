@@ -3,23 +3,56 @@
 # Operator interface
 ###
 
+"""
+Function call and multiplication:
+    - L(du, u, p, t) for in-place operator evaluation,
+    - du = L(u, p, t) for out-of-place operator evaluation
+
+If the operator is not a constant, update it with (u,p,t). A mutating form, i.e.
+update_coefficients!(A,u,p,t) that changes the internal coefficients, and a
+out-of-place form B = update_coefficients(A,u,p,t).
+
+"""
+function (::AbstractSciMLOperator) end
+
+###
+# Utilities for update functions
+###
+
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 
-update_coefficients(L,u,p,t) = L
-update_coefficients!(L,u,p,t) = L
+struct NoKwargFilter end
 
-function update_coefficients!(L::AbstractSciMLOperator, u, p, t)
+function preprocess_update_func(update_func, accepted_kwargs)
+    _update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
+    _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs 
+    # accepted_kwargs can be passed as nothing to indicate that we should not filter 
+    # (e.g. if the function already accepts all kwargs...). 
+    return (_accepted_kwargs isa NoKwargFilter) ? _update_func : FilterKwargs(_update_func, _accepted_kwargs)
+end
+function update_func_isconstant(update_func)
+    if update_func isa FilterKwargs
+        return update_func.f == DEFAULT_UPDATE_FUNC
+    else
+        return update_func == DEFAULT_UPDATE_FUNC
+    end
+end
+
+update_coefficients!(L,u,p,t; kwargs...) = nothing
+update_coefficients(L,u,p,t; kwargs...) = L
+
+function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     for op in getops(L)
-        update_coefficients!(op, u, p, t)
+        update_coefficients!(op, u, p, t; kwargs...)
     end
     L
 end
 
-(L::AbstractSciMLOperator)(u, p, t) = update_coefficients(L, u, p, t) * u
-(L::AbstractSciMLOperator)(du, u, p, t) = (update_coefficients!(L, u, p, t); mul!(du, L, u))
-(L::AbstractSciMLOperator)(du, u, p, t, α, β) = (update_coefficients!(L, u, p, t); mul!(du, L, u, α, β))
+(L::AbstractSciMLOperator)(u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
+(L::AbstractSciMLOperator)(du, u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
+(L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
 
-function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...)
+function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs...)
     msg = """Nonallocating L(v, u, p, t) type methods are not available for
     subtypes of `Number`."""
     throw(ArgumentError(msg))

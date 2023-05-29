@@ -148,9 +148,17 @@ end
 
     @test convert(Number, num) ≈ val
 
-    @test num(u, p, t) ≈ val * u
-    v=rand(N,K); @test num(v, u, p, t) ≈ val * u
-    v=rand(N,K); w=copy(v); @test num(v, u, p, t, a, b) ≈ a*val*u + b*w
+    # Test scalar operator which expects keyword argument to update,
+    # modeled in the style of a DiffEq W-operator.
+    γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
+                       accepted_kwargs = (:dtgamma,))
 
+    dtgamma = rand()
+    @test γ(u,p,t; dtgamma) ≈ dtgamma * u
+    @test γ(v,u,p,t; dtgamma) ≈ dtgamma * u
+ 
+    γ_added = γ + α
+    @test γ_added(u,p,t; dtgamma) ≈ (dtgamma + p) * u
+    @test γ_added(v,u,p,t; dtgamma) ≈ (dtgamma + p) * u
 end
 #

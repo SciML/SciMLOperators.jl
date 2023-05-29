@@ -84,6 +84,7 @@ function FunctionOperator(op,
     FunctionOperator(op, input, output; kwargs...)
 end
 
+# TODO: document constructor and revisit design as needed (e.g. for "accepted_kwargs")
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
                           output::AbstractVecOrMat = input;
@@ -101,6 +102,7 @@ function FunctionOperator(op,
 
                           p=nothing,
                           t::Union{Number,Nothing}=nothing,
+                          accepted_kwargs::NTuple{N,Symbol} = (),
 
                           ifcache::Bool = true,
 
@@ -111,7 +113,7 @@ function FunctionOperator(op,
                           issymmetric::Bool = false,
                           ishermitian::Bool = false,
                           isposdef::Bool = false,
-                         )
+                         ) where{N}
 
     # store eltype of input/output for caching with ComposedOperator.
     eltypes = eltype.((input, output))
@@ -181,6 +183,8 @@ function FunctionOperator(op,
               T = T,
               size = sz,
               eltypes = eltypes,
+              accepted_kwargs = accepted_kwargs,
+              kwargs = Dict{Symbol, Any}(),
              )
 
     L = FunctionOperator(
@@ -191,7 +195,7 @@ function FunctionOperator(op,
                          traits,
                          p,
                          t,
-                         cache,
+                         cache
                         )
 
     if ifcache & isnothing(L.cache)
@@ -201,35 +205,39 @@ function FunctionOperator(op,
     L
 end
 
-function update_coefficients(L::FunctionOperator, u, p, t)
+function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
 
-    if isconstant(L)
-        return L
-    end
-
-    @set! L.op = update_coefficients(L.op, u, p, t)
-    @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t)
-    @set! L.op_inverse = update_coefficients(L.op_inverse, u, p, t)
-    @set! L.op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t)
-
+    # update p, t
     @set! L.p = p
     @set! L.t = t
 
-    L
+    # filter and update kwargs
+    filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
+    @set! L.traits.kwargs = Dict{Symbol, Any}(filtered_kwargs)
+
+    isconstant(L) && return L
+
+    @set! L.op = update_coefficients(L.op, u, p, t; filtered_kwargs...)
+    @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t; filtered_kwargs...)
+    @set! L.op_inverse = update_coefficients(L.op_inverse, u, p, t; filtered_kwargs...)
+    @set! L.op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t; filtered_kwargs...)
 end
 
-function update_coefficients!(L::FunctionOperator, u, p, t)
+function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
-    if isconstant(L)
-        return L
-    end
-
-    for op in getops(L)
-        update_coefficients!(op, u, p, t)
-    end
-
+    # update p, t
     L.p = p
     L.t = t
+
+    # filter and update kwargs
+    filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
+    L.traits = (; L.traits..., kwargs = Dict{Symbol, Any}(filtered_kwargs))
+
+    isconstant(L) && return
+
+    for op in getops(L)
+        update_coefficients!(op, u, p, t; filtered_kwargs...)
+    end
 
     L
 end
@@ -267,9 +275,6 @@ function Base.adjoint(L::FunctionOperator)
     @set! traits.size = reverse(size(L))
     @set! traits.eltypes = reverse(traits.eltypes)
 
-    p = L.p
-    t = L.t
-
     cache = if iscached(L)
         cache = reverse(L.cache)
     else
@@ -281,8 +286,8 @@ function Base.adjoint(L::FunctionOperator)
                      op_inverse,
                      op_adjoint_inverse,
                      traits,
-                     p,
-                     t,
+                     L.p,
+                     L.t,
                      cache,
                     )
 end
@@ -310,9 +315,6 @@ function Base.inv(L::FunctionOperator)
         (p::Real) -> 1 / traits.opnorm(p)
     end
 
-    p = L.p
-    t = L.t
-
     cache = if iscached(L)
         cache = reverse(L.cache)
     else
@@ -324,8 +326,8 @@ function Base.inv(L::FunctionOperator)
                      op_inverse,
                      op_adjoint_inverse,
                      traits,
-                     p,
-                     t,
+                     L.p,
+                     L.t,
                      cache,
                     )
 end
@@ -353,8 +355,8 @@ function LinearAlgebra.opnorm(L::FunctionOperator, p)
       argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
       defined")`
     """)
-    opn = L.opnorm
-    return opn isa Number ? opn : L.opnorm(p)
+    opn = L.traits.opnorm
+    return opn isa Number ? opn : L.traits.opnorm(p)
 end
 LinearAlgebra.issymmetric(L::FunctionOperator) = L.traits.issymmetric
 LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
@@ -373,31 +375,36 @@ end
 islinear(L::FunctionOperator) = L.traits.islinear
 isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
-has_mul(L::FunctionOperator{iip}) where{iip} = true
-has_mul!(L::FunctionOperator{iip}) where{iip} = iip
+has_mul(::FunctionOperator{iip}) where{iip} = true
+has_mul!(::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 # TODO - FunctionOperator, Base.conj, transpose
 
 # operator application
-Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op(u, L.p, L.t)
-Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op_inverse(u, L.p, L.t)
+function Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
+    L.op(u, L.p, L.t; L.traits.kwargs...)
+end
+
+function Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
+    L.op_inverse(u, L.p, L.t; L.traits.kwargs...)
+end
 
 function Base.:*(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     _, co = L.cache
     du = zero(co)
-    L.op(du, u, L.p, L.t)
+    L.op(du, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function Base.:\(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     ci, _ = L.cache
     du = zero(ci)
-    L.op_inverse(du, u, L.p, L.t)
+    L.op_inverse(du, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
-    L.op(v, u, L.p, L.t)
+    L.op(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, args...)
@@ -414,11 +421,11 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, 
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, true}, u::AbstractVecOrMat, α, β) where{oop}
-    L.op(v, u, L.p, L.t, α, β)
+    L.op(v, u, L.p, L.t, α, β; L.traits.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
-    L.op_inverse(v, u, L.p, L.t)
+    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractVecOrMat)

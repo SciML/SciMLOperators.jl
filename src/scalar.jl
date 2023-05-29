@@ -3,8 +3,8 @@
 # AbstractSciMLScalarOperator interface
 ###
 
-function (L::AbstractSciMLScalarOperator)(u::Number, p, t)
-    L = update_coefficients(L, u, p, t)
+function (L::AbstractSciMLScalarOperator)(u::Number, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
     convert(Number, L) * u
 end
 
@@ -96,7 +96,7 @@ end
 Base.:+(α::AbstractSciMLScalarOperator) = α
 
 """
-    ScalarOperator(val[; update_func])
+    ScalarOperator(val; [update_func, accepted_kwargs])
 
     (α::ScalarOperator)(a::Number) = α * a
 
@@ -104,14 +104,19 @@ Represents a time-dependent scalar/scaling operator. The update function
 is called by `update_coefficients`/ `update_coefficients!` and is assumed
 to have the following signature:
 
-    update_func(oldval,u,p,t) -> newval
+    update_func(oldval,u,p,t; <accepted kwargs>) -> newval
 """
 mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
     val::T
     update_func::F
 end
 
-function ScalarOperator(val::T; update_func=DEFAULT_UPDATE_FUNC) where{T}
+function ScalarOperator(val;
+                        update_func = DEFAULT_UPDATE_FUNC,
+                        accepted_kwargs = nothing,
+                       )
+
+    update_func = preprocess_update_func(update_func, accepted_kwargs)
     ScalarOperator(val, update_func)
 end
 
@@ -125,8 +130,8 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 # traits
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
-    update_func = (oldval,u,p,t) -> α.update_func(oldval |> conj,u,p,t) |> conj
-    ScalarOperator(val; update_func=update_func)
+    update_func = (oldval,u,p,t; kwargs...) -> α.update_func(oldval |> conj,u,p,t; kwargs...) |> conj
+    ScalarOperator(val; update_func=update_func, accepted_kwargs=NoKwargFilter())
 end
 
 Base.one(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(one(T))
@@ -139,12 +144,17 @@ Base.abs(α::ScalarOperator) = abs(α.val)
 Base.iszero(α::ScalarOperator) = iszero(α.val)
 
 getops(α::ScalarOperator) = (α.val,)
-isconstant(α::ScalarOperator) = α.update_func == DEFAULT_UPDATE_FUNC
+isconstant(α::ScalarOperator) = update_func_isconstant(α.update_func)
 has_ldiv(α::ScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
-update_coefficients(L::ScalarOperator, u, p, t) = @set! L.val = L.update_func(L.val, u, p, t)
-update_coefficients!(L::ScalarOperator, u, p, t) = (L.val = L.update_func(L.val,u,p,t); L)
+function update_coefficients!(L::ScalarOperator,u,p,t; kwargs...)
+    L.val = L.update_func(L.val, u, p, t; kwargs...)
+end
+
+function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
+    @set! L.val = L.update_func(L.val, u, p, t; kwargs...)
+end
 
 """
 Lazy addition of Scalar Operators

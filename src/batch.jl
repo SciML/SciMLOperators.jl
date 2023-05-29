@@ -1,12 +1,12 @@
 #
 """
-    BatchedDiagonalOperator(diag, [; update_func])
+    BatchedDiagonalOperator(diag; update_func, update_func!, accepted_kwargs)
 
 Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
 Acts on `AbstractArray`s of the same size as `diag`. The update function is called
 by `update_coefficients!` and is assumed to have the following signature:
 
-    update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
+    update_func(diag::AbstractArray, u, p, t; <accepted kwarg fields>) -> [modifies diag]
 """
 struct BatchedDiagonalOperator{T,D,F,F!} <: AbstractSciMLOperator{T}
     diag::D
@@ -14,6 +14,7 @@ struct BatchedDiagonalOperator{T,D,F,F!} <: AbstractSciMLOperator{T}
     update_func!::F!
 
     function BatchedDiagonalOperator(diag::AbstractArray, update_func, update_func!)
+
         new{
             eltype(diag),
             typeof(diag),
@@ -25,15 +26,16 @@ struct BatchedDiagonalOperator{T,D,F,F!} <: AbstractSciMLOperator{T}
     end
 end
 
-function BatchedDiagonalOperator(diag::AbstractArray;
-                                 update_func = DEFAULT_UPDATE_FUNC,
-                                 update_func! = DEFAULT_UPDATE_FUNC)
-    BatchedDiagonalOperator(diag, update_func, update_func!)
-end
+function DiagonalOperator(u::AbstractArray;
+                          update_func = DEFAULT_UPDATE_FUNC,
+                          update_func! = DEFAULT_UPDATE_FUNC,
+                          accepted_kwargs = nothing
+                         )
 
-function DiagonalOperator(u::AbstractArray; update_func = DEFAULT_UPDATE_FUNC,
-                          update_func! = DEFAULT_UPDATE_FUNC)
-    BatchedDiagonalOperator(u; update_func = update_func, update_func! = update_func!)
+    update_func  = preprocess_update_func(update_func , accepted_kwargs)
+    update_func! = preprocess_update_func(update_func!, accepted_kwargs)
+
+    BatchedDiagonalOperator(u, update_func, update_func!)
 end
 
 # traits
@@ -46,37 +48,38 @@ function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     update_func = if isreal(L)
         L.update_func
     else
-        (L,u,p,t) -> conj(L.update_func(conj(L.diag),u,p,t))
+        (L,u,p,t; kwargs...) -> conj(L.update_func(conj(L.diag),u,p,t; kwargs...))
     end
     BatchedDiagonalOperator(diag; update_func=update_func)
 end
-
-function update_coefficients(L::BatchedDiagonalOperator,u,p,t)
-    @set! L.diag = L.update_func(L.diag,u,p,t)
-end
-update_coefficients!(L::BatchedDiagonalOperator,u,p,t) = (L.update_func!(L.diag,u,p,t); L)
-
-getops(L::BatchedDiagonalOperator) = (L.diag,)
-
-function isconstant(L::BatchedDiagonalOperator)
-    L.update_func == L.update_func! == DEFAULT_UPDATE_FUNC
-end
-islinear(::BatchedDiagonalOperator) = true
-has_adjoint(L::BatchedDiagonalOperator) = true
-has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
-has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
 
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
 function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
     if isreal(L)
         true
     else
-        d = vec(L.diag)
-        D = Diagonal(d)
-        ishermitian(d)
+        vec(L.diag) |> Diagonal |> ishermitian
     end
 end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
+
+function update_coefficients(L::BatchedDiagonalOperator,u ,p, t; kwargs...)
+    @set! L.diag = L.update_func(L.diag, u, p, t; kwargs...)
+end
+
+function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
+    L.update_func!(L.diag, u, p, t; kwargs...)
+end
+
+getops(L::BatchedDiagonalOperator) = (L.diag,)
+
+function isconstant(L::BatchedDiagonalOperator)
+    update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)
+end
+islinear(::BatchedDiagonalOperator) = true
+has_adjoint(L::BatchedDiagonalOperator) = true
+has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
+has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
 
 # operator application
 Base.:*(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .* u

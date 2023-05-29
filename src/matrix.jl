@@ -1,12 +1,12 @@
 #
 """
-    MatrixOperator(A[; update_func])
+    MatrixOperator(A; [update_func, update_func!, accepted_kwargs])
 
 Represents a time-dependent linear operator given by an AbstractMatrix. The
 update function is called by `update_coefficients!` and is assumed to have
 the following signature:
 
-    update_func(A::AbstractMatrix,u,p,t) -> [modifies A]
+    update_func(A::AbstractMatrix,u,p,t; <accepted kwargs>) -> [modifies A]
 """
 struct MatrixOperator{T,AT<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{T}
     A::AT
@@ -14,19 +14,26 @@ struct MatrixOperator{T,AT<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{T}
     update_func!::F!
 
     function MatrixOperator(A, update_func, update_func!)
+
         new{
             eltype(A),
             typeof(A),
             typeof(update_func),
             typeof(update_func!),
            }(
-             A, update_func, update_func!
+             A, update_func, update_func!,
             )
     end
 end
 
-function MatrixOperator(A; update_func = DEFAULT_UPDATE_FUNC,
-                        update_func! = DEFAULT_UPDATE_FUNC)
+function MatrixOperator(A;
+                        update_func = DEFAULT_UPDATE_FUNC,
+                        update_func! = DEFAULT_UPDATE_FUNC,
+                        accepted_kwargs = nothing,)
+
+    update_func  = preprocess_update_func(update_func , accepted_kwargs)
+    update_func! = preprocess_update_func(update_func!, accepted_kwargs)
+
     MatrixOperator(A, update_func, update_func!)
 end
 
@@ -48,42 +55,49 @@ end
 islinear(::MatrixOperator) = true
 
 Base.size(L::MatrixOperator) = size(L.A)
+Base.iszero(L::MatrixOperator) = iszero(L.A)
 for op in (
            :adjoint,
            :transpose,
           )
     @eval function Base.$op(L::MatrixOperator)
-        if isconstant(L)
-            MatrixOperator($op(L.A))
-        else
-            update_func = (A,u,p,t) -> $op(L.update_func($op(L.A), u, p, t))
-            update_func! = (A,u,p,t) -> $op(L.update_func!($op(L.A), u, p, t))
-            MatrixOperator($op(L.A); update_func = update_func,
-                           update_func! = update_func!)
-        end
+        isconstant(L) && return MatrixOperator($op(L.A))
+
+        update_func  = (A, u, p, t; kwargs...) -> $op(L.update_func( $op(L.A), u, p, t; kwargs...))
+        update_func! = (A, u, p, t; kwargs...) -> $op(L.update_func!($op(L.A), u, p, t; kwargs...))
+
+        MatrixOperator($op(L.A);
+                       update_func = update_func,
+                       update_func! = update_func!,
+                       accepted_kwargs = NoKwargFilter(),
+                      )
     end
 end
 
 function Base.conj(L::MatrixOperator)
-    update_func = (A, u, p, t) -> conj(L.update_func(conj(L.A), u, p, t))
-    update_func! = (A, u, p, t) -> conj(L.update_func!(conj(L.A), u, p, t))
+    isconstant(L) && return MatrixOperator(conj(L.A))
 
-    MatrixOperator(conj(L.A); update_func = update_func,
-                   update_func! = update_func!)
+    update_func  = (A, u, p, t; kwargs...) -> conj(L.update_func(conj(L.A), u, p, t; kwargs...))
+    update_func! = (A, u, p, t; kwargs...) -> conj(L.update_func!(conj(L.A), u, p, t; kwargs...))
+
+    MatrixOperator(conj(L.A);
+                   update_func = update_func,
+                   update_func! = update_func!,
+                   accepted_kwargs = NoKwargFilter(),
+                  )
 end
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
-
-function update_coefficients(L::MatrixOperator, u, p, t)
-    @set! L.A = L.update_func(L.A, u, p, t)
-end
-update_coefficients!(L::MatrixOperator,u,p,t) = (L.update_func!(L.A, u, p, t); L)
-
 getops(L::MatrixOperator) = (L.A,)
-function isconstant(L::MatrixOperator)
-    L.update_func == L.update_func! == DEFAULT_UPDATE_FUNC
+isconstant(L::MatrixOperator) = update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)
+
+function update_coefficients(L::MatrixOperator, u, p, t; kwargs...)
+    @set! L.A = L.update_func(L.A, u, p, t; kwargs...)
 end
-Base.iszero(L::MatrixOperator) = iszero(L.A)
+
+function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
+    L.update_func!(L.A, u, p, t; kwargs...)
+end
 
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
 SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
@@ -106,7 +120,7 @@ Base.copyto!(L::MatrixOperator, rhs::Base.Broadcast.Broadcasted{<:StaticArraysCo
 Base.Broadcast.broadcastable(L::MatrixOperator) = L
 Base.ndims(::Type{<:MatrixOperator{T,AType}}) where{T,AType} = ndims(AType)
 ArrayInterface.issingular(L::MatrixOperator) = ArrayInterface.issingular(L.A)
-Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func)
+Base.copy(L::MatrixOperator) = MatrixOperator(copy(L.A);update_func=L.update_func, accepted_kwargs=NoKwargFilter())
 
 # operator application
 Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
@@ -117,13 +131,13 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
 """
-    DiagonalOperator(diag, [; update_func])
+    DiagonalOperator(diag; [update_func, update_func!, accepted_kwargs])
 
 Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
 The update function is called by `update_coefficients!` and is assumed to have
 the following signature:
 
-    update_func(diag::AbstractVector,u,p,t) -> [modifies diag]
+    update_func(diag::AbstractVector,u,p,t; <accepted kwargs>) -> [modifies diag]
 
 When `diag` is an `AbstractVector` of length N, `L=DiagonalOpeator(diag, ...)`
 can be applied to `AbstractArray`s with `size(u, 1) == N`. Each column of the `u`
@@ -134,23 +148,23 @@ an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of 
 `L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
 with leading length `size(u, 1) = N`.
 """
-function DiagonalOperator(diag::AbstractVector; update_func = DEFAULT_UPDATE_FUNC, 
-                          update_func! = DEFAULT_UPDATE_FUNC)
+function DiagonalOperator(diag::AbstractVector;
+                          update_func = DEFAULT_UPDATE_FUNC,
+                          update_func! = DEFAULT_UPDATE_FUNC,
+                          accepted_kwargs = nothing,
+                         )
 
-    diag_update_func = if update_func == DEFAULT_UPDATE_FUNC
-        DEFAULT_UPDATE_FUNC
-    else
-        (A, u, p, t) -> (d = update_func(A.diag, u, p, t); Diagonal(d))
-    end
+    diag_update_func = update_func_isconstant(update_func) ? update_func :
+        (A, u, p, t; kwargs...) -> update_func(A.diag, u, p, t; kwargs...) |> Diagonal
 
-    diag_update_func! = if update_func! == DEFAULT_UPDATE_FUNC
-        DEFAULT_UPDATE_FUNC
-    else
-        (A, u, p, t) -> (update_func!(A.diag, u, p, t); A)
-    end
+    diag_update_func! = update_func_isconstant(update_func!) ? update_func! :
+        (A, u, p, t; kwargs...) -> update_func!(A.diag, u, p, t; kwargs...)
 
-    MatrixOperator(Diagonal(diag); update_func = diag_update_func,
-                   update_func! = diag_update_func!)
+    MatrixOperator(Diagonal(diag);
+                   update_func = diag_update_func,
+                   update_func! = diag_update_func!,
+                   accepted_kwargs = accepted_kwargs,
+                  )
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
@@ -255,13 +269,13 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, B, b[; update_func])
+    L = AffineOperator(A, B, b; [update_func, update_func!, accepted_kwargs])
     L(u) = A*u + B*b
 
 Represents a time-dependent affine operator. The update function is called
 by `update_coefficients!` and is assumed to have the following signature:
 
-    update_func(b::AbstractArray,u,p,t) -> [modifies b]
+    update_func(b::AbstractArray,u,p,t; <accepted kwargs>) -> [modifies b]
 """
 struct AffineOperator{T,AT,BT,bT,C,F,F!} <: AbstractSciMLOperator{T}
     A::AT
@@ -293,56 +307,85 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
                         b::AbstractArray;
                         update_func = DEFAULT_UPDATE_FUNC,
                         update_func! = DEFAULT_UPDATE_FUNC,
+                        accepted_kwargs = nothing,
                        )
+
     @assert size(A, 1) == size(B, 1) "Dimension mismatch: A, B don't output vectors
     of same size"
 
+    update_func  = preprocess_update_func(update_func , accepted_kwargs)
+    update_func! = preprocess_update_func(update_func!, accepted_kwargs)
+
     A = A isa AbstractMatrix ? MatrixOperator(A) : A
     B = B isa AbstractMatrix ? MatrixOperator(B) : B
+
     cache = B * b
 
     AffineOperator(A, B, b, cache, update_func, update_func!)
 end
 
 """
-    L = AddVector(b[; update_func])
+    L = AddVector(b; [update_func, update_func!, accepted_kwargs])
     L(u) = u + b
 """
-function AddVector(b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC,
-                   update_func! = DEFAULT_UPDATE_FUNC)
+function AddVector(b::AbstractVecOrMat;
+                   update_func = DEFAULT_UPDATE_FUNC,
+                   update_func! = DEFAULT_UPDATE_FUNC,
+                   accepted_kwargs = nothing
+                  )
+
     N  = size(b, 1)
     Id = IdentityOperator(N)
 
-    AffineOperator(Id, Id, b; update_func = update_func, update_func! = update_func!)
+    AffineOperator(Id, Id, b;
+                   update_func = update_func,
+                   update_func! = update_func!,
+                   accepted_kwargs = accepted_kwargs,
+                  )
 end
 
 """
-    L = AddVector(B, b[; update_func])
+    L = AddVector(B, b; [update_func, accepted_kwargs])
     L(u) = u + B*b
 """
-function AddVector(B, b::AbstractVecOrMat; update_func = DEFAULT_UPDATE_FUNC,
-                   update_func! = DEFAULT_UPDATE_FUNC)
+function AddVector(B, b::AbstractVecOrMat;
+                   update_func = DEFAULT_UPDATE_FUNC,
+                   update_func! = DEFAULT_UPDATE_FUNC,
+                   accepted_kwargs=nothing
+                  )
+
     N = size(B, 1)
     Id = IdentityOperator(N)
 
-    AffineOperator(Id, B, b; update_func = update_func, update_func! = update_func!)
+    AffineOperator(Id, B, b;
+                   update_func = update_func,
+                   update_func! = update_func!,
+                   accepted_kwargs = accepted_kwargs,
+                  )
 end
 
-function update_coefficients(L::AffineOperator, u, p, t)
-    @set! L.A = update_coefficients(L.A, u, p, t)
-    @set! L.B = update_coefficients(L.B, u, p, t)
-    @set! L.b = L.update_func(L.b, u, p, t)
-
-    L
+function update_coefficients(L::AffineOperator, u, p, t; kwargs...)
+    @set! L.A = update_coefficients(L.A, u, p, t; kwargs...)
+    @set! L.B = update_coefficients(L.B, u, p, t; kwargs...)
+    @set! L.b = L.update_func(L.b, u, p, t; kwargs...)
 end
 
-update_coefficients!(L::AffineOperator,u,p,t) = (L.update_func!(L.b,u,p,t); L)
+function update_coefficients!(L::AffineOperator, u, p, t; kwargs...)
+    L.update_func!(L.b, u, p, t; kwargs...)
+    for op in getops(L)
+        update_coefficients!(op, u, p, t; kwargs...)
+    end
+    nothing
+end
 
-getops(L::AffineOperator) = (L.A, L.B, L.b)
 function isconstant(L::AffineOperator)
-    (L.update_func == L.update_func! == DEFAULT_UPDATE_FUNC) &
+    update_func_isconstant(L.update_func) &
+    update_func_isconstant(L.update_func!) &
     all(isconstant, (L.A, L.B))
 end
+
+getops(L::AffineOperator) = (L.A, L.B, L.b)
+
 islinear(::AffineOperator) = false
 
 Base.size(L::AffineOperator) = size(L.A)
@@ -356,7 +399,7 @@ function Base.resize!(L::AffineOperator, n::Integer)
     L
 end
 
-has_adjoint(L::AffineOperator) = all(has_adjoint, L.ops)
+has_adjoint(L::AffineOperator) = false
 has_mul(L::AffineOperator) = has_mul(L.A)
 has_mul!(L::AffineOperator) = has_mul!(L.A)
 has_ldiv(L::AffineOperator) = has_ldiv(L.A)
