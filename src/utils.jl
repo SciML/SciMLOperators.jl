@@ -22,7 +22,7 @@ end
 # Filter keyword arguments to those accepted by function.
 # Avoid throwing errors here if a keyword argument is not provided: defer
 # this to the function call for a more readable error.
-function get_filtered_kwargs(kwargs::Base.Pairs, accepted_kwargs::NTuple{N,Symbol}) where{N}
+function get_filtered_kwargs(kwargs::AbstractDict, accepted_kwargs::NTuple{N,Symbol}) where{N}
     (kw => kwargs[kw] for kw in accepted_kwargs if haskey(kwargs, kw))
 end
 
