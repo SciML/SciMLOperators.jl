@@ -17,8 +17,6 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <:
     p::P
     """ Time """
     t::Tt
-    """ kwargs """
-    kwargs::Dict{Symbol,Any} # TODO move inside traits later
     """ Cache """
     cache::C
 
@@ -30,7 +28,6 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <:
                               traits,
                               p,
                               t,
-                              kwargs,
                               cache
                              )
 
@@ -60,7 +57,6 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <:
              traits,
              p,
              t,
-             kwargs,
              cache,
             )
     end
@@ -124,7 +120,6 @@ function FunctionOperator(op,
     sz = (size(output, 1), size(input, 1))
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
-    kwargs = Dict{Symbol, Any}()
 
     isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
@@ -189,6 +184,7 @@ function FunctionOperator(op,
               size = sz,
               eltypes = eltypes,
               accepted_kwargs = accepted_kwargs,
+              kwargs = Dict{Symbol, Any}(),
              )
 
     L = FunctionOperator(
@@ -199,7 +195,6 @@ function FunctionOperator(op,
                          traits,
                          p,
                          t,
-                         kwargs,
                          cache
                         )
 
@@ -212,11 +207,13 @@ end
 
 function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
 
+    # update p, t
     @set! L.p = p
     @set! L.t = t
 
+    # filter and update kwargs
     filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
-    @set! L.kwargs = Dict(filtered_kwargs)
+    @set! L.traits.kwargs = Dict{Symbol, Any}(filtered_kwargs)
 
     isconstant(L) && return L
 
@@ -228,11 +225,13 @@ end
 
 function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
+    # update p, t
     L.p = p
     L.t = t
 
+    # filter and update kwargs
     filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
-    L.kwargs = Dict(filtered_kwargs)
+    L.traits = (; L.traits..., kwargs = Dict{Symbol, Any}(filtered_kwargs))
 
     isconstant(L) && return
 
@@ -289,7 +288,6 @@ function Base.adjoint(L::FunctionOperator)
                      traits,
                      L.p,
                      L.t,
-                     L.kwargs,
                      cache,
                     )
 end
@@ -330,7 +328,6 @@ function Base.inv(L::FunctionOperator)
                      traits,
                      L.p,
                      L.t,
-                     L.kwargs,
                      cache,
                     )
 end
@@ -387,27 +384,27 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 
 # operator application
 function Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
-    L.op(u, L.p, L.t; L.kwargs...)
+    L.op(u, L.p, L.t; L.traits.kwargs...)
 end
 
 function Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
-    L.op_inverse(u, L.p, L.t; L.kwargs...)
+    L.op_inverse(u, L.p, L.t; L.traits.kwargs...)
 end
 
 function Base.:*(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     _, co = L.cache
     du = zero(co)
-    L.op(du, u, L.p, L.t; L.kwargs...)
+    L.op(du, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function Base.:\(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     ci, _ = L.cache
     du = zero(ci)
-    L.op_inverse(du, u, L.p, L.t; L.kwargs...)
+    L.op_inverse(du, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
-    L.op(v, u, L.p, L.t; L.kwargs...)
+    L.op(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, args...)
@@ -424,11 +421,11 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, 
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, true}, u::AbstractVecOrMat, α, β) where{oop}
-    L.op(v, u, L.p, L.t, α, β; L.kwargs...)
+    L.op(v, u, L.p, L.t, α, β; L.traits.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
-    L.op_inverse(v, u, L.p, L.t; L.kwargs...)
+    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractVecOrMat)
