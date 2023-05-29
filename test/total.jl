@@ -86,7 +86,7 @@ end
     C = rand(N,N)
     # Introduce update function for D dependent on kwarg "matrix"
     D = MatrixOperator(zeros(N,N); update_func=(A, u, p, t; matrix) -> (A .= p*t*matrix), 
-                       accepted_kwargs=(:matrix,))
+                       accepted_kwargs = (:matrix,))
 
     u = rand(N2,K)
     p = rand()
@@ -99,11 +99,9 @@ end
     T1 = ⊗(A, B)
     T2 = ⊗(C, D)
 
-    # Introduce update function for D1
-    D1  = DiagonalOperator(zeros(N2); update_func=(d, u, p, t) -> (d .= p))
-    # Introduce update funcion for D2 dependent on kwarg "diag" 
-    D2  = DiagonalOperator(zeros(N2); update_func=(d, u, p, t; diag) -> (d .= p*t*diag),
-                           accepted_kwargs=(:diag,))
+    D1  = DiagonalOperator(zeros(N2); update_func = (d, u, p, t) -> p)
+    D2  = DiagonalOperator(zeros(N2); update_func = (d, u, p, t; diag) -> p*t*diag,
+                           accepted_kwargs = (:diag,))
 
     TT = [T1, T2]
     DD = Diagonal([D1, D2])

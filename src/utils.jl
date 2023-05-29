@@ -18,13 +18,16 @@ struct FilterKwargs{F,K}
     f::F
     accepted_kwargs::K
 end
-function (f_filter::FilterKwargs)(args...; kwargs...)
-    # Filter keyword arguments to those accepted by function.
-    # Avoid throwing errors here if a keyword argument is not provided: defer this to the function call for a more readable error.
-    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in f_filter.accepted_kwargs if haskey(kwargs, kwarg))
-    f_filter.f(args...; filtered_kwargs...)
+
+# Filter keyword arguments to those accepted by function.
+# Avoid throwing errors here if a keyword argument is not provided: defer
+# this to the function call for a more readable error.
+function get_filtered_kwargs(kwargs::Base.Pairs, accepted_kwargs::NTuple{N,Symbol}) where{N}
+    (kw => kwargs[kw] for kw in accepted_kwargs if haskey(kwargs, kw))
 end
-# automatically convert NamedTuple's, etc. to a normalized kwargs representation (i.e. Base.Pairs) 
-normalize_kwargs(; kwargs...) = kwargs
-normalize_kwargs(kwargs) = normalize_kwargs(; kwargs...)
+
+function (f::FilterKwargs)(args...; kwargs...)
+    filtered_kwargs = get_filtered_kwargs(kwargs, f.accepted_kwargs)
+    f.f(args...; filtered_kwargs...)
+end
 #

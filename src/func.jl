@@ -2,7 +2,7 @@
 """
     Matrix free operators (given by a function)
 """
-mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -17,8 +17,8 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} 
     p::P
     """ Time """
     t::Tt
-    """ Keyword arguments """
-    kwargs::K
+    """ kwargs """
+    kwargs::Dict{Symbol,Any} # TODO move inside traits later
     """ Cache """
     cache::C
 
@@ -30,7 +30,7 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} 
                               traits,
                               p,
                               t,
-                              accepted_kwargs,
+                              kwargs,
                               cache
                              )
 
@@ -51,7 +51,6 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} 
             typeof(traits),
             typeof(p),
             typeof(t),
-            typeof(accepted_kwargs),
             typeof(cache),
            }(
              op,
@@ -61,7 +60,7 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,K,C} 
              traits,
              p,
              t,
-             accepted_kwargs,
+             kwargs,
              cache,
             )
     end
@@ -107,7 +106,7 @@ function FunctionOperator(op,
 
                           p=nothing,
                           t::Union{Number,Nothing}=nothing,
-                          accepted_kwargs = (),
+                          accepted_kwargs::NTuple{N,Symbol} = (),
 
                           ifcache::Bool = true,
 
@@ -118,13 +117,14 @@ function FunctionOperator(op,
                           issymmetric::Bool = false,
                           ishermitian::Bool = false,
                           isposdef::Bool = false,
-                         )
+                         ) where{N}
 
     # store eltype of input/output for caching with ComposedOperator.
     eltypes = eltype.((input, output))
     sz = (size(output, 1), size(input, 1))
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
+    kwargs = Dict{Symbol, Any}()
 
     isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
@@ -188,6 +188,7 @@ function FunctionOperator(op,
               T = T,
               size = sz,
               eltypes = eltypes,
+              accepted_kwargs = accepted_kwargs,
              )
 
     L = FunctionOperator(
@@ -198,7 +199,7 @@ function FunctionOperator(op,
                          traits,
                          p,
                          t,
-                         normalize_kwargs(accepted_kwargs),
+                         kwargs,
                          cache
                         )
 
@@ -214,9 +215,10 @@ function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
     @set! L.p = p
     @set! L.t = t
 
-    isconstant(L) && return L
+    filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
+    @set! L.kwargs = Dict(filtered_kwargs)
 
-    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in L.kwargs if haskey(kwargs, kwarg))
+    isconstant(L) && return L
 
     @set! L.op = update_coefficients(L.op, u, p, t; filtered_kwargs...)
     @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t; filtered_kwargs...)
@@ -226,16 +228,17 @@ end
 
 function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
-    isconstant(L) && return
+    L.p = p
+    L.t = t
 
-    filtered_kwargs = (kwarg => kwargs[kwarg] for kwarg in L.kwargs if haskey(kwargs, kwarg))
+    filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
+    L.kwargs = Dict(filtered_kwargs)
+
+    isconstant(L) && return
 
     for op in getops(L)
         update_coefficients!(op, u, p, t; filtered_kwargs...)
     end
-
-    L.p = p
-    L.t = t
 
     L
 end
@@ -383,8 +386,13 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 # TODO - FunctionOperator, Base.conj, transpose
 
 # operator application
-Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op(u, L.p, L.t)
-Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip} = L.op_inverse(u, L.p, L.t; L.kwargs...)
+function Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
+    L.op(u, L.p, L.t; L.kwargs...)
+end
+
+function Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
+    L.op_inverse(u, L.p, L.t; L.kwargs...)
+end
 
 function Base.:*(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
     _, co = L.cache

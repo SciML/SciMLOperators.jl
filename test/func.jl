@@ -107,10 +107,11 @@ end
     scale = rand()
 
     # Accept a kwarg "scale" in operator action
-    f(du,u,p,t; scale) = mul!(du, Diagonal(p*t*scale), u)
-    f(u, p, t; scale) = Diagonal(p * t * scale) * u
+    f(du,u,p,t; scale = 1.0) = mul!(du, Diagonal(p*t*scale), u)
+    f(u, p, t; scale = 1.0) = Diagonal(p * t * scale) * u
 
-    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), accepted_kwargs=(;scale=zero(scale)))
+    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t),
+                         accepted_kwargs = (:scale,))
 
     ans = @. u * p * t * scale 
     @test L(u,p,t; scale) ≈ ans

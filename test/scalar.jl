@@ -151,7 +151,7 @@ end
     # Test scalar operator which expects keyword argument to update,
     # modeled in the style of a DiffEq W-operator.
     γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
-                       accepted_kwargs=(:dtgamma,))
+                       accepted_kwargs = (:dtgamma,))
 
     dtgamma = rand()
     @test γ(u,p,t; dtgamma) ≈ dtgamma * u
