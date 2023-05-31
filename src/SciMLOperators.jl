@@ -1,3 +1,20 @@
+"""
+`SciMLOperators` is a package for managing linear, nonlinear, and
+time-dependent operators acting on vectors, (or column-vectors of matrices).
+We provide wrappers for matrix-free operators, fast tensor-product
+evaluations, pre-cached mutating evaluations, as well as `Zygote`-compatible
+non-mutating evaluations.
+
+The lazily implemented operator algebra allows the user to update the
+operator state by passing in an update function that accepts arbirary
+parameter objects. Further, our operators behave like `AbstractMatrix` types
+thanks to  overloads defined for methods in `Base`, and `LinearAlgebra`.
+
+Therefore, an `AbstractSciMLOperator` can be passed to `LinearSolve.jl`,
+or `NonlinearSolve.jl` as a linear/nonlinear operator, or to
+`OrdinaryDiffEq.jl` as an `ODEFunction`. Examples of usage within the
+`SciML` ecosystem are provided in the documentation.
+"""
 module SciMLOperators
 
 using DocStringExtensions
@@ -22,9 +39,13 @@ import SparseArrays: sparse, issparse
 """
 $(TYPEDEF)
 
+Subtypes of `AbstractSciMLOperator` represent linear, nonlinear,
+time-dependent operators acting on vectors, or matrix column-vectors.
+A lazy operator algebra is also defined for `AbstractSciMLOperator`s.
+
 # Interface
 
-An `L::AbstractSciMLOperator` can be called like a function. This behaves
+An `AbstractSciMLOperator` can be called like a function. This behaves
 like multiplication by the linear operator represented by the
 `AbstractSciMLOperator`. Possible signatures are
 
@@ -49,6 +70,11 @@ abstract type AbstractSciMLOperator{T} end
 
 """
 $(TYPEDEF)
+
+An `AbstractSciMLScalarOperator` represents a linear scaling operation
+that may be applied to an `AbstractVecOrMat`. Addition, multiplication,
+division of `AbstractSciMLScalarOperator`s is defined lazily so operator
+state may be updated.
 """
 abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLOperator{T} end
 
