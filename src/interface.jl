@@ -3,18 +3,6 @@
 # Operator interface
 ###
 
-"""
-Function call and multiplication:
-    - L(du, u, p, t) for in-place operator evaluation,
-    - du = L(u, p, t) for out-of-place operator evaluation
-
-If the operator is not a constant, update it with (u,p,t). A mutating form, i.e.
-update_coefficients!(A,u,p,t) that changes the internal coefficients, and a
-out-of-place form B = update_coefficients(A,u,p,t).
-
-"""
-function (::AbstractSciMLOperator) end
-
 ###
 # Utilities for update functions
 ###
