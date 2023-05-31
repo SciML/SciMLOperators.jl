@@ -254,6 +254,10 @@ function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMa
     L
 end
 
+function Base.show(io::IO, L::FunctionOperator)
+    a, b = size(L)
+    print(io, "FunctionOperator($a × $b)")
+end
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator)
 

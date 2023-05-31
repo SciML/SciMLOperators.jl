@@ -54,6 +54,10 @@ end
                           )
 islinear(::MatrixOperator) = true
 
+function Base.show(io::IO, L::MatrixOperator)
+    a, b = size(L)
+    print(io, "MatrixOperator($a × $b)")
+end
 Base.size(L::MatrixOperator) = size(L.A)
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 for op in (
@@ -168,6 +172,11 @@ function DiagonalOperator(diag::AbstractVector;
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
+function Base.show(io::IO, L::MatrixOperator{T,<:Diagonal}) where{T}
+    n = length(L.A.diag)
+    print(io, "DiagonalOperator($n × $n)")
+end
+
 const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ? LinearAlgebra.AdjointFactorization : Adjoint
 const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? LinearAlgebra.TransposeFactorization : Transpose
 
@@ -219,6 +228,14 @@ end
 Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator) = convert(AbstractMatrix, L.L)
 
 # traits
+function Base.show(io::IO, L::InvertibleOperator)
+    print(io, "InvertibleOperator(")
+    show(io, L.L)
+    print(io, ", ")
+    show(io, L.F)
+    print(io, ")")
+end
+
 Base.size(L::InvertibleOperator) = size(L.L)
 Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.L), transpose(L.F))
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.L', L.F')
@@ -387,6 +404,21 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 
 islinear(::AffineOperator) = false
+
+function Base.show(io::IO, L::AffineOperator)
+    show(io, L.A)
+    print(io, " + ")
+    show(io, L.B)
+    print(io, " * ")
+
+    if L.b isa AbstractVector
+        n = size(L.b, 1)
+        print(io, "AbstractVector($n)")
+    elseif L.b isa AbstractMatrix
+        n, k = size(L.b)
+        print(io, "AbstractMatrix($n × $k)")
+    end
+end
 
 Base.size(L::AffineOperator) = size(L.A)
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))

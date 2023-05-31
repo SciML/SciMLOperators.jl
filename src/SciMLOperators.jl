@@ -11,6 +11,7 @@ import Lazy: @forward
 import Setfield: @set!
 
 # overload
+import Base: show
 import Base: zero, one, oneunit
 import Base: +, -, *, /, \, ∘, ==, conj, exp, kron
 import Base: iszero, inv, adjoint, transpose, size, convert

@@ -64,6 +64,13 @@ end
 
 #LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
 
+function Base.show(io::IO, L::TensorProductOperator)
+    print(io, "(")
+    show(io, L.ops[1])
+    print(io, " ⊗ ")
+    show(io, L.ops[2])
+    print(io, ")")
+end
 Base.size(L::TensorProductOperator) = reduce(.*, size.(L.ops))
 
 for op in (

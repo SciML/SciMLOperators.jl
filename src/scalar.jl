@@ -128,6 +128,7 @@ ScalarOperator(α::AbstractSciMLScalarOperator) = α
 ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
+Base.show(io::IO, α::ScalarOperator) = print(io, "ScalarOperator($(α.val))")
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
     update_func = (oldval,u,p,t; kwargs...) -> α.update_func(oldval |> conj,u,p,t; kwargs...) |> conj
@@ -193,6 +194,15 @@ function Base.convert(T::Type{<:Number}, α::AddedScalarOperator)
     sum(convert.(T, α.ops))
 end
 
+function Base.show(io::IO, α::AddedScalarOperator)
+    print(io, "(")
+    show(io, α.ops[1])
+    for i in 2:length(α.ops)
+        print(io, " + ")
+        show(io, α.ops[i])
+    end
+    print(io, ")")
+end
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
 function update_coefficients(L::AddedScalarOperator, u, p, t)
@@ -209,7 +219,7 @@ has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
 has_ldiv!(α::AddedScalarOperator) = has_ldiv(α)
 
 """
-Lazy composition of Scalar Operators
+Lazy multiplication of Scalar Operators
 """
 struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
@@ -246,6 +256,15 @@ function Base.convert(T::Type{<:Number}, α::ComposedScalarOperator)
     prod(convert.(T, α.ops))
 end
 
+function Base.show(io::IO, α::ComposedScalarOperator)
+    print(io, "(")
+    show(io, α.ops[1])
+    for i in 2:length(α.ops)
+        print(io, " * ")
+        show(io, α.ops[i])
+    end
+    print(io, ")")
+end
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
 
@@ -304,6 +323,10 @@ function Base.convert(T::Type{<:Number}, α::InvertedScalarOperator)
     inv(convert(Number, α.λ))
 end
 
+function Base.show(io::IO, α::InvertedScalarOperator)
+    print(io, "1 / ")
+    show(io, α.λ)
+end
 Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
 
 function update_coefficients(L::InvertedScalarOperator, u, p, t)
