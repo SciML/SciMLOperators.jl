@@ -72,9 +72,9 @@ abstract type AbstractSciMLOperator{T} end
 $(TYPEDEF)
 
 An `AbstractSciMLScalarOperator` represents a linear scaling operation
-that may be applied to an `AbstractVecOrMat`. Addition, multiplication,
-division of `AbstractSciMLScalarOperator`s is defined lazily so operator
-state may be updated.
+that may be applied to `Number`, `AbstractVecOrMat` subtypes. Addition,
+multiplication, division of `AbstractSciMLScalarOperator`s is defined
+lazily so operator state may be updated.
 """
 abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLOperator{T} end
 

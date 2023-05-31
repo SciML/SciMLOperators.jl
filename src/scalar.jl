@@ -95,22 +95,51 @@ end
 
 Base.:+(α::AbstractSciMLScalarOperator) = α
 
-"""
-    ScalarOperator(val; [update_func, accepted_kwargs])
-
-    (α::ScalarOperator)(a::Number) = α * a
-
-Represents a time-dependent scalar/scaling operator. The update function
-is called by `update_coefficients`/ `update_coefficients!` and is assumed
-to have the following signature:
-
-    update_func(oldval,u,p,t; <accepted kwargs>) -> newval
-"""
 mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
     val::T
     update_func::F
 end
 
+"""
+$SIGNATURES
+
+Represents a linear scaling operator that may be applied to `Number`,
+`AbstractVecOrMat` subtypes. Its state is updated by the user-provided
+`update_func` during operator evaluation by calls to `update_coefficients[!]`.
+If no `update_func` is provided, then the operator is constant.
+
+The update function is called recursively by `update_coefficients[!]`,
+and is assumed to have the following signature:
+
+    update_func(oldval::Number,u,p,t; <accepted kwargs>) -> newval
+
+The set of keyword-arguments accepted by `update_func` must be provided
+to `ScalarOperator` via the kwarg `accepted_kwargs` as a typle of `Symbol`s.
+
+# Interface
+
+Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`s, so
+
+# Example
+
+```
+v = zero(4)
+u = rand(4)
+p = nothing
+t = 0.0
+
+val_update = (a, u, p, t; scale = 0.0) -> copy(scale)
+α = ScalarOperator(0.0; update_func = val_update; accepted_kwargs = (:scale,))
+β = 2 * α + 3 / α
+
+β(v, u, p, t; scale = 1.0)
+
+update_coefficients!(β, u, p, t; scale = 1.0)
+β * u
+lmul!(β, u)
+mul!(v, β, u)
+```
+"""
 function ScalarOperator(val;
                         update_func = DEFAULT_UPDATE_FUNC,
                         accepted_kwargs = nothing,
@@ -158,7 +187,9 @@ function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
 end
 
 """
-Lazy addition of Scalar Operators
+$TYPEDEF
+
+Lazy addition of `AbstractSciMLScalarOperator`s
 """
 struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
@@ -219,7 +250,9 @@ has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
 has_ldiv!(α::AddedScalarOperator) = has_ldiv(α)
 
 """
-Lazy multiplication of Scalar Operators
+$TYPEDEF
+
+Lazy multiplication of `AbstractSciMLScalarOperator`s
 """
 struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
@@ -282,12 +315,11 @@ has_ldiv(α::ComposedScalarOperator) = all(has_ldiv, α.ops)
 has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 
 """
-Lazy inversion of Scalar Operators
+$TYPEDEF
+
+Lazy inverse of `AbstractSciMLScalarOperator`s
+
 """
-#=
-Keeping with the style, we avoid use of the generic InvertedOperator and instead
-have a specialized type for this purpose that subtypes AbstractSciMLScalarOperator.
-=#
 struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
     λ::λType
 
@@ -295,6 +327,10 @@ struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
         new{T,typeof(λ)}(λ)
     end
 end
+#=
+Keeping with the style, we avoid use of the generic InvertedOperator and instead
+have a specialized type for this purpose that subtypes AbstractSciMLScalarOperator.
+=#
 Base.inv(L::AbstractSciMLScalarOperator) = InvertedScalarOperator(L)
 
 for op in (
