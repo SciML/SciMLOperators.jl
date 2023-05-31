@@ -99,6 +99,8 @@ the values of `u`, or even shape, may not correspond to the input
 expected by `update_func`. If an operator's state depends on its
 input vector, then it is, by definition, a nonlinear operator.
 We recommend sticking such nonlinearities in `FunctionOperator.`
+This topic is further discussed in
+(this issue)[https://github.com/SciML/SciMLOperators.jl/issues/159].
 
 # Example
 
@@ -148,6 +150,11 @@ end
 
 getops(L) = ()
 
+"""
+$SIGNATURES
+
+Checks whether `L` has preallocated caches for inplace evaluations.
+"""
 function iscached(L::AbstractSciMLOperator)
 
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
@@ -171,12 +178,9 @@ iscached(::Union{
         ) = true
 
 """
-Allocate caches for a SciMLOperator for fast evaluation
+$SIGNATURES
 
-arguments:
-    L :: AbstractSciMLOperator
-    in :: AbstractVecOrMat input prototype to L
-    out :: (optional) AbstractVecOrMat output prototype to L
+Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
 """
 function cache_operator end
 
@@ -237,6 +241,11 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
 ### Extra standard assumptions
 
+"""
+$SIGNATURES
+
+Checks if an operator's state is constant or not.
+"""
 isconstant(::Union{
                    # LinearAlgebra
                    AbstractMatrix,
@@ -251,6 +260,11 @@ isconstant(::Union{
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 
 #islinear(L) = false
+"""
+$SIGNATURES
+
+Checks whether operator is linear or not.
+"""
 islinear(::AbstractSciMLOperator) = false
 
 islinear(::Union{
