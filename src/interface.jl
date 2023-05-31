@@ -3,8 +3,6 @@
 # Operator interface
 ###
 
-function (::AbstractSciMLOperator) end
-
 ###
 # Utilities for update functions
 ###
