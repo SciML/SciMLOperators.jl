@@ -40,7 +40,8 @@ function update_func_isconstant(update_func)
 end
 
 const UPDATE_COEFFS_WARNING = """
-    !!! warning The user-provided `update_func[!]` must not use `u` in
+!!! warning
+    The user-provided `update_func[!]` must not use `u` in
     its computation. Positional argument `(u, p, t)` to `update_func[!]` are
     passed down by `update_coefficients[!](L, u, p, t)`, where `u` is the
     input-vector to the composite `AbstractSciMLOperator`. For that reason,
@@ -50,7 +51,7 @@ const UPDATE_COEFFS_WARNING = """
     We recommend sticking such nonlinearities in `FunctionOperator.`
     This topic is further discussed in
     (this issue)[https://github.com/SciML/SciMLOperators.jl/issues/159].
-    """
+"""
 
 """
 Update the state of `L` based on `u`, input vector, `p` parameter object,
