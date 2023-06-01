@@ -37,7 +37,7 @@ julia> Pkg.add("SciMLOperators")
 Let `M`, `D`, `F` be matrix, diagonal, and function-based `SciMLOperators`
 respectively.
 
-```
+```julia
 N = 4
 f = (u, p, t) -> u .* u
 
@@ -48,10 +48,65 @@ F = FunctionOperator(f, zeros(N), zeros(N))
 
 Then, the following codes just work.
 
-```
-L = 2M + 3F + LinearAlgebra.I
-L = D * F * M'
-L = kron(M, F)
-LL = [M F; F D]
+```julia
+L1 = 2M + 3F + LinearAlgebra.I
+L2 = D * F * M'
+L3 = kron(M, D, F)
+L4 = M \ D
+L5 = [M; D]' * [M F; F D] * [F; D]
 ```
 
+Each `L#` can be applied to vectors of appropriate sizes:
+
+```julia
+u = rand(N)
+v = zeros(N)
+u_kron = rand(N ^ 3)
+
+v = L1 * u
+mul!(v, L2, u)
+v_kron = L3(u_kron, p, t)
+L4(v, u, p, t)
+```
+
+Thanks to overloads defined for evaluation methods and traits in
+`Base`, `LinearAlgebra`, the behaviour of a `SciMLOperator` is
+indistinguishable from an `AbstractMatrix`. These operators can be
+passed to linear solver packages, and even to ordinary differential
+equation solvers.
+
+## Operator update
+
+## Features
+
+* Matrix-free operators with `FunctionOperator`
+* Fast tensor product evaluation
+* Lazy algebra: addition, subtraction, multiplication, inverse, adjoint
+* Mutating, nonmutating update behaviour (Zygote compatible)
+* `InvertibleOperator` - pair fwd, bwd operators
+
+## Roadmap
+- [ ] [Complete integration with `SciML` ecosystem](https://github.com/SciML/SciMLOperators.jl/issues/142)
+- [ ] [Block-matrices](https://github.com/SciML/SciMLOperators.jl/issues/161)
+- [x] [Benchmark and speed-up tensorbproduct evaluations](https://github.com/SciML/SciMLOperators.jl/issues/58)
+- [ ] [Fast tensor-sum (`kronsum`) evaluation](https://github.com/SciML/SciMLOperators.jl/issues/53)
+- [ ] Fully flesh out operator array algebra
+- [ ] [Operator fusion/matrix chain multiplication at constant (u, p, t)-slices](https://github.com/SciML/SciMLOperators.jl/issues/51)
+
+## Packages providing similar functionality
+* `LinearMaps.jl`
+* `DiffEqOperators.jl` (deprecated)
+
+## Pacakges utilizing `SciMLOperators`
+If you are using `SciMLOperators` in your work, feel free to create a PR
+and add your package to this list.
+
+* `SciML` packages:
+    * `OrdinaryDiffEq.jl`
+    * `LinearSolve.jl`
+    * `SciMLSensitivity.jl`
+* `CalculustJL` packages:
+    * `CalculustCore.jl`
+    * `FourierSpaces.jl`
+    * `NodalPolynomialSpaces.jl`
+* `OtherPackage.jl`

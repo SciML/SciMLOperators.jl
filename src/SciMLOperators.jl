@@ -1,8 +1,5 @@
 """
 $(README)
-
-# Exports
-$(EXPORTS)
 """
 module SciMLOperators
 
