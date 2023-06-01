@@ -1,5 +1,7 @@
 """
 $(TYPEDEF)
+
+Operator representing the identity function `id(u) = u`
 """
 struct IdentityOperator <: AbstractSciMLOperator{Bool}
     len::Int
@@ -95,6 +97,8 @@ end
 
 """
 $(TYPEDEF)
+
+Operator representing the null function `n(u) = 0 * u`
 """
 struct NullOperator <: AbstractSciMLOperator{Bool}
     len::Int
@@ -176,6 +180,8 @@ for op in (
 end
 
 """
+$TYPEDEF
+
     ScaledOperator
 
     (λ L)*(u) = λ * L(u)

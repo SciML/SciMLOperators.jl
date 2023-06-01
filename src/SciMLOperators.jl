@@ -1,19 +1,8 @@
 """
-`SciMLOperators` is a package for managing linear, nonlinear, and
-time-dependent operators acting on vectors, (or column-vectors of matrices).
-We provide wrappers for matrix-free operators, fast tensor-product
-evaluations, pre-cached mutating evaluations, as well as `Zygote`-compatible
-non-mutating evaluations.
+$(README)
 
-The lazily implemented operator algebra allows the user to update the
-operator state by passing in an update function that accepts arbirary
-parameter objects. Further, our operators behave like `AbstractMatrix` types
-thanks to  overloads defined for methods in `Base`, and `LinearAlgebra`.
-
-Therefore, an `AbstractSciMLOperator` can be passed to `LinearSolve.jl`,
-or `NonlinearSolve.jl` as a linear/nonlinear operator, or to
-`OrdinaryDiffEq.jl` as an `ODEFunction`. Examples of usage within the
-`SciML` ecosystem are provided in the documentation.
+# Exports
+$(EXPORTS)
 """
 module SciMLOperators
 
@@ -65,6 +54,8 @@ An `AbstractSciMLOperator` behaves like a matrix in these methods.
 Allocation-free methods, suffixed with a `!` often need cache arrays.
 To precache an `AbstractSciMLOperator`, call the function
 `L = cache_operator(L, input_vector)`.
+
+# Methods
 """
 abstract type AbstractSciMLOperator{T} end
 

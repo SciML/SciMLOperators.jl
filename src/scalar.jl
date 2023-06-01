@@ -105,20 +105,23 @@ $SIGNATURES
 
 Represents a linear scaling operator that may be applied to `Number`,
 `AbstractVecOrMat` subtypes. Its state is updated by the user-provided
-`update_func` during operator evaluation by calls to `update_coefficients[!]`.
-If no `update_func` is provided, then the operator is constant.
-
-The update function is called recursively by `update_coefficients[!]`,
-and is assumed to have the following signature:
+`update_func` during operator evaluation (`L([v,] u, p, t)`), or by
+calls to `update_coefficients[!]`. Both recursively call the 
+update function, `update_func` which is assumed to have the signautre:
 
     update_func(oldval::Number,u,p,t; <accepted kwargs>) -> newval
 
 The set of keyword-arguments accepted by `update_func` must be provided
 to `ScalarOperator` via the kwarg `accepted_kwargs` as a typle of `Symbol`s.
+`kwargs` may not be passed down to `update_func` if `accepted_kwargs`
+are not provided.
+
+$(UPDATE_COEFFS_WARNING)
 
 # Interface
 
-Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`s, so
+Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`. the
+interface supports addition, subtraction, multiplication and division.
 
 # Example
 
