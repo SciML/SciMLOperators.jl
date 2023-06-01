@@ -1,6 +1,8 @@
 # SciMLOperators.jl: The SciML Operators Interface
 
-$(README)
+```@docs
+SciMLOperators
+```
 
 ## Reproducibility
 ```@raw html

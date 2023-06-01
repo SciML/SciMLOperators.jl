@@ -1,4 +1,4 @@
-# SciMLOperators.jl
+# `SciMLOperators.jl`
 
 *Unified operator interface for `SciML.ai` and beyond*
 
@@ -78,7 +78,7 @@ in-place cache so the operation is nonallocating.
 L2 = cache_operator(L2, u)
 L4 = cache_operator(L4, u)
 
-# allocation-free
+# allocation-free evaluation
 mul!(v, L2, u)
 L4(v, u, p, t)
 ```

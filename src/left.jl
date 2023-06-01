@@ -40,6 +40,9 @@ end
 # fallback wrappers
 ###
 
+"""
+$TYPEDEF
+"""
 struct AdjointOperator{T,LType} <: AbstractSciMLOperator{T}
     L::LType
 
@@ -48,6 +51,9 @@ struct AdjointOperator{T,LType} <: AbstractSciMLOperator{T}
     end
 end
 
+"""
+$TYPEDEF
+"""
 struct TransposedOperator{T,LType} <: AbstractSciMLOperator{T}
     L::LType
 
