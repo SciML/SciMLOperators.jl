@@ -67,8 +67,19 @@ v = zeros(N)
 u_kron = rand(N ^ 3)
 
 v = L1 * u
-mul!(v, L2, u)
 v_kron = L3(u_kron, p, t)
+```
+
+For mutating operator evaluations, call `cache_operator` to generate
+in-place cache so the operation is nonallocating.
+
+```julia
+# allocate cache
+L2 = cache_operator(L2, u)
+L4 = cache_operator(L4, u)
+
+# allocation-free
+mul!(v, L2, u)
 L4(v, u, p, t)
 ```
 
@@ -76,7 +87,12 @@ Thanks to overloads defined for evaluation methods and traits in
 `Base`, `LinearAlgebra`, the behaviour of a `SciMLOperator` is
 indistinguishable from an `AbstractMatrix`. These operators can be
 passed to linear solver packages, and even to ordinary differential
-equation solvers.
+equation solvers. The list of overloads to the `AbstractMatrix`
+interface include, but are not limited, the following:
+
+- `Base: size, zero, one, +, -, *, /, \, ∘, inv, adjoint, transpose, convert`
+- `LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, issymmetric, ishermitian, isposdef`
+- `SparseArrays: sparse, issparse`
 
 ## Operator update
 
@@ -84,9 +100,10 @@ equation solvers.
 
 * Matrix-free operators with `FunctionOperator`
 * Fast tensor product evaluation
-* Lazy algebra: addition, subtraction, multiplication, inverse, adjoint
 * Mutating, nonmutating update behaviour (Zygote compatible)
 * `InvertibleOperator` - pair fwd, bwd operators
+* Lazy algebra: addition, subtraction, multiplication, inverse, adjoint
+* Pre-caching methods for in-place evaluations
 
 ## Why `SciMLOperators`?
 
@@ -146,11 +163,8 @@ We provide below a list of packages that make use of `SciMLOperators`.
 If you are using `SciMLOperators` in your work, feel free to create a PR
 and add your package to this list.
 
-* [`SciML.ai`](https://sciml.ai/) ecosystem: `SciMLOperators` is compatible
-with, and utilized by every `SciML` package.
-* [`CalculustJL`](https://github.com/CalculustJL) packages use
-`SciMLOperators` to define matrix-free vector-calculus operators for solving
-partial differential equations.
+* [`SciML.ai`](https://sciml.ai/) ecosystem: `SciMLOperators` is compatible with, and utilized by every `SciML` package.
+* [`CalculustJL`](https://github.com/CalculustJL) packages use `SciMLOperators` to define matrix-free vector-calculus operators for solving partial differential equations.
     * [`CalculustCore.jl`](https://github.com/CalculustJL/CalculustCore.jl)
     * [`FourierSpaces.jl`](https://github.com/CalculustJL/FourierSpaces.jl)
     * [`NodalPolynomialSpaces.jl`](https://github.com/CalculustJL/NodalPolynomialSpaces.jl)
@@ -162,7 +176,7 @@ partial differential equations.
 - [ ] [Block-matrices](https://github.com/SciML/SciMLOperators.jl/issues/161)
 - [x] [Benchmark and speed-up tensorbproduct evaluations](https://github.com/SciML/SciMLOperators.jl/issues/58)
 - [ ] [Fast tensor-sum (`kronsum`) evaluation](https://github.com/SciML/SciMLOperators.jl/issues/53)
-- [ ] Fully flesh out operator array algebra
+- [ ] [Fully flesh out operator array algebra](https://github.com/SciML/SciMLOperators.jl/issues/62)
 - [ ] [Operator fusion/matrix chain multiplication at constant `(u, p, t)`-slices](https://github.com/SciML/SciMLOperators.jl/issues/51)
 
 ## Contributing
