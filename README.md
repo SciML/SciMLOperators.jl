@@ -88,7 +88,7 @@ equation solvers.
 ## Roadmap
 - [ ] [Complete integration with `SciML` ecosystem](https://github.com/SciML/SciMLOperators.jl/issues/142)
 - [ ] [Block-matrices](https://github.com/SciML/SciMLOperators.jl/issues/161)
-- [x] [Benchmark and speed-up tensorbproduct evaluations](https://github.com/SciML/SciMLOperators.jl/issues/58)
+- [x] [Benchmark and speed-up tensor product evaluations](https://github.com/SciML/SciMLOperators.jl/issues/58)
 - [ ] [Fast tensor-sum (`kronsum`) evaluation](https://github.com/SciML/SciMLOperators.jl/issues/53)
 - [ ] Fully flesh out operator array algebra
 - [ ] [Operator fusion/matrix chain multiplication at constant (u, p, t)-slices](https://github.com/SciML/SciMLOperators.jl/issues/51)
