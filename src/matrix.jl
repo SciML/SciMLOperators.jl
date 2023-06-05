@@ -28,6 +28,7 @@ adjoints, transposes.
 
 # Example
 
+Out-of-place update and usage
 ```
 u = rand(4)
 p = rand(4, 4)
@@ -43,6 +44,7 @@ L = cache_operator(M, u)
 v = L(u, p, t; scale = 1.0)
 ```
 
+In-place update and usage
 ```
 v = zero(4)
 u = rand(4)
