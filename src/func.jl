@@ -86,7 +86,6 @@ function FunctionOperator(op,
     FunctionOperator(op, input, output; kwargs...)
 end
 
-# TODO: document constructor and revisit design as needed (e.g. for "accepted_kwargs")
 """
 $(SIGNATURES)
 
@@ -127,7 +126,6 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `p` - Prototype of parameter struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `p` is set to `nothing` if no value is provided.
 * `t` - Protype of scalar time variable passed to the operator during evaluation. `t` is set to `zero(T)` if no value is provided.
 * `accepted_kwargs` - `Tuple` of `Symbol`s corresponding to the keyword arguments accepted by `op*`, and `update_coefficients[!]`. For example, if `op` accepts kwarg `scale`, as in `op(u, p, t; scale)`, then `accepted_kwargs = (:scale,)`.
-
 * `T` - `eltype` of the operator. If no value is provided, the constructor inferrs the value from types of `input`, and `output`
 * `isinplace` - `true` if the operator can be used is a mutating way with in-place allocations. This trait is inferred if no value is provided.
 * `outofplace` - `true` if the operator can be used is a non-mutating way with in-place allocations. This trait is inferred if no value is provided.
@@ -439,8 +437,6 @@ has_mul(::FunctionOperator{iip}) where{iip} = true
 has_mul!(::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
-
-# TODO - FunctionOperator, Base.conj, transpose
 
 # operator application
 function Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
