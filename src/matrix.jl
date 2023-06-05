@@ -10,6 +10,7 @@ to `update_coefficients[!](L, u, p, t)`. Both recursively call the
 
     update_func(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> newA
 or
+
     update_func!(A::AbstractMatrix, u ,p , t; <accepted kwargs>) -> [modifies A]
 
 The set of keyword-arguments accepted by `update_func[!]` must be provided
@@ -29,7 +30,7 @@ adjoints, transposes.
 
 ```
 u = rand(4)
-p = rand(N, N)
+p = rand(4, 4)
 t = rand()
 
 mat_update = (A, u, p, t; scale = 0.0) -> t * p
@@ -49,7 +50,7 @@ p = nothing
 t = rand()
 
 mat_update! = (A, u, p, t; scale = 0.0) -> (copy!(A, p); lmul!(t, A))
-M = MatrixOperator(0.0; update_func! = val_update!; accepted_kwargs = (:scale,))
+M = MatrixOperator(zeros(4, 4); update_func! = val_update!; accepted_kwargs = (:scale,))
 L = M * M + 3I
 
 # update L in-place and evaluate
@@ -203,6 +204,7 @@ evaluation (`L([v,], u, p, t)`), or by calls to
 
     update_func(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> new_diag
 or
+
     update_func!(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> [modifies diag]
 
 The set of keyword-arguments accepted by `update_func[!]` must be provided
@@ -244,10 +246,10 @@ const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ? LinearAlge
 const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? LinearAlgebra.TransposeFactorization : Transpose
 
 """
-    InvertibleOperator(L, F)
+$SIGNATURES
 
 Stores an operator and its factorization (or inverse operator).
-Supports left division and `ldiv!` via `F`, and operator application
+Supports left division and `ldiv!` via `F`, and operator evaluation
 via `L`.
 """
 struct InvertibleOperator{T,LT,FT} <: AbstractSciMLOperator{T}
@@ -349,13 +351,47 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOr
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 """
-    L = AffineOperator(A, B, b; [update_func, update_func!, accepted_kwargs])
-    L(u) = A*u + B*b
+$SIGNATURES
 
-Represents a time-dependent affine operator. The update function is called
-by `update_coefficients!` and is assumed to have the following signature:
+Represents a generalized affine operation (`v = A * u + B * b`) that may
+be applied to an `AbstractVecOrMat`. The user-provided update functions,
+`update_func[!]` update the `AbstractVecOrMat` `b`, and are called during
+during operator evaluation (`L([v,], u, p, t)`), or by calls
+to `update_coefficients[!](L, u, p, t)`. The update functions are
+assumped to have the syntax
 
-    update_func(b::AbstractArray,u,p,t; <accepted kwargs>) -> [modifies b]
+    update_func(b::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> new_b
+or
+
+    update_func!(b::AbstractVecOrMat, u ,p , t; <accepted kwargs>) -> [modifies b]
+
+and `B`, `b` are expected to have an appropriate size so that
+`A * u + B * b` makes sense. Specifically, `size(A, 1) == size(B, 1)`, and
+`size(u, 2) == size(b, 2)`.
+
+The set of keyword-arguments accepted by `update_func[!]` must be provided
+to `AffineOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+`kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
+are not provided.
+
+# Example
+
+```
+u = rand(4)
+p = rand(4)
+t = rand()
+
+A = MatrixOperator(rand(4, 4))
+B = MatrixOperator(rand(4, 4))
+
+vec_update_func = (b, u, p, t) -> p * t
+L = AffineOperator(A, B, zero(4); update_func = vec_update_func)
+L = cache_operator(M, u)
+
+# update L and evaluate
+v = L(u, p, t) # == A * u + B * (p * t)
+```
+
 """
 struct AffineOperator{T,AT,BT,bT,C,F,F!} <: AbstractSciMLOperator{T}
     A::AT
@@ -405,8 +441,11 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
 end
 
 """
-    L = AddVector(b; [update_func, update_func!, accepted_kwargs])
-    L(u) = u + b
+$SIGNATURES
+
+Represents the affine operation `v = I * u + I * b`. The update functions,
+`update_func[!]` update the state of `AbstractVecOrMat ` `b`. see
+documentation of `AffineOperator` for more details.
 """
 function AddVector(b::AbstractVecOrMat;
                    update_func = DEFAULT_UPDATE_FUNC,
@@ -425,8 +464,11 @@ function AddVector(b::AbstractVecOrMat;
 end
 
 """
-    L = AddVector(B, b; [update_func, accepted_kwargs])
-    L(u) = u + B*b
+$SIGNATURES
+
+Represents the affine operation `v = I * u + B * b`. The update functions,
+`update_func[!]` update the state of `AbstractVecOrMat ` `b`. see
+documentation of `AffineOperator` for more details.
 """
 function AddVector(B, b::AbstractVecOrMat;
                    update_func = DEFAULT_UPDATE_FUNC,

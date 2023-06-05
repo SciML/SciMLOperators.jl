@@ -35,8 +35,8 @@ An `AbstractSciMLOperator` can be called like a function. This behaves
 like multiplication by the linear operator represented by the
 `AbstractSciMLOperator`. Possible signatures are
 
-- `L(du, u, p, t)` for in-place operator evaluation
-- `du = L(u, p, t)` for out-of-place operator evaluation
+- `L(v, u, p, t)` for in-place operator evaluation
+- `v = L(u, p, t)` for out-of-place operator evaluation
 
 Operator evaluation methods update its coefficients with `(u, p, t)`
 information using the `update_coefficients(!)` method. The methods
@@ -81,6 +81,7 @@ include("tensor.jl")
 export ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
+       InvertibleOperator,
        AffineOperator,
        AddVector,
        FunctionOperator,
