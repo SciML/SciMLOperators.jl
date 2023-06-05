@@ -103,25 +103,25 @@ end
 """
 $SIGNATURES
 
-Represents a linear scaling operator that may be applied to `Number`,
-`AbstractVecOrMat` subtypes. Its state is updated by the user-provided
+Represents a linear scaling operator that may be applied to a `Number`,
+or an `AbstractArray` subtype. Its state is updated by the user-provided
 `update_func` during operator evaluation (`L([v,] u, p, t)`), or by
 calls to `update_coefficients[!]`. Both recursively call the 
 update function, `update_func` which is assumed to have the signautre:
 
-    update_func(oldval::Number,u,p,t; <accepted kwargs>) -> newval
+    update_func(oldval::Number, u, p, t; <accepted kwargs>) -> newval
 
 The set of keyword-arguments accepted by `update_func` must be provided
-to `ScalarOperator` via the kwarg `accepted_kwargs` as a typle of `Symbol`s.
-`kwargs` may not be passed down to `update_func` if `accepted_kwargs`
+to `ScalarOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+`kwargs` cannot be passed down to `update_func` if `accepted_kwargs`
 are not provided.
 
 $(UPDATE_COEFFS_WARNING)
 
 # Interface
 
-Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`. the
-interface supports addition, subtraction, multiplication and division.
+Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`s. The
+interface supports lazy addition, subtraction, multiplication and division.
 
 # Example
 
@@ -135,12 +135,11 @@ val_update = (a, u, p, t; scale = 0.0) -> copy(scale)
 α = ScalarOperator(0.0; update_func = val_update; accepted_kwargs = (:scale,))
 β = 2 * α + 3 / α
 
-β(v, u, p, t; scale = 1.0)
+# update L out-of-place, and evaluate
+β(u, p, t; scale = 1.0)
 
-update_coefficients!(β, u, p, t; scale = 1.0)
-β * u
-lmul!(β, u)
-mul!(v, β, u)
+# update L in-place and evaluate
+β(v, u, p, t; scale = 1.0)
 ```
 """
 function ScalarOperator(val;
