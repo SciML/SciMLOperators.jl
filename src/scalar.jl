@@ -27,7 +27,7 @@ SCALINGCOMBINETYPES = (
 )
 
 Base.length(::AbstractSciMLScalarOperator) = 1
-Base.size(α::AbstractSciMLScalarOperator) = ()
+Base.size(::AbstractSciMLScalarOperator) = ()
 Base.adjoint(α::AbstractSciMLScalarOperator) = conj(α)
 Base.transpose(α::AbstractSciMLScalarOperator) = α
 
@@ -95,22 +95,53 @@ end
 
 Base.:+(α::AbstractSciMLScalarOperator) = α
 
-"""
-    ScalarOperator(val; [update_func, accepted_kwargs])
-
-    (α::ScalarOperator)(a::Number) = α * a
-
-Represents a time-dependent scalar/scaling operator. The update function
-is called by `update_coefficients`/ `update_coefficients!` and is assumed
-to have the following signature:
-
-    update_func(oldval,u,p,t; <accepted kwargs>) -> newval
-"""
 mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
     val::T
     update_func::F
 end
 
+"""
+$SIGNATURES
+
+Represents a linear scaling operator that may be applied to a `Number`,
+or an `AbstractArray` subtype. Its state is updated by the user-provided
+`update_func` during operator evaluation (`L([v,] u, p, t)`), or by
+calls to `update_coefficients[!]`. Both recursively call the 
+update function, `update_func` which is assumed to have the signautre:
+
+    update_func(oldval::Number, u, p, t; <accepted kwargs>) -> newval
+
+The set of keyword-arguments accepted by `update_func` must be provided
+to `ScalarOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+`kwargs` cannot be passed down to `update_func` if `accepted_kwargs`
+are not provided.
+
+$(UPDATE_COEFFS_WARNING)
+
+# Interface
+
+Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`s. The
+interface supports lazy addition, subtraction, multiplication and division.
+
+# Example
+
+```
+v = zero(4)
+u = rand(4)
+p = nothing
+t = 0.0
+
+val_update = (a, u, p, t; scale = 0.0) -> copy(scale)
+α = ScalarOperator(0.0; update_func = val_update; accepted_kwargs = (:scale,))
+β = 2 * α + 3 / α
+
+# update L out-of-place, and evaluate
+β(u, p, t; scale = 1.0)
+
+# update L in-place and evaluate
+β(v, u, p, t; scale = 1.0)
+```
+"""
 function ScalarOperator(val;
                         update_func = DEFAULT_UPDATE_FUNC,
                         accepted_kwargs = nothing,
@@ -128,6 +159,7 @@ ScalarOperator(α::AbstractSciMLScalarOperator) = α
 ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
+Base.show(io::IO, α::ScalarOperator) = print(io, "ScalarOperator($(α.val))")
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
     update_func = (oldval,u,p,t; kwargs...) -> α.update_func(oldval |> conj,u,p,t; kwargs...) |> conj
@@ -157,7 +189,9 @@ function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
 end
 
 """
-Lazy addition of Scalar Operators
+$TYPEDEF
+
+Lazy addition of `AbstractSciMLScalarOperator`s
 """
 struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
@@ -193,6 +227,15 @@ function Base.convert(T::Type{<:Number}, α::AddedScalarOperator)
     sum(convert.(T, α.ops))
 end
 
+function Base.show(io::IO, α::AddedScalarOperator)
+    print(io, "(")
+    show(io, α.ops[1])
+    for i in 2:length(α.ops)
+        print(io, " + ")
+        show(io, α.ops[i])
+    end
+    print(io, ")")
+end
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
 function update_coefficients(L::AddedScalarOperator, u, p, t)
@@ -209,7 +252,9 @@ has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
 has_ldiv!(α::AddedScalarOperator) = has_ldiv(α)
 
 """
-Lazy composition of Scalar Operators
+$TYPEDEF
+
+Lazy multiplication of `AbstractSciMLScalarOperator`s
 """
 struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
     ops::O
@@ -246,6 +291,15 @@ function Base.convert(T::Type{<:Number}, α::ComposedScalarOperator)
     prod(convert.(T, α.ops))
 end
 
+function Base.show(io::IO, α::ComposedScalarOperator)
+    print(io, "(")
+    show(io, α.ops[1])
+    for i in 2:length(α.ops)
+        print(io, " * ")
+        show(io, α.ops[i])
+    end
+    print(io, ")")
+end
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
 
@@ -263,12 +317,11 @@ has_ldiv(α::ComposedScalarOperator) = all(has_ldiv, α.ops)
 has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 
 """
-Lazy inversion of Scalar Operators
+$TYPEDEF
+
+Lazy inverse of `AbstractSciMLScalarOperator`s
+
 """
-#=
-Keeping with the style, we avoid use of the generic InvertedOperator and instead
-have a specialized type for this purpose that subtypes AbstractSciMLScalarOperator.
-=#
 struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
     λ::λType
 
@@ -276,6 +329,10 @@ struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
         new{T,typeof(λ)}(λ)
     end
 end
+#=
+Keeping with the style, we avoid use of the generic InvertedOperator and instead
+have a specialized type for this purpose that subtypes AbstractSciMLScalarOperator.
+=#
 Base.inv(L::AbstractSciMLScalarOperator) = InvertedScalarOperator(L)
 
 for op in (
@@ -304,6 +361,10 @@ function Base.convert(T::Type{<:Number}, α::InvertedScalarOperator)
     inv(convert(Number, α.λ))
 end
 
+function Base.show(io::IO, α::InvertedScalarOperator)
+    print(io, "1 / ")
+    show(io, α.λ)
+end
 Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
 
 function update_coefficients(L::InvertedScalarOperator, u, p, t)

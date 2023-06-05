@@ -7,7 +7,7 @@ include("pages.jl")
 
 makedocs(
     sitename="SciMLOperators.jl",
-    authors="Chris Rackauckas, Alex Jones, Vedant Puri",
+    authors="Vedant Puri, Alex Jones, Chris Rackauckas",
     modules=[SciMLOperators],
     clean=true,doctest=false,
     format = Documenter.HTML(analytics = "UA-90474609-3",

@@ -1,12 +1,60 @@
 #
 """
-    MatrixOperator(A; [update_func, update_func!, accepted_kwargs])
+$SIGNATURES
 
-Represents a time-dependent linear operator given by an AbstractMatrix. The
-update function is called by `update_coefficients!` and is assumed to have
-the following signature:
+Represents a linear operator given by an `AbstractMatrix` that may be
+applied to an `AbstractVecOrMat`. Its state is updated by the user-provided
+`update_func` during operator evaluation (`L([v,], u, p, t)`), or by calls
+to `update_coefficients[!](L, u, p, t)`. Both recursively call the
+`update_function`, `update_func` which is assumed to have the signature
 
-    update_func(A::AbstractMatrix,u,p,t; <accepted kwargs>) -> [modifies A]
+    update_func(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> newA
+or
+    update_func!(A::AbstractMatrix, u ,p , t; <accepted kwargs>) -> [modifies A]
+
+The set of keyword-arguments accepted by `update_func[!]` must be provided
+to `MatrixOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+`kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
+are not provided.
+
+$(UPDATE_COEFFS_WARNING)
+
+# Interface
+
+Lazy matrix algebra is defined for `AbstractSciMLOperator`s. The Interface
+supports lazy addition, subtraction, multiplication, inversion,
+adjoints, transposes.
+
+# Example
+
+```
+u = rand(4)
+p = rand(N, N)
+t = rand()
+
+mat_update = (A, u, p, t; scale = 0.0) -> t * p
+M = MatrixOperator(0.0; update_func = mat_update; accepted_kwargs = (:scale,))
+
+L = M * M + 3I
+L = cache_operator(M, u)
+
+# update L and evaluate
+v = L(u, p, t; scale = 1.0)
+```
+
+```
+v = zero(4)
+u = rand(4)
+p = nothing
+t = rand()
+
+mat_update! = (A, u, p, t; scale = 0.0) -> (copy!(A, p); lmul!(t, A))
+M = MatrixOperator(0.0; update_func! = val_update!; accepted_kwargs = (:scale,))
+L = M * M + 3I
+
+# update L in-place and evaluate
+L(v, u, p, t; scale = 1.0)
+```
 """
 struct MatrixOperator{T,AT<:AbstractMatrix{T},F,F!} <: AbstractSciMLOperator{T}
     A::AT
@@ -54,6 +102,10 @@ end
                           )
 islinear(::MatrixOperator) = true
 
+function Base.show(io::IO, L::MatrixOperator)
+    a, b = size(L)
+    print(io, "MatrixOperator($a × $b)")
+end
 Base.size(L::MatrixOperator) = size(L.A)
 Base.iszero(L::MatrixOperator) = iszero(L.A)
 for op in (
@@ -131,22 +183,37 @@ LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
 LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 
 """
-    DiagonalOperator(diag; [update_func, update_func!, accepted_kwargs])
+$SIGNATURES
 
-Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
-The update function is called by `update_coefficients!` and is assumed to have
-the following signature:
-
-    update_func(diag::AbstractVector,u,p,t; <accepted kwargs>) -> [modifies diag]
-
-When `diag` is an `AbstractVector` of length N, `L=DiagonalOpeator(diag, ...)`
-can be applied to `AbstractArray`s with `size(u, 1) == N`. Each column of the `u`
-will be scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
+Represents a elementwise scaling (diagonal-scaling) operation that may
+be applied to an `AbstractVecOrMat`. When `diag` is an `AbstractVector`
+of length N, `L = DiagonalOpeator(diag, ...)` can be applied to
+`AbstractArray`s with `size(u, 1) == N`. Each column of the `u` will be
+scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
 
 When `diag` is a multidimensional array, `L = DiagonalOperator(diag, ...)` forms
 an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of `diag`.
 `L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
 with leading length `size(u, 1) = N`.
+
+Its state is updated by the user-provided `update_func` during operator
+evaluation (`L([v,], u, p, t)`), or by calls to
+`update_coefficients[!](L, u, p, t)`. Both recursively call the
+`update_function`, `update_func` which is assumed to have the signature
+
+    update_func(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> new_diag
+or
+    update_func!(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> [modifies diag]
+
+The set of keyword-arguments accepted by `update_func[!]` must be provided
+to `MatrixOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+`kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
+are not provided.
+
+$(UPDATE_COEFFS_WARNING)
+
+# Example
+
 """
 function DiagonalOperator(diag::AbstractVector;
                           update_func = DEFAULT_UPDATE_FUNC,
@@ -167,6 +234,11 @@ function DiagonalOperator(diag::AbstractVector;
                   )
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
+
+function Base.show(io::IO, L::MatrixOperator{T,<:Diagonal}) where{T}
+    n = length(L.A.diag)
+    print(io, "DiagonalOperator($n × $n)")
+end
 
 const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ? LinearAlgebra.AdjointFactorization : Adjoint
 const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ? LinearAlgebra.TransposeFactorization : Transpose
@@ -219,6 +291,14 @@ end
 Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator) = convert(AbstractMatrix, L.L)
 
 # traits
+function Base.show(io::IO, L::InvertibleOperator)
+    print(io, "InvertibleOperator(")
+    show(io, L.L)
+    print(io, ", ")
+    show(io, L.F)
+    print(io, ")")
+end
+
 Base.size(L::InvertibleOperator) = size(L.L)
 Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.L), transpose(L.F))
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.L', L.F')
@@ -387,6 +467,21 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 
 islinear(::AffineOperator) = false
+
+function Base.show(io::IO, L::AffineOperator)
+    show(io, L.A)
+    print(io, " + ")
+    show(io, L.B)
+    print(io, " * ")
+
+    if L.b isa AbstractVector
+        n = size(L.b, 1)
+        print(io, "AbstractVector($n)")
+    elseif L.b isa AbstractMatrix
+        n, k = size(L.b)
+        print(io, "AbstractMatrix($n × $k)")
+    end
+end
 
 Base.size(L::AffineOperator) = size(L.A)
 Base.iszero(L::AffineOperator) = all(iszero, getops(L))

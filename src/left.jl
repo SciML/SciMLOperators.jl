@@ -40,6 +40,9 @@ end
 # fallback wrappers
 ###
 
+"""
+$TYPEDEF
+"""
 struct AdjointOperator{T,LType} <: AbstractSciMLOperator{T}
     L::LType
 
@@ -48,6 +51,9 @@ struct AdjointOperator{T,LType} <: AbstractSciMLOperator{T}
     end
 end
 
+"""
+$TYPEDEF
+"""
 struct TransposedOperator{T,LType} <: AbstractSciMLOperator{T}
     L::LType
 
@@ -67,6 +73,17 @@ islinear(L::TransposedOperator) = islinear(L.L)
 
 Base.transpose(L::AdjointOperator) = conj(L.L)
 Base.adjoint(L::TransposedOperator) = conj(L.L)
+
+function Base.show(io::IO, L::AdjointOperator)
+    show(io, L.L)
+    print(io, "'")
+end
+
+function Base.show(io::IO, L::TransposedOperator)
+    print(io, "transpose(")
+    show(io, L.L)
+    print(io, ")")
+end
 
 for (op, LType, VType) in (
                            (:adjoint,   :AdjointOperator,    :AbstractAdjointVecOrMat   ),

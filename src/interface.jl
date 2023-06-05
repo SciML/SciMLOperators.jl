@@ -7,8 +7,21 @@
 # Utilities for update functions
 ###
 
+"""
+$SIGNATURES
+
+The default update function for `AbstractSciMLOperator`s, a no-op that
+leaves the operator state unchanged.
+"""
 DEFAULT_UPDATE_FUNC(A,u,p,t) = A
 
+"""
+$SIGNATURES
+
+This type indicates to `preprocess_update_func` to not to filter keyword
+arguments. Required in implementation of lazy `Base.adjoint`,
+`Base.conj`, `Base.transpose`.
+"""
 struct NoKwargFilter end
 
 function preprocess_update_func(update_func, accepted_kwargs)
@@ -26,9 +39,90 @@ function update_func_isconstant(update_func)
     end
 end
 
-update_coefficients!(L,u,p,t; kwargs...) = nothing
-update_coefficients(L,u,p,t; kwargs...) = L
+const UPDATE_COEFFS_WARNING = """
+!!! warning
+    The user-provided `update_func[!]` must not use `u` in
+    its computation. Positional argument `(u, p, t)` to `update_func[!]` are
+    passed down by `update_coefficients[!](L, u, p, t)`, where `u` is the
+    input-vector to the composite `AbstractSciMLOperator`. For that reason,
+    the values of `u`, or even shape, may not correspond to the input
+    expected by `update_func[!]`. If an operator's state depends on its
+    input vector, then it is, by definition, a nonlinear operator.
+    We recommend sticking such nonlinearities in `FunctionOperator.`
+    This topic is further discussed in
+    (this issue)[https://github.com/SciML/SciMLOperators.jl/issues/159].
+"""
 
+"""
+Update the state of `L` based on `u`, input vector, `p` parameter object,
+`t`, and keyword arguments. Internally, `update_coefficients` calls the
+user-provided `update_func` method for every component operator in `L`
+with the positional arguments `(u, p, t)` and keyword arguments
+corresponding to the symbols provided to the operator via kwarg
+`accepted_kwargs`.
+
+This method is out-of-place, i.e. fully non-mutating and `Zygote`-compatible.
+
+$(UPDATE_COEFFS_WARNING)
+
+# Example
+
+```
+using SciMLOperator
+
+mat_update_func = (A, u, p, t; scale = 1.0) -> p * p' * scale * t
+
+M = MatrixOperator(zeros(4,4); update_func = mat_update_func,
+                   accepted_kwargs = (:state,))
+
+L = M + IdentityOperator(4)
+
+u = rand(4)
+p = rand(4)
+t = 1.0
+
+L = update_coefficients(L, u, p, t; scale = 2.0)
+L * u
+```
+
+"""
+update_coefficients
+
+"""
+Update in-place the state of `L` based on `u`, input vector, `p` parameter
+object, `t`, and keyword arguments. Internally, `update_coefficients!` calls
+the user-provided mutating `update_func!` method for every component operator
+in `L` with the positional arguments `(u, p, t)` and keyword arguments
+corresponding to the symbols provided to the operator via kwarg
+`accepted_kwargs`.
+
+$(UPDATE_COEFFS_WARNING)
+
+# Example
+
+```
+using SciMLOperator
+
+_A = rand(4, 4)
+mat_update_func! = (L, u, p, t; scale = 1.0) -> copy!(A, _A)
+
+M = MatrixOperator(zeros(4,4); update_func! = mat_update_func!)
+
+L = M + IdentityOperator(4)
+
+u = rand(4)
+p = rand(4)
+t = 1.0
+
+update_coefficients!(L, u, p, t)
+L * u
+```
+
+"""
+update_coefficients!
+
+update_coefficients(L,u,p,t; kwargs...) = L
+update_coefficients!(L,u,p,t; kwargs...) = nothing
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
@@ -52,6 +146,11 @@ end
 
 getops(L) = ()
 
+"""
+$SIGNATURES
+
+Checks whether `L` has preallocated caches for inplace evaluations.
+"""
 function iscached(L::AbstractSciMLOperator)
 
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
@@ -75,12 +174,9 @@ iscached(::Union{
         ) = true
 
 """
-Allocate caches for a SciMLOperator for fast evaluation
+$SIGNATURES
 
-arguments:
-    L :: AbstractSciMLOperator
-    in :: AbstractVecOrMat input prototype to L
-    out :: (optional) AbstractVecOrMat output prototype to L
+Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
 """
 function cache_operator end
 
@@ -141,6 +237,11 @@ has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
 ### Extra standard assumptions
 
+"""
+$SIGNATURES
+
+Checks if an operator's state is constant or not.
+"""
 isconstant(::Union{
                    # LinearAlgebra
                    AbstractMatrix,
@@ -155,6 +256,11 @@ isconstant(::Union{
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 
 #islinear(L) = false
+"""
+$SIGNATURES
+
+Checks whether operator is linear or not.
+"""
 islinear(::AbstractSciMLOperator) = false
 
 islinear(::Union{

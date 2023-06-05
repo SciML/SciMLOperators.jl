@@ -1,5 +1,30 @@
 # The AbstractSciMLOperator Interface
 
+## Interface
+
+```@docs
+update_coefficients
+update_coefficients!
+cache_operator
+```
+
+## Traits
+
+```@docs
+isconstant
+iscached
+issquare
+islinear
+has_adjoint
+has_expmv
+has_expmv!
+has_exp
+has_mul
+has_mul!
+has_ldiv
+has_ldiv!
+```
+
 ## Formal Properties of SciMLOperators
 
 These are the formal properties that an `AbstractSciMLOperator` should obey

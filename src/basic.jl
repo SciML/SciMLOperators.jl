@@ -1,5 +1,7 @@
 """
 $(TYPEDEF)
+
+Operator representing the identity function `id(u) = u`
 """
 struct IdentityOperator <: AbstractSciMLOperator{Bool}
     len::Int
@@ -17,6 +19,7 @@ end
 Base.convert(::Type{AbstractMatrix}, ii::IdentityOperator) = Diagonal(ones(Bool, ii.len))
 
 # traits
+Base.show(io::IO, ii::IdentityOperator) = print(io, "IdentityOperator($(ii.len))")
 Base.size(ii::IdentityOperator) = (ii.len, ii.len)
 Base.adjoint(A::IdentityOperator) = A
 Base.transpose(A::IdentityOperator) = A
@@ -94,6 +97,8 @@ end
 
 """
 $(TYPEDEF)
+
+Operator representing the null function `n(u) = 0 * u`
 """
 struct NullOperator <: AbstractSciMLOperator{Bool}
     len::Int
@@ -111,6 +116,7 @@ end
 Base.convert(::Type{AbstractMatrix}, nn::NullOperator) = Diagonal(zeros(Bool, nn.len))
 
 # traits
+Base.show(io::IO, nn::NullOperator) = print(io, "NullOperator($(nn.len))")
 Base.size(nn::NullOperator) = (nn.len, nn.len)
 Base.adjoint(A::NullOperator) = A
 Base.transpose(A::NullOperator) = A
@@ -174,6 +180,8 @@ for op in (
 end
 
 """
+$TYPEDEF
+
     ScaledOperator
 
     (λ L)*(u) = λ * L(u)
@@ -223,6 +231,11 @@ Base.convert(::Type{AbstractMatrix}, L::ScaledOperator) = convert(Number,L.λ) *
 SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
+function Base.show(io::IO, L::ScaledOperator{T}) where{T}
+    show(io, L.λ)
+    print(io, " * ")
+    show(io, L.L)
+end
 Base.size(L::ScaledOperator) = size(L.L)
 for op in (
            :adjoint,
@@ -378,6 +391,15 @@ Base.convert(::Type{AbstractMatrix}, L::AddedOperator) = sum(op -> convert(Abstr
 SparseArrays.sparse(L::AddedOperator) = sum(sparse, L.ops)
 
 # traits
+function Base.show(io::IO, L::AddedOperator)
+    print(io, "(")
+    show(io, L.ops[1])
+    for i in 2:length(L.ops)
+        print(io, " + ")
+        show(io, L.ops[i])
+    end
+    print(io, ")")
+end
 Base.size(L::AddedOperator) = size(first(L.ops))
 for op in (
            :adjoint,
@@ -521,6 +543,15 @@ Base.convert(::Type{AbstractMatrix}, L::ComposedOperator) = prod(op -> convert(A
 SparseArrays.sparse(L::ComposedOperator) = prod(sparse, L.ops)
 
 # traits
+function Base.show(io::IO, L::ComposedOperator)
+    print(io, "(")
+    show(io, L.ops[1])
+    for i in 2:length(L.ops)
+        print(io, " * ")
+        show(io, L.ops[i])
+    end
+    print(io, ")")
+end
 Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops),2))
 for op in (
            :adjoint,
@@ -709,6 +740,10 @@ Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 
 Base.convert(::Type{AbstractMatrix}, L::InvertedOperator) = inv(convert(AbstractMatrix, L.L))
 
+function Base.show(io::IO, L::InvertedOperator)
+    print(io, "1 / ")
+    show(io, L.L)
+end
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
 Base.transpose(L::InvertedOperator) = InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
 Base.adjoint(L::InvertedOperator) = InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)

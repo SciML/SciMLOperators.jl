@@ -3,22 +3,32 @@
 ## Direct Operator Definitions
 
 ```@docs
-ScalarOperator
+ScalarOperator.IdentityOperator
 SciMLOperators.NullOperator
+ScalarOperator
 MatrixOperator
 DiagonalOperator
 AffineOperator
+AddVector
 FunctionOperator
+TensorProductOperator
 ```
 
-## Lazy Operator Compositions
+## Lazy Scalar Operator Combination
+
+```@docs
+SciMLOperators.AddedScalarOperator
+SciMLOperators.ComposedScalarOperator
+SciMLOperators.InvertedScalarOperator
+```
+## Lazy Operator Combination
 
 ```@docs
 SciMLOperators.ScaledOperator
-SciMLOperators.ComposedOperator
 SciMLOperators.AddedOperator
+SciMLOperators.ComposedOperator
 SciMLOperators.InvertedOperator
 SciMLOperators.InvertibleOperator
-SciMLOperators.AdjointedOperator
+SciMLOperators.AdjointOperator
 SciMLOperators.TransposedOperator
 ```

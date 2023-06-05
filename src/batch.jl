@@ -39,6 +39,10 @@ function DiagonalOperator(u::AbstractArray;
 end
 
 # traits
+function Base.show(io::IO, L::BatchedDiagonalOperator)
+    n, k = size(L.diag)
+    print(io, "BatchedDiagonalOperator($n × $n, k = $k)")
+end
 Base.size(L::BatchedDiagonalOperator) = (N = size(L.diag, 1); (N, N))
 Base.iszero(L::BatchedDiagonalOperator) = iszero(L.diag)
 Base.transpose(L::BatchedDiagonalOperator) = L

@@ -1,6 +1,8 @@
 #
 """
-    Matrix free operators (given by a function)
+Matrix free operators (given by a function)
+
+$(FIELDS)
 """
 mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
@@ -85,6 +87,9 @@ function FunctionOperator(op,
 end
 
 # TODO: document constructor and revisit design as needed (e.g. for "accepted_kwargs")
+"""
+$(SIGNATURES)
+"""
 function FunctionOperator(op,
                           input::AbstractVecOrMat,
                           output::AbstractVecOrMat = input;
@@ -254,6 +259,10 @@ function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMa
     L
 end
 
+function Base.show(io::IO, L::FunctionOperator)
+    a, b = size(L)
+    print(io, "FunctionOperator($a × $b)")
+end
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator)
 
