@@ -1,13 +1,19 @@
 #
 """
-    Lazy Tensor Product Operator
+$SIGNATURES
 
-    TensorProductOperator(A, B) = A ⊗ B
+Computes the lazy pairwise Kronecker product, or tensor product,
+operator of `AbstractMatrix`, and `AbstractSciMLOperator` subtypes.
+Calling `⊗(ops...)` is equivalent to `Base.kron(ops...)`. Fast
+operator evaluation is performed without forming the full tensor
+product operator.
 
-    (A ⊗ B)(u) = vec(B * U * transpose(A))
+```
+TensorProductOperator(A, B) = A ⊗ B
 
-    where U is a lazy representation of the vector u as
-    a matrix with the appropriate size.
+(A ⊗ B)(u) = vec(B * reshape(u, M, N) * transpose(A))
+```
+where `M = size(B, 2)`, and `N = size(A, 2)`
 """
 struct TensorProductOperator{T,O,C} <: AbstractSciMLOperator{T}
     ops::O
@@ -45,7 +51,22 @@ TensorProductOperator(op::AbstractSciMLOperator) = op
 TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator) = IdentityOperator(ii1.len * ii2.len)
 
-# overload ⊗ (\otimes)
+"""
+$SIGNATURES
+
+Computes the lazy pairwise Kronecker product, or tensor product,
+operator of `AbstractMatrix`, and `AbstractSciMLOperator` subtypes.
+Calling `⊗(ops...)` is equivalent to `Base.kron(ops...)`. Fast
+operator evaluation is performed without forming the full tensor
+product operator.
+
+```
+TensorProductOperator(A, B) = A ⊗ B
+
+(A ⊗ B)(u) = vec(B * reshape(u, M, N) * transpose(A))
+```
+where `M = size(B, 2)`, and `N = size(A, 2)`
+"""
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
 # TODO - overload Base.kron for tensor product operators

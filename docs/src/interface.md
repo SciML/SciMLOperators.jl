@@ -1,6 +1,155 @@
-# The AbstractSciMLOperator Interface
+# The `AbstractSciMLOperator` Interface
 
-## Interface
+## Formal Properties of SciMLOperators
+
+These are the formal properties that an `AbstractSciMLOperator` should obey
+for it to work in the solvers.
+
+1. An `AbstractSciMLOperator` represents a linear or nonlinear operator with input/output
+   being `AbstractArray`s. Specifically, a SciMLOperator, `L`, of size `(M, N)` accepts
+   input argument `u` with leading length `N`, i.e. `size(u, 1) == N`, and returns an
+   `AbstractArray` of the same dimension with leading length `M`, i.e. `size(L * u, 1) == M`.
+2. SciMLOperators can be applied to an `AbstractArray` via overloaded `Base.*`, or
+   the in-place `LinearAlgebra.mul!`. Additionally, operators are allowed to be time,
+   or parameter dependent. The state of a SciMLOperator can be updated by calling
+   the mutating function `update_coefficients!(L, u, p, t)` where `p` representes
+   parameters, and `t`, time.  Calling a SciMLOperator as `L(du, u, p, t)` or out-of-place
+   `L(u, p, t)` will automatically update the state of `L` before applying it to `u`.
+   `L(u, p, t)` is the same operation as `L(u, p, t) * u`.
+3. To support the update functionality, we have lazily implemented a comprehensive operator
+   algebra. That means a user can add, subtract, scale, compose and invert SciMLOperators,
+   and the state of the resultant operator would be updated as expected upon calling
+   `L(du, u, p, t)` or `L(u, p, t)` so long as an update function is provided for the
+   component operators.
+
+## Overloaded Traits
+
+Thanks to overloads defined for evaluation methods and traits in
+`Base`, `LinearAlgebra`, the behaviour of a `SciMLOperator` is
+indistinguishable from an `AbstractMatrix`. These operators can be
+passed to linear solver packages, and even to ordinary differential
+equation solvers. The list of overloads to the `AbstractMatrix`
+interface include, but are not limited, the following:
+
+- `Base: size, zero, one, +, -, *, /, \, ∘, inv, adjoint, transpose, convert`
+- `LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, issymmetric, ishermitian, isposdef`
+- `SparseArrays: sparse, issparse`
+
+## Multidimension arrays and batching
+
+SciMLOperator can also be applied to `AbstractMatrix` subtypes where
+operator-evaluation is done column-wise.
+
+```julia
+K = 10
+u_mat = rand(N, K)
+
+v_mat = F(u_mat, p, t) # == mul!(v_mat, F, u_mat)
+size(v_mat) == (N, K) # true
+```
+
+`L#` can also be applied to `AbstractArray`s that are not
+`AbstractVecOrMat`s so long as their size in the first dimension is appropriate
+for matrix-multiplication. Internally, `SciMLOperator`s reshapes an
+`N`-dimensional array to an `AbstractMatrix`, and applies the operator via
+matrix-multiplication.
+
+## Operator update
+
+This package can also be used to write time-dependent, and
+parameter-dependent operators, whose state can be updated per
+a user-defined function.
+The updates can be done in-place, i.e. by mutating the object,
+or out-of-place, i.e. in a non-mutating, `Zygote`-compatible way.
+
+For example,
+
+```julia
+u = rand(N)
+p = rand(N)
+t = rand()
+
+# out-of-place update
+mat_update_func = (A, u, p, t) -> t * (p * p')
+sca_update_func = (a, u, p, t) -> t * sum(p)
+
+M = MatrixOperator(zero(N, N); update_func = mat_update_func)
+α = ScalarOperator(zero(Float64); update_func = sca_update_func)
+
+L = α * M
+L = cache_operator(L, u)
+
+# L is initialized with zero state
+L * u == zeros(N) # true
+
+# update operator state with `(u, p, t)`
+L = update_coefficients(L, u, p, t)
+# and multiply
+L * u != zeros(N) # true
+
+# updates state and evaluates L at (u, p, t)
+L(u, p, t) != zeros(N) # true
+```
+
+The out-of-place evaluation function `L(u, p, t)` calls
+`update_coefficients` under the hood, which recursively calls
+the `update_func` for each component `SciMLOperator`.
+Therefore the out-of-place evaluation function is equivalent to
+calling `update_coefficients` followed by `Base.*`. Notice that
+the out-of-place evaluation does not return the updated operator.
+
+On the other hand,, the in-place evaluation function, `L(v, u, p, t)`,
+mutates `L`, and is equivalent to calling `update_coefficients!`
+followed by `mul!`. The in-place update behaviour works the same way
+with a few `<!>`s appended here and there. For example,
+
+```julia
+v = rand(N)
+u = rand(N)
+p = rand(N)
+t = rand()
+
+# in-place update
+_A = rand(N, N)
+_d = rand(N)
+mat_update_func!  = (A, u, p, t) -> (copy!(A, _A); lmul!(t, A); nothing)
+diag_update_func! = (diag, u, p, t) -> copy!(diag, N)
+
+M = MatrixOperator(zero(N, N); update_func! = mat_update_func!)
+D = DiagonalOperator(zero(N); update_func! = diag_update_func!)
+
+L = D * M
+L = cache_operator(L, u)
+
+# L is initialized with zero state
+L * u == zeros(N) # true
+
+# update L in-place
+update_coefficients!(L, u, p, t)
+# and multiply
+mul!(v, u, p, t) != zero(N) # true
+
+# updates L in-place, and evaluates at (u, p, t)
+L(v, u, p, t) != zero(N) # true
+```
+
+The update behaviour makes this package flexible enough to be used
+in `OrdianryDiffEq`. As the parameter object `p` is often reserved
+for sensitivy computation via automatic-differentiation, a user may
+prefer to pass in state information via other arguments. For that
+reason, we allow for update functions with arbitrary keyword arguments.
+
+```julia
+mat_update_func = (A, u, p, t; scale = 0.0) -> scale * (p * p')
+
+M = MatrixOperator(zero(N, N); update_func = mat_update_func,
+                   accepted_kwargs = (:state,))
+
+M(u, p, t) == zeros(N) # true
+M(u, p, t; scale = 1.0) != zero(N)
+```
+
+## Interface API Reference
 
 ```@docs
 update_coefficients
@@ -24,40 +173,6 @@ has_mul!
 has_ldiv
 has_ldiv!
 ```
-
-## Formal Properties of SciMLOperators
-
-These are the formal properties that an `AbstractSciMLOperator` should obey
-for it to work in the solvers.
-
-1. An `AbstractSciMLOperator` represents a linear or nonlinear operator with input/output
-   being `AbstractArray`s. Specifically, a SciMLOperator, `L`, of size `(M,N)` accepts
-   input argument `u` with leading length `N`, i.e. `size(u, 1) == N`, and returns an
-   `AbstractArray` of the same dimension with leading length `M`, i.e. `size(L * u, 1) == M`.
-2. SciMLOperators can be applied to an `AbstractArray` via overloaded `Base.*`, or
-   the in-place `LinearAlgebra.mul!`. Additionally, operators are allowed to be time,
-   or parameter dependent. The state of a SciMLOperator can be updated by calling
-   the mutating function `update_coefficients!(L, u, p, t)` where `p` representes
-   parameters, and `t`, time.  Calling a SciMLOperator as `L(du, u, p, t)` or out-of-place
-   `L(u, p, t)` will automatically update the state of `L` before applying it to `u`.
-   `L(u, p, t)` is the same operation as `L(u, p, t) * u`.
-3. To support the update functionality, we have lazily implemented a comprehensive operator
-   algebra. That means a user can add, subtract, scale, compose and invert SciMLOperators,
-   and the state of the resultant operator would be updated as expected upon calling
-   `L(du, u, p, t)` or `L(u, p, t)` so long as an update function is provided for the
-   component operators.
-
-## AbstractSciMLOperator Interface Description
-
-1. `AbstractSciMLLinearOperator <: AbstractSciMLOperator`
-2. `AbstractSciMLScalarOperator <: AbstractSciMLLinearOperator`
-3. `isconstant(A)` trait for whether the operator is constant or not.
-4. Optional: `exp(A)`. Required for simple exponential integration.
-5. Optional: `expv(A,u,t) = exp(t*A)*u` and `expv!(v,A::AbstractSciMLOperator,u,t)`
-   Required for sparse-saving exponential integration.
-6. Optional: factorizations. `ldiv!`, `factorize` et. al. This is only required
-   for algorithms which use the factorization of the operator (Crank-Nicolson),
-   and only for when the default linear solve is used.
 
 ## Note About Affine Operators
 
