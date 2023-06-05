@@ -1,6 +1,6 @@
 #
 """
-$SIGNAUTRES
+$SIGNATURES
 
 Computes the lazy pairwise Kronecker product, or tensor product,
 operator of `AbstractMatrix`, and `AbstractSciMLOperator` subtypes.
@@ -52,7 +52,7 @@ TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator) = IdentityOperator(ii1.len * ii2.len)
 
 """
-$SIGNAUTRES
+$SIGNATURES
 
 Computes the lazy pairwise Kronecker product, or tensor product,
 operator of `AbstractMatrix`, and `AbstractSciMLOperator` subtypes.
