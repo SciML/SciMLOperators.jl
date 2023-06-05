@@ -69,8 +69,18 @@ where `M = size(B, 2)`, and `N = size(A, 2)`
 """
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
-# TODO - overload Base.kron for tensor product operators
-#Base.kron(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
+"""
+$SIGNATURES
+
+Construct a lazy representation of the Kronecker product `A ⊗ B`. One of the
+two factors can be an `AbstractMatrix`, which is then promoted to a
+`MatrixOperator` automatically. To avoid fallback to the generic
+[`Base.kron`](@ref), at least one of `A` and `B` must be an
+`AbstractSciMLOperator`.
+"""
+Base.kron(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = TensorProductOperator(A, B)
+Base.kron(A::AbstractMatrix, B::AbstractSciMLOperator) = TensorProductOperator(A, B)
+Base.kron(A::AbstractSciMLOperator, B::AbstractMatrix) = TensorProductOperator(A, B)
 
 # convert to matrix
 Base.kron(ops::AbstractSciMLOperator...) = kron(convert.(AbstractMatrix, ops)...)
