@@ -173,7 +173,7 @@ function FunctionOperator(op,
 
     # store eltype of input/output for caching with ComposedOperator.
     eltypes = eltype.((input, output))
-    sz = (size(output, 1), size(input, 1))
+    sz = (length(output), length(input))
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
 
