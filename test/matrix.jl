@@ -1,7 +1,7 @@
 using SciMLOperators, LinearAlgebra
 using Random
 
-using SciMLOperators: InvertibleOperator, InvertedOperator, ⊗
+using SciMLOperators: InvertibleOperator, InvertedOperator, ⊗, AbstractSciMLOperator
 using FFTW
 
 Random.seed!(0)
@@ -262,6 +262,18 @@ for square in [false, true] #for K in [1, K]
 
     AB  = kron(A, B)
     ABC = kron(A, B, C)
+
+    # test Base.kron overload
+    # ensure kron(mat, mat) is not a TensorProductOperator
+    @test !isa(AB, AbstractSciMLOperator)
+    @test !isa(ABC, AbstractSciMLOperator)
+
+    # test Base.kron overload
+    _A = rand(N, N)
+    @test kron(_A, MatrixOperator(_A)) isa TensorProductOperator
+    @test kron(MatrixOperator(_A), _A) isa TensorProductOperator
+
+    @test kron(MatrixOperator(_A), MatrixOperator(_A)) isa TensorProductOperator
 
     # Inputs
     u2 = rand(n1*n2, K)
