@@ -101,7 +101,24 @@ K = 12
 end
 
 @testset "Batch FunctionOperator" begin
-       # out of place
+    u = rand(N,K)
+    p = nothing
+    t = 0.0
+    α = rand()
+    β = rand()
+
+    A = rand(N,N) |> Symmetric
+    F = lu(A)
+    Ai = inv(A)
+
+    f1(u, p, t)  = A * u
+    f1i(u, p, t) = A \ u
+
+    f2(du, u, p, t)  = mul!(du, A, u)
+    f2(du, u, p, t, α, β)  = mul!(du, A, u, α, β)
+    f2i(du, u, p, t) = ldiv!(du, F, u)
+    f2i(du, u, p, t, α, β) = mul!(du, Ai, u, α, β)
+   # out of place
     op1 = FunctionOperator(f1, u, A*u;
 
                            op_inverse=f1i,
