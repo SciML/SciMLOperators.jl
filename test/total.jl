@@ -31,6 +31,8 @@ K = 12
                            islinear=true,
                           )
 
+    @test size(ftr) == (length(k), length(x))
+
     # derivative test
     ik = im * DiagonalOperator(k)
     Dx = ftr \ ik * ftr

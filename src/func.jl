@@ -80,12 +80,12 @@ and optionally
 
     op(v, u, p, t, α, β; <accepted_kwargs>) -> [modifies v]
 
-where `u`, `v` are `AbstractVecOrMat`s, `p` is a parameter object, and
+where `u`, `v` are `AbstractArray`s, `p` is a parameter object, and
 `t`, `α`, `β` are scalars. The first signautre corresponds to applying
 the operator with `Base.*`, and the latter two correspond to the
 three-argument, and the five-argument `mul!` respectively.
 
-`input` and `output` prototype `AbstractVecOrMat`s are required for
+`input` and `output` prototype `AbstractArray`s are required for
 determining operator traits such as `eltype`, `size`, and for
 preallocating cache. If `output` array is not provided, the output
 is assumed to be of the same type and share as the input.
@@ -120,8 +120,8 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `isposdef` - `true` if the operator is linear and positive-definite. Defaults to `false`.
 """
 function FunctionOperator(op,
-                          input::AbstractVecOrMat,
-                          output::AbstractVecOrMat = input;
+                          input::AbstractArray,
+                          output::AbstractArray = input;
 
                           op_adjoint=nothing,
                           op_inverse=nothing,
@@ -294,7 +294,7 @@ function iscached(L::FunctionOperator)
     !isnothing(L.cache)
 end
 
-function cache_self(L::FunctionOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+function cache_self(L::FunctionOperator, u::AbstractArray, v::AbstractArray)
     !L.traits.ifcache && @debug """Cache is being allocated for a FunctionOperator
         created with kwarg ifcache = false."""
     @set! L.cache = zero.((u, v))
@@ -432,35 +432,35 @@ has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 # operator application
-function Base.:*(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
+function Base.:*(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
     L.op(u, L.p, L.t; L.traits.kwargs...)
 end
 
-function Base.:\(L::FunctionOperator{iip,true}, u::AbstractVecOrMat) where{iip}
+function Base.:\(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
     L.op_inverse(u, L.p, L.t; L.traits.kwargs...)
 end
 
-function Base.:*(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
+function Base.:*(L::FunctionOperator{true,false}, u::AbstractArray)
     _, co = L.cache
     du = zero(co)
     L.op(du, u, L.p, L.t; L.traits.kwargs...)
 end
 
-function Base.:\(L::FunctionOperator{true,false}, u::AbstractVecOrMat)
+function Base.:\(L::FunctionOperator{true,false}, u::AbstractArray)
     ci, _ = L.cache
     du = zero(ci)
     L.op_inverse(du, u, L.p, L.t; L.traits.kwargs...)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
+function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
     L.op(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat, args...)
+function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray, args...)
     @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, false}, u::AbstractVecOrMat, α, β) where{oop}
+function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, false}, u::AbstractArray, α, β) where{oop}
     _, co = L.cache
 
     copy!(co, v)
@@ -469,25 +469,25 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, 
     axpy!(β, co, v)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::FunctionOperator{true, oop, true}, u::AbstractVecOrMat, α, β) where{oop}
+function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true}, u::AbstractArray, α, β) where{oop}
     L.op(v, u, L.p, L.t, α, β; L.traits.kwargs...)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{true}, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
     L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
-function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractArray)
     ci, _ = L.cache
     copy!(ci, u)
     ldiv!(u, L, ci)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::FunctionOperator{false}, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray)
     @error "LinearAlgebra.ldiv! not defined for out-of-place FunctionOperators"
 end
 
-function LinearAlgebra.ldiv!(L::FunctionOperator{false}, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(L::FunctionOperator{false}, u::AbstractArray)
     @error "LinearAlgebra.ldiv! not defined for out-of-place FunctionOperators"
 end
 #
