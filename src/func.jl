@@ -120,6 +120,7 @@ function `adjoint_inverse`. All are assumed to have the same calling signature a
 below traits.
 
 ## Traits
+
 Keyword arguments are used to set operator traits, which are assumed to be
 uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 
@@ -132,6 +133,7 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
 * `isconstant` - `true` if the operator is constant, and doesn't need to be updated via `update_coefficients[!]` during operator evaluation.
 * `islinear` - `true` if the operator is linear. Defaults to `false`.
+* `batch` - Boolean indicating if the input/output arrays comprise of batched vectors. If `true`, the last dimension of input/output arrays is considered to be the batch dimension and is not involved in size computation. For example, let `size(output), size(input) = (M, K), (N, K)`. If `batch = true`, then the second dimension is assumed to be the batch dimension, and the `size(F::FunctionOperator) = (M, N)`. If `batch = false`, then `size(F::FunctionOperator) = (M * K, M * K)`.
 * `ifcache` - Allocate cache arrays in constructor. Defaults to `true`. Cache can be generated afterwards by calling `cache_operator(L, input, output)`
 * `cache` - Pregenerated cache arrays for in-place evaluations. Expected to be of type and shape `(similar(input), similar(output),)`. The constructor generates cache if no values are provided. Cache generation by the constructor can be disabled by setting the kwarg `ifcache = false`.
 * `opnorm` - The norm of `op`. Can be a `Number`, or function `opnorm(p::Integer)`. Defaults to `nothing`.
@@ -159,6 +161,7 @@ function FunctionOperator(op,
                           isconstant::Bool = false,
                           islinear::Bool = false,
 
+                          batch::Bool = false,
                           ifcache::Bool = true,
                           cache::Union{Nothing, NTuple{2}}=nothing,
 
@@ -171,9 +174,21 @@ function FunctionOperator(op,
 
     # store eltype of input/output for caching with ComposedOperator.
     eltypes = eltype.((input, output))
-    sz = (size(output, 1), size(input, 1))
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
+
+    @assert ndims(output) == ndims(input) """input/output arrays,
+    ($(typeof(input)), $(typeof(output))) provided to FunctionOperator
+    do not have the same number of dimensions."""
+
+    _size = if batch
+        # assume batches are in the last dimension
+        sz_in = size(input)[1:end-1] |> prod
+        sz_out = size(output)[1:end-1] |> prod
+        (sz_out, sz_in)
+    else
+        (length(output), length(input))
+    end
 
     isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
@@ -235,7 +250,7 @@ function FunctionOperator(op,
               has_mul5 = has_mul5,
               ifcache = ifcache,
               T = T,
-              size = sz,
+              size = _size,
               eltypes = eltypes,
               accepted_kwargs = accepted_kwargs,
               kwargs = Dict{Symbol, Any}(),
