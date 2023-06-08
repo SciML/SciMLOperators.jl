@@ -35,24 +35,24 @@ has_mul!(::AbstractSciMLScalarOperator) = true
 islinear(::AbstractSciMLScalarOperator) = true
 has_adjoint(::AbstractSciMLScalarOperator) = true
 
-Base.:*(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) * u
-Base.:\(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = convert(Number, α) \ u
+Base.:*(α::AbstractSciMLScalarOperator, u::AbstractArray) = convert(Number, α) * u
+Base.:\(α::AbstractSciMLScalarOperator, u::AbstractArray) = convert(Number, α) \ u
 
-LinearAlgebra.rmul!(u::AbstractVecOrMat, α::AbstractSciMLScalarOperator) = rmul!(u, convert(Number, α))
-LinearAlgebra.lmul!(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = lmul!(convert(Number, α), u)
-LinearAlgebra.ldiv!(α::AbstractSciMLScalarOperator, u::AbstractVecOrMat) = ldiv!(convert(Number, α), u)
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat)
+LinearAlgebra.rmul!(u::AbstractArray, α::AbstractSciMLScalarOperator) = rmul!(u, convert(Number, α))
+LinearAlgebra.lmul!(α::AbstractSciMLScalarOperator, u::AbstractArray) = lmul!(convert(Number, α), u)
+LinearAlgebra.ldiv!(α::AbstractSciMLScalarOperator, u::AbstractArray) = ldiv!(convert(Number, α), u)
+function LinearAlgebra.ldiv!(v::AbstractArray, α::AbstractSciMLScalarOperator, u::AbstractArray)
     ldiv!(v, convert(Number, α), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, α::AbstractSciMLScalarOperator, u::AbstractVecOrMat)
+function LinearAlgebra.mul!(v::AbstractArray, α::AbstractSciMLScalarOperator, u::AbstractArray)
     x = convert(Number, α)
     mul!(v, x, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(v::AbstractArray,
                             α::AbstractSciMLScalarOperator,
-                            u::AbstractVecOrMat,
+                            u::AbstractArray,
                             a::Union{Number,AbstractSciMLScalarOperator},
                             b::Union{Number,AbstractSciMLScalarOperator})
     α = convert(Number, α)
@@ -62,32 +62,32 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat,
 end
 
 function LinearAlgebra.axpy!(α::AbstractSciMLScalarOperator,
-                             x::AbstractVecOrMat,
-                             y::AbstractVecOrMat)
+                             x::AbstractArray,
+                             y::AbstractArray)
     α = convert(Number, α)
     axpy!(α, x, y)
 end
 
 function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
-                              x::AbstractVecOrMat,
+                              x::AbstractArray,
                               β::Number,
-                              y::AbstractVecOrMat)
+                              y::AbstractArray)
     α = convert(Number, α)
     axpby!(α, x, β, y)
 end
 
 function LinearAlgebra.axpby!(α::Number,
-                              x::AbstractVecOrMat,
+                              x::AbstractArray,
                               β::AbstractSciMLScalarOperator,
-                              y::AbstractVecOrMat)
+                              y::AbstractArray)
     β = convert(Number, β)
     axpby!(α, x, β, y)
 end
 
 function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
-                              x::AbstractVecOrMat,
+                              x::AbstractArray,
                               β::AbstractSciMLScalarOperator,
-                              y::AbstractVecOrMat)
+                              y::AbstractArray)
     α = convert(Number, α)
     β = convert(Number, β)
     axpby!(α, x, β, y)
