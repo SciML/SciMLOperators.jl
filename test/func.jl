@@ -63,14 +63,14 @@ K = 12
 
     @test op1' === op1
 
-    @test size(op1) == (N,N)
+    @test size(op1) == (N*K,N*K)
     @test has_adjoint(op1)
     @test has_mul(op1)
     @test !has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
-    @test size(op2) == (N,N)
+    @test size(op2) == (N*K,N*K)
     @test has_adjoint(op2)
     @test has_mul(op2)
     @test has_mul!(op2)
@@ -98,6 +98,64 @@ K = 12
 
     v = rand(N,K); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
     v = copy(u);   @test A \ v ≈ ldiv!(op2, u)
+end
+
+@testset "Batch FunctionOperator" begin
+       # out of place
+    op1 = FunctionOperator(f1, u, A*u;
+
+                           op_inverse=f1i,
+
+                           ifcache = false,
+                           batch = true,
+                           islinear=true,
+                           opnorm=true,
+                           issymmetric=true,
+                           ishermitian=true,
+                           isposdef=true,
+                          )
+
+    # in place
+    op2 = FunctionOperator(f2, u, A*u;
+
+                           op_inverse=f2i,
+
+                           ifcache = false,
+                           batch = true,
+                           islinear=true,
+                           opnorm=true,
+                           issymmetric=true,
+                           ishermitian=true,
+                           isposdef=true,
+                          )
+
+    @test issquare(op1)
+    @test issquare(op2)
+
+    @test islinear(op1)
+    @test islinear(op2)
+
+    @test op1' === op1
+
+    @test size(op1) == (N,N)
+    @test has_adjoint(op1)
+    @test has_mul(op1)
+    @test !has_mul!(op1)
+    @test has_ldiv(op1)
+    @test !has_ldiv!(op1)
+
+    @test size(op2) == (N,N)
+    @test has_adjoint(op2)
+    @test has_mul(op2)
+    @test has_mul!(op2)
+    @test has_ldiv(op2)
+    @test has_ldiv!(op2)
+
+    @test !iscached(op1)
+    @test !iscached(op2)
+
+    @test !op1.traits.has_mul5
+    @test op2.traits.has_mul5 
 end
 
 @testset "FunctionOperator update test" begin
