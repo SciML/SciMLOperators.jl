@@ -1,7 +1,5 @@
 #
-"""
-$SIGNATURES
-
+TENSOR_PROD_DOC = """
 Computes the lazy pairwise Kronecker product, or tensor product,
 operator of `AbstractMatrix`, and `AbstractSciMLOperator` subtypes.
 Calling `⊗(ops...)` is equivalent to `Base.kron(ops...)`. Fast
@@ -10,10 +8,17 @@ product operator.
 
 ```
 TensorProductOperator(A, B) = A ⊗ B
+TensorProductOperator(A, B, C) = A ⊗ B ⊗ C
 
 (A ⊗ B)(u) = vec(B * reshape(u, M, N) * transpose(A))
 ```
 where `M = size(B, 2)`, and `N = size(A, 2)`
+"""
+
+"""
+$SIGNATURES
+
+$TENSOR_PROD_DOC
 """
 struct TensorProductOperator{T,O,C} <: AbstractSciMLOperator{T}
     ops::O
@@ -54,26 +59,24 @@ TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator) = IdentityOp
 """
 $SIGNATURES
 
-Computes the lazy pairwise Kronecker product, or tensor product,
-operator of `AbstractMatrix`, and `AbstractSciMLOperator` subtypes.
-Calling `⊗(ops...)` is equivalent to `Base.kron(ops...)`. Fast
-operator evaluation is performed without forming the full tensor
-product operator.
-
-```
-TensorProductOperator(A, B) = A ⊗ B
-
-(A ⊗ B)(u) = vec(B * reshape(u, M, N) * transpose(A))
-```
-where `M = size(B, 2)`, and `N = size(A, 2)`
+$TENSOR_PROD_DOC
 """
 ⊗(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
 
-# TODO - overload Base.kron for tensor product operators
-#Base.kron(ops::Union{AbstractMatrix,AbstractSciMLOperator}...) = TensorProductOperator(ops...)
+"""
+$SIGNATURES
 
-# convert to matrix
-Base.kron(ops::AbstractSciMLOperator...) = kron(convert.(AbstractMatrix, ops)...)
+Construct a lazy representation of the Kronecker product `A ⊗ B`. One of the
+two factors can be an `AbstractMatrix`, which is then promoted to a
+`MatrixOperator` automatically. To avoid fallback to the generic
+[`Base.kron`](@ref), at least one of `A` and `B` must be an
+`AbstractSciMLOperator`.
+"""
+Base.kron(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = TensorProductOperator(A, B)
+Base.kron(A::AbstractMatrix, B::AbstractSciMLOperator) = TensorProductOperator(A, B)
+Base.kron(A::AbstractSciMLOperator, B::AbstractMatrix) = TensorProductOperator(A, B)
+
+Base.kron(ops::AbstractSciMLOperator...) = TensorProductOperator(ops...)
 
 function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
     kron(convert.(AbstractMatrix, L.ops)...)
