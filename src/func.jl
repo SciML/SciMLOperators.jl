@@ -133,6 +133,7 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
 * `isconstant` - `true` if the operator is constant, and doesn't need to be updated via `update_coefficients[!]` during operator evaluation.
 * `islinear` - `true` if the operator is linear. Defaults to `false`.
+* `batch` - Boolean indicating if the input/output arrays comprise of batched vectors. If `true`, the last dimension of input/output arrays is considered to be the batch dimension and is not involved in size computation. For example, let `size(output), size(input) = (M, K), (N, K)`. If `batch = true`, then the second dimension is assumed to be the batch dimension, and the `size` of `FunctionOperator` is set to `(M, N)`. If `batch = false`, then `size` would be set to `(M * K, M * K)`.
 * `ifcache` - Allocate cache arrays in constructor. Defaults to `true`. Cache can be generated afterwards by calling `cache_operator(L, input, output)`
 * `cache` - Pregenerated cache arrays for in-place evaluations. Expected to be of type and shape `(similar(input), similar(output),)`. The constructor generates cache if no values are provided. Cache generation by the constructor can be disabled by setting the kwarg `ifcache = false`.
 * `opnorm` - The norm of `op`. Can be a `Number`, or function `opnorm(p::Integer)`. Defaults to `nothing`.
@@ -154,13 +155,13 @@ function FunctionOperator(op,
 
                           # traits
                           T::Union{Type{<:Number},Nothing}=nothing,
-                          batch_dim::Union{Integer, Nothing} = nothing,
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
                           has_mul5::Union{Nothing,Bool}=nothing,
                           isconstant::Bool = false,
                           islinear::Bool = false,
 
+                          batch::Bool = false,
                           ifcache::Bool = true,
                           cache::Union{Nothing, NTuple{2}}=nothing,
 
@@ -180,13 +181,13 @@ function FunctionOperator(op,
     ($(typeof(input)), $(typeof(output))) provided to FunctionOperator
     do not have the same number of dimensions."""
 
-    _size = if isnothing(batch_dim)
-        # assume batch_dim is 2
-        (size(output, 1), size(input, 1))
-    else
-        sz_in = size(input)[1:batch_dim-1] |> prod
-        sz_out = size(output)[1:batch_dim-1] |> prod
+    _size = if batch
+        # assume batches are in the last dimension
+        sz_in = size(input)[1:end-1] |> prod
+        sz_out = size(output)[1:end-1] |> prod
         (sz_out, sz_in)
+    else
+        (length(output), length(input))
     end
 
     isinplace = if isnothing(isinplace)
