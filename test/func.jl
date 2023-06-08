@@ -196,7 +196,7 @@ end
 end
 
 @testset "FunctionOperator update test" begin
-    u = rand(N,K)
+    u = rand(N, K)
     p = rand(N)
     t = rand()
     scale = rand()
@@ -205,8 +205,10 @@ end
     f(du,u,p,t; scale = 1.0) = mul!(du, Diagonal(p*t*scale), u)
     f(u, p, t; scale = 1.0) = Diagonal(p * t * scale) * u
 
-    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t),
+    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), batch = true,
                          accepted_kwargs = (:scale,))
+
+    @test size(L) == (N, N)
 
     ans = @. u * p * t * scale 
     @test L(u,p,t; scale) ≈ ans
