@@ -120,6 +120,7 @@ function `adjoint_inverse`. All are assumed to have the same calling signature a
 below traits.
 
 ## Traits
+
 Keyword arguments are used to set operator traits, which are assumed to be
 uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 
@@ -153,6 +154,7 @@ function FunctionOperator(op,
 
                           # traits
                           T::Union{Type{<:Number},Nothing}=nothing,
+                          batch_dim::Union{Integer, Nothing} = nothing,
                           isinplace::Union{Nothing,Bool}=nothing,
                           outofplace::Union{Nothing,Bool}=nothing,
                           has_mul5::Union{Nothing,Bool}=nothing,
@@ -171,9 +173,21 @@ function FunctionOperator(op,
 
     # store eltype of input/output for caching with ComposedOperator.
     eltypes = eltype.((input, output))
-    sz = (size(output, 1), size(input, 1))
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
+
+    @assert ndims(output) == ndims(input) """input/output arrays,
+    ($(typeof(input)), $(typeof(output))) provided to FunctionOperator
+    do not have the same number of dimensions."""
+
+    _size = if isnothing(batch_dim)
+        # assume batch_dim is 2
+        (size(output, 1), size(input, 1))
+    else
+        sz_in = size(input)[1:batch_dim-1] |> prod
+        sz_out = size(output)[1:batch_dim-1] |> prod
+        (sz_out, sz_in)
+    end
 
     isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
@@ -235,7 +249,7 @@ function FunctionOperator(op,
               has_mul5 = has_mul5,
               ifcache = ifcache,
               T = T,
-              size = sz,
+              size = _size,
               eltypes = eltypes,
               accepted_kwargs = accepted_kwargs,
               kwargs = Dict{Symbol, Any}(),
