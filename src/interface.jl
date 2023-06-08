@@ -430,11 +430,11 @@ for op in (
   end
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat)
-    mul!(v, convert(AbstractMatrix,L), u)
-end
+# function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat)
+#     mul!(v, convert(AbstractMatrix,L), u)
+# end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
-    mul!(v, convert(AbstractMatrix,L), u, α, β)
-end
+# function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
+#     mul!(v, convert(AbstractMatrix,L), u, α, β)
+# end
 #
