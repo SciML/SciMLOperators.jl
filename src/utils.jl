@@ -9,10 +9,6 @@ function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
     size_in, size_out
 end
 
-dims(A) = length(size(A))
-dims(::AbstractArray{<:Any,N}) where{N} = N
-dims(::AbstractSciMLOperator) = 2
-
 # Keyword argument filtering
 struct FilterKwargs{F,K}
     f::F
