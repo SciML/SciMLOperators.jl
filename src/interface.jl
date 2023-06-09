@@ -186,34 +186,20 @@ function cache_operator end
 
 cache_operator(L, u) = L
 cache_operator(L, u, v) = L
-cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
-cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
+cache_self(L::AbstractSciMLOperator, ::AbstractArray...) = L
+cache_internals(L::AbstractSciMLOperator, ::AbstractArray...) = L
 
-function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractArray, v::AbstractArray)
 
     L = cache_self(L, u, v)
     L = cache_internals(L, u, v)
     L
 end
 
-function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
+function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
 
     L = cache_self(L, u)
     L = cache_internals(L, u)
-    L
-end
-
-function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
-    u isa AbstractVecOrMat && @error "cache_operator not defined for $(typeof(L)), $(typeof(u))."
-
-    n = size(L, 2)
-    s = size(u)
-    k = prod(s[2:end])
-
-    @assert s[1] == n "Dimension mismatch"
-
-    U = reshape(u, (n, k))
-    L = cache_operator(L, U)
     L
 end
 
@@ -236,12 +222,12 @@ Check if `adjoint(L)` is lazily defined.
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
 Check if `expmv!(v, L, u, t)`, equivalent to `mul!(v, exp(t * A), u)`, is
-defined for `Number` `t`, and `AbstractVecOrMat`s `u, v` of appropriate sizes.
+defined for `Number` `t`, and `AbstractArray`s `u, v` of appropriate sizes.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
 Check if `expmv(L, u, t)`, equivalent to `exp(t * A) * u`, is defined for
-`Number` `t`, and `AbstractVecOrMat` `u` of appropriate size.
+`Number` `t`, and `AbstractArray` `u` of appropriate size.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 """
@@ -249,20 +235,20 @@ Check if `exp(L)` is defined lazily defined.
 """
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
-Check if `L * u` is defined for `AbstractVecOrMat` `u` of appropriate size.
+Check if `L * u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
-Check if `mul!(v, L, u)` is defined for `AbstractVecOrMat`s `u, v` of
+Check if `mul!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
-Check if `L \\ u` is defined for `AbstractVecOrMat` `u` of appropriate size.
+Check if `L \\ u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
-Check if `ldiv!(v, L, u)` is defined for `AbstractVecOrMat`s `u, v` of
+Check if `ldiv!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
@@ -430,11 +416,11 @@ for op in (
   end
 end
 
-# function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat)
+# function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
 #     mul!(v, convert(AbstractMatrix,L), u)
 # end
 
-# function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
+# function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
 #     mul!(v, convert(AbstractMatrix,L), u, α, β)
 # end
 #

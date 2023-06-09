@@ -26,10 +26,10 @@ NK = N * K
     f1(u, p, t)  = _mul(A, u)
     f1i(u, p, t) = _div(A, u)
 
-    f2(du, u, p, t)  = mul!(vec(du), A, vec(u))
-    f2(du, u, p, t, α, β)  = mul!(vec(du), A, vec(u), α, β)
-    f2i(du, u, p, t) = ldiv!(vec(du), F, vec(u))
-    f2i(du, u, p, t, α, β) = mul!(vec(du), Ai, vec(u), α, β)
+    f2(du, u, p, t)  = (mul!(vec(du), A, vec(u)); du)
+    f2(du, u, p, t, α, β)  = (mul!(vec(du), A, vec(u), α, β); du)
+    f2i(du, u, p, t) = (ldiv!(vec(du), F, vec(u)); du)
+    f2i(du, u, p, t, α, β) = (mul!(vec(du), Ai, vec(u), α, β); du)
 
     # out of place
     op1 = FunctionOperator(f1, u;
