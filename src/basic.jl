@@ -263,7 +263,7 @@ has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
-function cache_internals(L::ScaledOperator, u::AbstractArray)
+function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     @set! L.λ = cache_operator(L.λ, u)
     L
@@ -287,27 +287,27 @@ for fact in (
 end
 
 # operator application, inversion
-Base.:*(L::ScaledOperator, u::AbstractArray) = L.λ * (L.L * u)
-Base.:\(L::ScaledOperator, u::AbstractArray) = L.λ \ (L.L \ u)
+Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
+Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
-function LinearAlgebra.mul!(v::AbstractArray, L::ScaledOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
     iszero(L.λ) && return lmul!(false, v)
     a = convert(Number, L.λ)
     mul!(v, L.L, u, a, false)
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::ScaledOperator, u::AbstractArray, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat, α, β)
     iszero(L.λ) && return lmul!(β, v)
     a = convert(Number, L.λ*α)
     mul!(v, L.L, u, a, β)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractArray, L::ScaledOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
     ldiv!(v, L.L, u)
     ldiv!(L.λ, v)
 end
 
-function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVecOrMat)
     ldiv!(L.λ, u)
     ldiv!(L.L, u)
 end
@@ -429,7 +429,7 @@ islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
-function cache_internals(L::AddedOperator, u::AbstractArray)
+function cache_internals(L::AddedOperator, u::AbstractVecOrMat)
     for i=1:length(L.ops)
         @set! L.ops[i] = cache_operator(L.ops[i], u)
     end
@@ -439,11 +439,11 @@ end
 getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
-function Base.:*(L::AddedOperator, u::AbstractArray)
+function Base.:*(L::AddedOperator, u::AbstractVecOrMat)
     sum(op -> iszero(op) ? zero(u) : op * u, L.ops)
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::AddedOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AddedOperator, u::AbstractVecOrMat)
     mul!(v, first(L.ops), u)
     for op in L.ops[2:end]
         iszero(op) && continue
@@ -452,7 +452,7 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AddedOperator, u::AbstractArray
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::AddedOperator, u::AbstractArray, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AddedOperator, u::AbstractVecOrMat, α, β)
     lmul!(β, v)
     for op in L.ops
         iszero(op) && continue
@@ -611,10 +611,10 @@ end
 
 # operator application
 # https://github.com/SciML/SciMLOperators.jl/pull/94
-#Base.:*(L::ComposedOperator, u::AbstractArray) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
-#Base.:\(L::ComposedOperator, u::AbstractArray) = foldl((acc, op) -> op \ acc, L.ops; init=u)
+#Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
+#Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function Base.:\(L::ComposedOperator, u::AbstractArray)
+function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
     v = u
     for op in L.ops
         v = op \ v
@@ -623,7 +623,7 @@ function Base.:\(L::ComposedOperator, u::AbstractArray)
     v
 end
 
-function Base.:*(L::ComposedOperator, u::AbstractArray)
+function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
     v = u
     for op in reverse(L.ops)
         v = op * v
@@ -632,7 +632,7 @@ function Base.:*(L::ComposedOperator, u::AbstractArray)
     v
 end
 
-function cache_self(L::ComposedOperator, u::AbstractArray)
+function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 
     K = size(u, 2)
     cache = (zero(u),)
@@ -640,13 +640,7 @@ function cache_self(L::ComposedOperator, u::AbstractArray)
         op = L.ops[i]
 
         M = size(op, 1)
-        _size = if u isa AbstractVector
-            (M,)
-        elseif u isa AbstractMatrix
-            (M, K)
-        else
-            # TODO ComposedOperator cache_self case for AbstractArrays
-        end
+        sz = u isa AbstractMatrix ? (M, K) : (M,)
 
         T = if op isa FunctionOperator # 
             # FunctionOperator isn't guaranteed to play by the rules of
@@ -657,14 +651,14 @@ function cache_self(L::ComposedOperator, u::AbstractArray)
             promote_type(eltype.((op, cache[1]))...)
         end
 
-        cache = (similar(u, T, _size), cache...)
+        cache = (similar(u, T, sz), cache...)
     end
 
     @set! L.cache = cache
     L
 end
 
-function cache_internals(L::ComposedOperator, u::AbstractArray)
+function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
     if isnothing(L.cache)
         L = cache_self(L, u)
     end
@@ -677,7 +671,7 @@ function cache_internals(L::ComposedOperator, u::AbstractArray)
     @set! L.ops = ops
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::ComposedOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
@@ -688,7 +682,7 @@ function LinearAlgebra.mul!(v::AbstractArray, L::ComposedOperator, u::AbstractAr
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::ComposedOperator, u::AbstractArray, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
     @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
@@ -700,7 +694,7 @@ function LinearAlgebra.mul!(v::AbstractArray, L::ComposedOperator, u::AbstractAr
     axpy!(β, cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractArray, L::ComposedOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
@@ -711,7 +705,7 @@ function LinearAlgebra.ldiv!(v::AbstractArray, L::ComposedOperator, u::AbstractA
     v
 end
 
-function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVecOrMat)
 
     for i in 1:length(L.ops)
         ldiv!(L.ops[i], u)
@@ -788,25 +782,25 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
                              has_adjoint,
                             )
 
-Base.:*(L::InvertedOperator, u::AbstractArray) = L.L \ u
-Base.:\(L::InvertedOperator, u::AbstractArray) = L.L * u
+Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
+Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
-function cache_self(L::InvertedOperator, u::AbstractArray)
+function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
     cache = zero(u)
     @set! L.cache = cache
     L
 end
 
-function cache_internals(L::InvertedOperator, u::AbstractArray)
+function cache_internals(L::InvertedOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::InvertedOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat)
     ldiv!(v, L.L, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::InvertedOperator, u::AbstractArray, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
     @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
@@ -816,11 +810,11 @@ function LinearAlgebra.mul!(v::AbstractArray, L::InvertedOperator, u::AbstractAr
     axpy!(β, L.cache, v)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractArray, L::InvertedOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat)
     mul!(v, L.L, u)
 end
 
-function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractArray)
+function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
     @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
     set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
 
