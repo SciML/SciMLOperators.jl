@@ -673,8 +673,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)` or
-    `cache_operator(L, u, v)`."""
+    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`"""
 
     vecs = (v, L.cache[1:end-1]..., u)
     for i in reverse(1:length(L.ops))
@@ -685,8 +684,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)` or
-    `cache_operator(L, u, v)`."""
+    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`."""
 
     cache = L.cache[end]
     copy!(cache, v)
@@ -698,8 +696,7 @@ end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)` or
-    `cache_operator(L, u, v)`."""
+    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`."""
 
     vecs = (u, reverse(L.cache[1:end-1])..., v)
     for i in 1:length(L.ops)
@@ -805,8 +802,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)` or
-    `cache_operator(L, u, v)`."""
+    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`."""
 
     copy!(L.cache, v)
     ldiv!(v, L.L, u)
@@ -820,8 +816,7 @@ end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)` or
-    `cache_operator(L, u, v)`."""
+    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`."""
 
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
