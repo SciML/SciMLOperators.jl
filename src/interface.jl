@@ -1,10 +1,8 @@
 #
-###
 # Operator interface
-###
 
 ###
-# Utilities for update functions
+# update interface
 ###
 
 """
@@ -13,31 +11,7 @@ $SIGNATURES
 The default update function for `AbstractSciMLOperator`s, a no-op that
 leaves the operator state unchanged.
 """
-DEFAULT_UPDATE_FUNC(A,u,p,t) = A
-
-"""
-$SIGNATURES
-
-This type indicates to `preprocess_update_func` to not to filter keyword
-arguments. Required in implementation of lazy `Base.adjoint`,
-`Base.conj`, `Base.transpose`.
-"""
-struct NoKwargFilter end
-
-function preprocess_update_func(update_func, accepted_kwargs)
-    _update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
-    _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs 
-    # accepted_kwargs can be passed as nothing to indicate that we should not filter 
-    # (e.g. if the function already accepts all kwargs...). 
-    return (_accepted_kwargs isa NoKwargFilter) ? _update_func : FilterKwargs(_update_func, _accepted_kwargs)
-end
-function update_func_isconstant(update_func)
-    if update_func isa FilterKwargs
-        return update_func.f == DEFAULT_UPDATE_FUNC
-    else
-        return update_func == DEFAULT_UPDATE_FUNC
-    end
-end
+DEFAULT_UPDATE_FUNC(A, u, p, t) = A
 
 const UPDATE_COEFFS_WARNING = """
 !!! warning
@@ -54,6 +28,8 @@ const UPDATE_COEFFS_WARNING = """
 """
 
 """
+$SIGNATURES
+
 Update the state of `L` based on `u`, input vector, `p` parameter object,
 `t`, and keyword arguments. Internally, `update_coefficients` calls the
 user-provided `update_func` method for every component operator in `L`
@@ -86,9 +62,11 @@ L * u
 ```
 
 """
-update_coefficients
+update_coefficients(L, u, p, t; kwargs...) = L
 
 """
+$SIGNATURES
+
 Update in-place the state of `L` based on `u`, input vector, `p` parameter
 object, `t`, and keyword arguments. Internally, `update_coefficients!` calls
 the user-provided mutating `update_func!` method for every component operator
@@ -119,16 +97,18 @@ L * u
 ```
 
 """
-update_coefficients!
+update_coefficients!(L, u, p, t; kwargs...) = nothing
 
-update_coefficients(L,u,p,t; kwargs...) = L
-update_coefficients!(L,u,p,t; kwargs...) = nothing
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
     end
     L
 end
+
+###
+# evaluation interface
+###
 
 (L::AbstractSciMLOperator)(u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
 (L::AbstractSciMLOperator)(du, u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
@@ -204,7 +184,7 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
 end
 
 ###
-# Operator Traits
+# operator traits
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1

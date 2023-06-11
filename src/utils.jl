@@ -1,4 +1,8 @@
 #
+
+###
+# multidim
+###
 function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
     m, n = size(L)
     nk = length(u)
@@ -7,6 +11,34 @@ function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
     size_out = issquare(L) ? size_in : (m, size(u)[2:end]...)
 
     size_in, size_out
+end
+
+###
+# kwarg filter
+###
+
+"""
+$SIGNATURES
+
+This type indicates to `preprocess_update_func` to not to filter keyword
+arguments. Required in implementation of lazy `Base.adjoint`,
+`Base.conj`, `Base.transpose`.
+"""
+struct NoKwargFilter end
+
+function preprocess_update_func(update_func, accepted_kwargs)
+    _update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
+    _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs 
+    # accepted_kwargs can be passed as nothing to indicate that we should not filter 
+    # (e.g. if the function already accepts all kwargs...). 
+    return (_accepted_kwargs isa NoKwargFilter) ? _update_func : FilterKwargs(_update_func, _accepted_kwargs)
+end
+function update_func_isconstant(update_func)
+    if update_func isa FilterKwargs
+        return update_func.f == DEFAULT_UPDATE_FUNC
+    else
+        return update_func == DEFAULT_UPDATE_FUNC
+    end
 end
 
 # Keyword argument filtering
