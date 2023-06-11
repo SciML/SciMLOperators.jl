@@ -10,39 +10,24 @@ for op in (
         u isa AbstractVecOrMat && error("Operation $(Base.$op) not defined for $(typeof(L)), $(typeof(u)).")
 
         sizes = _mat_sizes(L, u)
-        sizev = issquare(L) ? size(u) : begin
-            (size(L, 1), size(u)[2:end]...,)
-        end
+        sizev = issquare(L) ? size(u) : (size(L, 1), size(u)[2:end]...,)
 
-        uu = reshape(u, sizes[1])
-        vv = $op(L, uu)
+        U = reshape(u, sizes[1])
+        V = $op(L, U)
 
-        reshape(vv, sizev)
+        reshape(V, sizev)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, args...)
     u isa AbstractVecOrMat && @error "LinearAlgebra.mul! not defined for $(typeof(L)), $(typeof(u))."
 
-    sizes = _mat_sizes(L, u)
+    sz_in, sz_out = _mat_sizes(L, u)
 
-    uu = reshape(u, sizes[1])
-    vv = reshape(v, sizes[2])
+    U = reshape(u, sz_in)
+    V = reshape(v, sz_out)
 
-    mul!(vv, L, uu)
-
-    v
-end
-
-function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
-    u isa AbstractVecOrMat && @error "LinearAlgebra.mul! not defined for $(typeof(L)), $(typeof(u))."
-
-    sizes = _mat_sizes(L, u)
-
-    uu = reshape(u, sizes[1])
-    vv = reshape(v, sizes[2])
-
-    mul!(vv, L, uu, α, β)
+    mul!(V, L, U, args...)
 
     v
 end
@@ -50,12 +35,12 @@ end
 function LinearAlgebra.ldiv!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error "LinearAlgebra.ldiv! not defined for $(typeof(L)), $(typeof(u))."
 
-    sizes = _mat_sizes(L, u)
+    sz_in, sz_out = _mat_sizes(L, u)
 
-    uu = reshape(u, sizes[1])
-    vv = reshape(v, sizes[2])
+    U = reshape(u, sz_in)
+    V = reshape(v, sz_out)
 
-    ldiv!(vv, L, uu)
+    ldiv!(V, L, U)
 
     v
 end
@@ -63,11 +48,11 @@ end
 function LinearAlgebra.ldiv!(L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error "LinearAlgebra.ldiv! not defined for $(typeof(L)), $(typeof(u))."
 
-    sizes = _mat_sizes(L, u)
+    sz_in, _ = _mat_sizes(L, u)
 
-    uu = reshape(u, sizes[1])
+    U = reshape(u, sz_in)
 
-    ldiv!(L, uu)
+    ldiv!(L, U)
 
     u
 end
