@@ -398,29 +398,39 @@ function Base.resize!(L::AbstractSciMLOperator, n::Integer)
 end
 
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
-LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
+
+function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
+    @warn """using convert-based fallback in LinearAlgebra.opnorm."""
+    opnorm(convert(AbstractMatrix,L), p)
+end
+
 for pred in (
              :issymmetric,
              :ishermitian,
              :isposdef,
             )
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
+        @warn """using convert-based fallback in $pred."""
         $pred(convert(AbstractMatrix, L))
     end
 end
+
 for op in (
            :sum,:prod
           )
-  @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
-      $op(convert(AbstractMatrix, L); kwargs...)
-  end
+    @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
+        @warn """using convert-based fallback in $op."""
+        $op(convert(AbstractMatrix, L); kwargs...)
+    end
 end
 
 # function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
+#     @warn """using convert-based fallback in mul!."""
 #     mul!(v, convert(AbstractMatrix,L), u)
 # end
 
 # function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
+#     @warn """using convert-based fallback in mul!."""
 #     mul!(v, convert(AbstractMatrix,L), u, α, β)
 # end
 #
