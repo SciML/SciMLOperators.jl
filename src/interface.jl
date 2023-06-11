@@ -404,13 +404,13 @@ for op in (
     end
 end
 
-# function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
-#     @warn """using convert-based fallback in mul!."""
-#     mul!(v, convert(AbstractMatrix,L), u)
-# end
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
+    @warn """using convert-based fallback in mul!."""
+    mul!(v, convert(AbstractMatrix,L), u)
+end
 
-# function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
-#     @warn """using convert-based fallback in mul!."""
-#     mul!(v, convert(AbstractMatrix,L), u, α, β)
-# end
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
+    @warn """using convert-based fallback in mul!."""
+    mul!(v, convert(AbstractMatrix,L), u, α, β)
+end
 #
