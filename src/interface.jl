@@ -1,8 +1,7 @@
 #
-# Operator interface
 
 ###
-# update interface
+# operator update interface
 ###
 
 """
@@ -107,7 +106,7 @@ function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
 end
 
 ###
-# evaluation interface
+# operator evaluation interface
 ###
 
 (L::AbstractSciMLOperator)(u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
@@ -121,7 +120,7 @@ function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs
 end
 
 ###
-# caching interface
+# operator caching interface
 ###
 
 getops(L) = ()
