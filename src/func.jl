@@ -5,7 +5,7 @@ Matrix free operator given by a function
 $(FIELDS)
 """
 mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
-    """ Function with signature op(u, p, t) and (if isinplace) op(du, u, p, t) """
+    """ Function with signature op(u, p, t) and (if isinplace) op(v, u, p, t) """
     op::F
     """ Adjoint operator"""
     op_adjoint::Fa
@@ -150,14 +150,30 @@ function FunctionOperator(op,
                           isposdef::Bool = false,
                          ) where{N}
 
+    # establish types
+
     # store eltype of input/output for caching with ComposedOperator.
-    eltypes = eltype.((input, output))
+    eltypes = eltype(input), eltype(output)
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
+
+    @assert T <: Number "Please provide a Number type for the Operator"
+
+    # establish sizes
 
     @assert ndims(output) == ndims(input) """input/output arrays,
     ($(typeof(input)), $(typeof(output))) provided to FunctionOperator
     do not have the same number of dimensions."""
+
+    sizes = size(input), size(output)
+
+    if batch
+        @assert size(input)[end] == size(output)[end] """
+        Batch size (length of last dimension) in input/output arrays to
+        FunctionOperator is not equal. Input array, $(typeof(input)), has
+        size $(size(input)), whereas output array, $(typeof(output)), has
+        size $(size(output))."""
+    end
 
     _size = if batch
         # assume batches are in the last dimension
@@ -167,6 +183,8 @@ function FunctionOperator(op,
     else
         (length(output), length(input))
     end
+
+    # evaluation signatures
 
     isinplace = if isnothing(isinplace)
         static_hasmethod(op, typeof((output, input, p, t)))
@@ -194,12 +212,12 @@ function FunctionOperator(op,
     end
 
     if !isinplace & !outofplace
-        @error "Please provide a funciton with signatures `op(u, p, t)` for applying
-        the operator out-of-place, and/or the signature is `op(du, u, p, t)` for
-        in-place application."
+        @error """Please provide a funciton with signatures `op(u, p, t)` for
+        applying the operator out-of-place, and/or the signature is
+        `op(v, u, p, t)` for in-place application."""
     end
 
-    T isa Nothing && @error "Please provide a Number type for the Operator"
+    # traits
 
     isreal = T <: Real
     selfadjoint = ishermitian | (isreal & issymmetric)
@@ -228,8 +246,9 @@ function FunctionOperator(op,
               has_mul5 = has_mul5,
               ifcache = ifcache,
               T = T,
-              size = _size,
               batch = batch,
+              size = _size,
+              sizes = sizes,
               eltypes = eltypes,
               accepted_kwargs = accepted_kwargs,
               kwargs = Dict{Symbol, Any}(),
@@ -246,8 +265,10 @@ function FunctionOperator(op,
                          cache
                         )
 
+    # create cache
+
     if ifcache & isnothing(L.cache)
-        L = cache_operator(L, input, output)
+        L = cache_operator(L, input)
     end
 
     L
@@ -295,11 +316,46 @@ function iscached(L::FunctionOperator)
     !isnothing(L.cache)
 end
 
-function cache_self(L::FunctionOperator, u::AbstractArray, v::AbstractArray = u)
-    !L.traits.ifcache && @debug """Cache is being allocated for a FunctionOperator
-        created with kwarg ifcache = false."""
-    @set! L.cache = zero.((u, v))
-    L
+function cache_self(L::FunctionOperator, u::AbstractArray)
+    !L.traits.ifcache && @debug """Cache is being allocated for a
+        FunctionOperator created with kwarg ifcache = false."""
+
+    if L.traits.batch
+        N = size(L, 2)
+        NK = length(u)
+
+        K, r = divrem(NK, N)
+
+        if r != 0
+            msg = """Input array, $(typeof(u)), of size $(size(u)), cannot be
+                reshaped to size $((L.traits.sizes[1]..., :K)) for integer `K`
+                (batch size) as expected by FunctionOperator of size
+                $(size(L))."""
+            throw(DimensionMismatch(msg))
+        end
+
+        sz_in, sz_out = L.traits.sizes
+
+        sz_in = (sz_in[1:end-1]..., K)
+        sz_out = (sz_out[1:end-1]..., K)
+
+        @set! L.traits.sizes = (sz_in, sz_out,)
+        U = reshape(u, sz_in)
+    else
+        if size(L, 2) != length(u)
+            msg = """Length of input array, $(typeof(u)), of size $(size(u))
+                not consistent with second dimension of FunctionOperator
+                of size $(size(L)). """
+            throw(DimensionMismatch(msg))
+        end
+
+        U = reshape(u, L.traits.sizes[1])
+    end
+
+    _u = similar(u, L.traits.eltypes[1], L.traits.sizes[1])
+    _v = similar(u, L.traits.eltypes[2], L.traits.sizes[2])
+
+    @set! L.cache = (_u, _v)
 end
 
 function Base.show(io::IO, L::FunctionOperator)
@@ -325,6 +381,7 @@ function Base.adjoint(L::FunctionOperator)
 
     traits = L.traits
     @set! traits.size = reverse(size(L))
+    @set! traits.sizes = reverse(traits.sizes)
     @set! traits.eltypes = reverse(traits.eltypes)
 
     cache = if iscached(L)
@@ -357,6 +414,7 @@ function Base.inv(L::FunctionOperator)
 
     traits = L.traits
     @set! traits.size = reverse(size(L))
+    @set! traits.sizes = reverse(traits.sizes)
     @set! traits.eltypes = reverse(traits.eltypes)
 
     @set! traits.opnorm = if traits.opnorm isa Number
@@ -386,6 +444,8 @@ end
 
 function Base.resize!(L::FunctionOperator, n::Integer)
 
+    # input/output to `L` must be `AbstractVector`s. i.e. no batching
+
     for op in getops(L)
         if static_hasmethod(resize!, typeof((op, n)))
             resize!(op, n)
@@ -396,7 +456,7 @@ function Base.resize!(L::FunctionOperator, n::Integer)
         resize!(v, n)
     end
 
-    L.traits = (; L.traits..., size = (n, n),)
+    L.traits = (; L.traits..., size = (n, n), sizes = ((n,), (n,)),)
 
     L
 end
@@ -415,6 +475,8 @@ LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
 function getops(L::FunctionOperator)
+    # TODO - replace with named tuple
+
     ops = (L.op,)
 
     ops = isa(L.op_adjoint, Nothing) ? ops : (ops..., L.op_adjoint)
@@ -434,27 +496,57 @@ has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothin
 
 # operator application
 function Base.:*(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
-    L.op(u, L.p, L.t; L.traits.kwargs...)
+
+    U = reshape(u, L.traits.sizes[1])
+
+    V = L.op(U, L.p, L.t; L.traits.kwargs...)
+
+    #TODO - reshape output?
 end
 
 function Base.:\(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
-    L.op_inverse(u, L.p, L.t; L.traits.kwargs...)
+
+    U = reshape(u, L.traits.sizes[1])
+
+    V = L.op_inverse(U, L.p, L.t; L.traits.kwargs...)
 end
 
+# fallback *, \ for FunctionOperator with no OOP method
+
 function Base.:*(L::FunctionOperator{true,false}, u::AbstractArray)
+
     _, co = L.cache
-    du = zero(co)
-    L.op(du, u, L.p, L.t; L.traits.kwargs...)
+    v = zero(co)
+
+    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
+    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+
+    L.op(v, u, L.p, L.t; L.traits.kwargs...)
+
+    v
 end
 
 function Base.:\(L::FunctionOperator{true,false}, u::AbstractArray)
+
     ci, _ = L.cache
-    du = zero(ci)
-    L.op_inverse(du, u, L.p, L.t; L.traits.kwargs...)
+    v = zero(ci)
+
+    U = reshape(u, L.traits.sizes[2]) # size(L, 1) -- output size
+    V = reshape(v, L.traits.sizes[1]) # size(L, 2) -- input size
+
+    L.op_inverse(V, U, L.p, L.t; L.traits.kwargs...)
+
+    v
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
-    L.op(v, u, L.p, L.t; L.traits.kwargs...)
+
+    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
+    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+
+    L.op(V, U, L.p, L.t; L.traits.kwargs...)
+
+    v
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray, args...)
@@ -462,26 +554,46 @@ function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{false}, u::Abs
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, false}, u::AbstractArray, α, β) where{oop}
-    _, co = L.cache
+    _, Co = L.cache
 
-    copy!(co, v)
-    mul!(v, L, u)
-    lmul!(α, v)
-    axpy!(β, co, v)
+    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
+    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+
+    copy!(Co, V)
+    mul!(V, L, U)
+    lmul!(α, V)
+    axpy!(β, Co, V)
+
+    v
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true}, u::AbstractArray, α, β) where{oop}
-    L.op(v, u, L.p, L.t, α, β; L.traits.kwargs...)
+    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
+    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+
+    L.op(V, U, L.p, L.t, α, β; L.traits.kwargs...)
+
+    v
 end
 
 function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
-    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
+    U = reshape(u, L.traits.sizes[2]) # size(L, 1) -- output size
+    V = reshape(v, L.traits.sizes[1]) # size(L, 2) -- input  size
+
+    L.op_inverse(V, U, L.p, L.t; L.traits.kwargs...)
+
+    v
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractArray)
-    ci, _ = L.cache
-    copy!(ci, u)
-    ldiv!(u, L, ci)
+    Ci, _ = L.cache
+
+    U = reshape(u, L.traits.sizes[2]) # size(L, 1) -- output size
+
+    copy!(Ci, U)
+    ldiv!(U, L, Ci)
+
+    u
 end
 
 function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray)
