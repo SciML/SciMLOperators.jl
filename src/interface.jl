@@ -364,19 +364,23 @@ expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 
 function Base.conj(L::AbstractSciMLOperator)
     isreal(L) && return L
+    @warn """using convert-based fallback for Base.conj"""
     convert(AbstractMatrix, L) |> conj
 end
 
 function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
+    @warn """using convert-based fallback for Base.=="""
     size(L1) != size(L2) && return false
     convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
 end
 
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Any,N}) where {N}
+    @warn """using convert-based fallback for Base.getindex"""
     convert(AbstractMatrix, L)[I...]
 end
 function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
-    convert(AbstractMatrix,L)[I...]
+    @warn """using convert-based fallback for Base.getindex"""
+    convert(AbstractMatrix, L)[I...]
 end
 
 function Base.resize!(L::AbstractSciMLOperator, n::Integer)
@@ -387,7 +391,7 @@ LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
 
 function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
     @warn """using convert-based fallback in LinearAlgebra.opnorm."""
-    opnorm(convert(AbstractMatrix,L), p)
+    opnorm(convert(AbstractMatrix, L), p)
 end
 
 for pred in (
@@ -412,11 +416,11 @@ end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
     @warn """using convert-based fallback in mul!."""
-    mul!(v, convert(AbstractMatrix,L), u)
+    mul!(v, convert(AbstractMatrix, L), u)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
     @warn """using convert-based fallback in mul!."""
-    mul!(v, convert(AbstractMatrix,L), u, α, β)
+    mul!(v, convert(AbstractMatrix, L), u, α, β)
 end
 #
