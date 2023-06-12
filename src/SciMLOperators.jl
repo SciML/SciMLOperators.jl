@@ -69,7 +69,6 @@ abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLOperator{T} end
 include("utils.jl")
 include("interface.jl")
 include("left.jl")
-include("multidim.jl")
 
 include("scalar.jl")
 include("matrix.jl")
