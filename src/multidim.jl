@@ -9,13 +9,12 @@ for op in (
     @eval function Base.$op(L::AbstractSciMLOperator, u::AbstractArray)
         u isa AbstractVecOrMat && error("Operation $(Base.$op) not defined for $(typeof(L)), $(typeof(u)).")
 
-        sizes = _mat_sizes(L, u)
-        sizev = issquare(L) ? size(u) : (size(L, 1), size(u)[2:end]...,)
+        sz_in, sz_out = _mat_sizes(L, u)
 
-        U = reshape(u, sizes[1])
+        U = reshape(u, sz_in)
         V = $op(L, U)
 
-        reshape(V, sizev)
+        reshape(V, sz_out)
     end
 end
 
