@@ -198,12 +198,12 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
 
     outer, inner = L.ops
 
-    _ , ni = size(inner)
-    _ , no = size(outer)
+    mi , ni = size(inner)
+    _  , no = size(outer)
     k = size(u, 2)
 
     uinner = reshape(u, (ni, no*k))
-    uouter = L.cache[2]
+    uouter = reshape(L.cache[2], (no, mi * k))
 
     @set! L.ops[2] = cache_operator(inner, uinner)
     @set! L.ops[1] = cache_operator(outer, uouter)
