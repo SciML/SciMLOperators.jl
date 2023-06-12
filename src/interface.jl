@@ -164,9 +164,6 @@ Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
 """
 cache_operator(L, u) = L
 
-cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
-cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
-
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
 
     L = cache_self(L, u)
@@ -184,11 +181,14 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error """cache_operator not defined for
     $(typeof(L)), $(typeof(u))."""
 
-    sz = _mat_sizes(L, u)
+    sz, _ = _mat_sizes(L, u)
     U = reshape(u, sz)
 
     cache_operator(L, U)
 end
+
+cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
+cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 
 ###
 # operator traits

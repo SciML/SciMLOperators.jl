@@ -316,7 +316,7 @@ function iscached(L::FunctionOperator)
     !isnothing(L.cache)
 end
 
-function cache_self(L::FunctionOperator, u::AbstractArray)
+function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
     !L.traits.ifcache && @debug """Cache is being allocated for a
         FunctionOperator created with kwarg ifcache = false."""
 
