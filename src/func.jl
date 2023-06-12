@@ -111,7 +111,7 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
 * `isconstant` - `true` if the operator is constant, and doesn't need to be updated via `update_coefficients[!]` during operator evaluation.
 * `islinear` - `true` if the operator is linear. Defaults to `false`.
-* `batch` - Boolean indicating if the input/output arrays comprise of batched vectors. If `true`, the last dimension of input/output arrays is considered to be the batch dimension and is not involved in size computation. For example, let `size(output), size(input) = (M, K), (N, K)`. If `batch = true`, then the second dimension is assumed to be the batch dimension, and the `size(F::FunctionOperator) = (M, N)`. If `batch = false`, then `size(F::FunctionOperator) = (M * K, M * K)`.
+* `batch` - Boolean indicating if the input/output arrays comprise of batched column-vectors stacked in a matrix. If `true`, the input/output arrays must be `AbstractVecOrMat`s, and the length of the  second dimension (the batch dimension) must be the same. The batch dimension is not involved in size computation. For example, with `batch = true`, and `size(output), size(input) = (M, K), (N, K)`, the `FunctionOperator` size is set to `(M, N)`. If `batch = false`, which is the default, the `input`/`output` arrays may of any size so long as `ndims(input) == ndims(output)`, and the `size` of `FunctionOperator` is set to `(length(input), length(output))`.
 * `ifcache` - Allocate cache arrays in constructor. Defaults to `true`. Cache can be generated afterwards by calling `cache_operator(L, input, output)`
 * `cache` - Pregenerated cache arrays for in-place evaluations. Expected to be of type and shape `(similar(input), similar(output),)`. The constructor generates cache if no values are provided. Cache generation by the constructor can be disabled by setting the kwarg `ifcache = false`.
 * `opnorm` - The norm of `op`. Can be a `Number`, or function `opnorm(p::Integer)`. Defaults to `nothing`.
@@ -157,29 +157,43 @@ function FunctionOperator(op,
     T  = isnothing(T) ? promote_type(eltypes...) : T
     t  = isnothing(t) ? zero(real(T)) : t
 
-    @assert T <: Number "Please provide a Number type for the Operator"
+    @assert T <: Number """The `eltype` of `FunctionOperator`, as well as
+    the `input`/`output` arrays must be `<:Number`."""
 
     # establish sizes
 
-    @assert ndims(output) == ndims(input) """input/output arrays,
-    ($(typeof(input)), $(typeof(output))) provided to FunctionOperator
-    do not have the same number of dimensions."""
+    @assert ndims(output) == ndims(input) """`input`/`output` arrays,
+    ($(typeof(input)), $(typeof(output))) provided to `FunctionOperator`
+    do not have the same number of dimensions. Further, if `batch = true`,
+    then both arrays must be `AbstractVector`s, or both must be
+    `AbstractMatrix` types."""
+
+    if batch
+        if !isa(input, AbstractVecOrMat)
+            msg = """`FunctionOperator` constructed with `batch = true` only
+                accepts `AbstractVecOrMat` types with
+                `size(L, 2) == size(u, 1)`."""
+            ArgumentError(msg) |> throw
+        end
+
+        if input isa AbstractMatrix
+            # assume batches are 2nd dimension of `AbstractVecOrMat`
+            if size(input, 2) != size(output, 2)
+                msg = """ Batch size (length of second dimension) in `input`/
+                    `output` arrays to `FunctionOperator` is not equal. Input
+                    array, $(typeof(input)), has size $(size(input)), whereas
+                    output array, $(typeof(output)), has size
+                    $(size(output))."""
+                ArgumentError(msg) |> throw
+            end
+        end
+    end
 
     sizes = size(input), size(output)
 
-    if batch
-        @assert size(input)[end] == size(output)[end] """
-        Batch size (length of last dimension) in input/output arrays to
-        FunctionOperator is not equal. Input array, $(typeof(input)), has
-        size $(size(input)), whereas output array, $(typeof(output)), has
-        size $(size(output))."""
-    end
-
     _size = if batch
-        # assume batches are in the last dimension
-        sz_in = size(input)[1:end-1] |> prod
-        sz_out = size(output)[1:end-1] |> prod
-        (sz_out, sz_in)
+        # assume batches are 2nd dimension of `AbstractVecOrMat`
+        (size(output, 1), size(input, 1))
     else
         (length(output), length(input))
     end
@@ -198,6 +212,12 @@ function FunctionOperator(op,
         outofplace
     end
 
+    if !isinplace & !outofplace
+        @error """Please provide a funciton with signatures `op(u, p, t)` for
+        applying the operator out-of-place, and/or the signature is
+        `op(v, u, p, t)` for in-place application."""
+    end
+
     has_mul5 = if isnothing(has_mul5)
         has_mul5 = true
         for f in (
@@ -209,12 +229,6 @@ function FunctionOperator(op,
         end
 
         has_mul5
-    end
-
-    if !isinplace & !outofplace
-        @error """Please provide a funciton with signatures `op(u, p, t)` for
-        applying the operator out-of-place, and/or the signature is
-        `op(v, u, p, t)` for in-place application."""
     end
 
     # traits
@@ -316,31 +330,30 @@ function iscached(L::FunctionOperator)
     !isnothing(L.cache)
 end
 
-function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
-    !L.traits.ifcache && @debug """Cache is being allocated for a
-        FunctionOperator created with kwarg ifcache = false."""
+# fix method amg bw AbstractArray, AbstractVecOrMat
+cache_operator(L::FunctionOperator, u::AbstractArray) = _cache_operator(L, u)
+cache_operator(L::FunctionOperator, u::AbstractVecOrMat) = _cache_operator(L, u)
 
-    if L.traits.batch
-        N = size(L, 2)
-        NK = length(u)
+function _cache_operator(L::FunctionOperator, u::AbstractArray)
 
-        K, r = divrem(NK, N)
+    U = if L.traits.batch
+        @assert u isa AbstractVecOrMat """`FunctionOperator` constructed with
+        `batch = true` only accepts `AbstractVecOrMat` types with
+        `size(L, 2) == size(u, 1)`."""
 
-        if r != 0
-            msg = """Input array, $(typeof(u)), of size $(size(u)), cannot be
-                reshaped to size $((L.traits.sizes[1]..., :K)) for integer `K`
-                (batch size) as expected by FunctionOperator of size
-                $(size(L))."""
-            throw(DimensionMismatch(msg))
+        if size(L, 2) != size(u, 1)
+            msg = """Second dimension of `FunctionOperator` of size $(size(L))
+                is not consistent with first dimension of input array `u`
+                of size $(size(u))."""
+            DimensionMismatch(msg) |> throw
         end
 
-        sz_in, sz_out = L.traits.sizes
+        M = size(L, 1)
+        K = size(u, 2)
+        size_out = u isa AbstractVector ? (M,) : (M, K)
+        @set! L.traits.sizes = size(u), size_out
 
-        sz_in = (sz_in[1:end-1]..., K)
-        sz_out = (sz_out[1:end-1]..., K)
-
-        @set! L.traits.sizes = (sz_in, sz_out,)
-        U = reshape(u, sz_in)
+        u
     else
         if size(L, 2) != length(u)
             msg = """Length of input array, $(typeof(u)), of size $(size(u))
@@ -349,8 +362,19 @@ function cache_self(L::FunctionOperator, u::AbstractVecOrMat)
             throw(DimensionMismatch(msg))
         end
 
-        U = reshape(u, L.traits.sizes[1])
+        reshape(u, L.traits.sizes[1])
     end
+
+    L = cache_self(L, U)
+    L = cache_internals(L, U)
+    L
+end
+
+# fix method amg bw AbstractArray, AbstractVecOrMat
+cache_self(L::FunctionOperator, u::AbstractArray) = _cache_self(L, u)
+cache_self(L::FunctionOperator, u::AbstractVecOrMat) = _cache_self(L, u)
+
+function _cache_self(L::FunctionOperator, u::AbstractArray)
 
     _u = similar(u, L.traits.eltypes[1], L.traits.sizes[1])
     _v = similar(u, L.traits.eltypes[2], L.traits.sizes[2])
@@ -444,7 +468,13 @@ end
 
 function Base.resize!(L::FunctionOperator, n::Integer)
 
-    # input/output to `L` must be `AbstractVector`s. i.e. no batching
+    # input/output to `L` must be `AbstractVector`s
+    if length(L.traits.sizes[1]) != 1
+        msg = """`Base.resize!` is only supported by `FunctionOperator` whose
+            input/output arrays are `AbstractVector`s.
+            """
+        MethodError(msg) |> throw
+    end
 
     for op in getops(L)
         if static_hasmethod(resize!, typeof((op, n)))
@@ -475,15 +505,12 @@ LinearAlgebra.ishermitian(L::FunctionOperator) = L.traits.ishermitian
 LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
 function getops(L::FunctionOperator)
-    # TODO - replace with named tuple
-
-    ops = (L.op,)
-
-    ops = isa(L.op_adjoint, Nothing) ? ops : (ops..., L.op_adjoint)
-    ops = isa(L.op_inverse, Nothing) ? ops : (ops..., L.op_inverse)
-    ops = isa(L.op_adjoint_inverse, Nothing) ? ops : (ops..., L.op_adjoint_inverse)
-
-    ops
+    (;
+     op = L.op,
+     op_adjoint = L.op_adjoint,
+     op_inverse = L.op_inverse,
+     op_adjoint_inverse = L.op_adjoint_inverse,
+    )
 end
 
 islinear(L::FunctionOperator) = L.traits.islinear
@@ -494,59 +521,90 @@ has_mul!(::FunctionOperator{iip}) where{iip} = iip
 has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
+function _sizecheck(L::FunctionOperator, u, v)
+
+    if L.traits.batch
+        if !isnothing(u)
+            if !isa(u, AbstractVecOrMat)
+                msg = """$L constructed with `batch = true` only
+                    accept input arrays that are `AbstractVecOrMat`s with
+                    `size(L, 2) == size(u, 1)`."""
+                ArgumentError(msg) |> throw
+            end
+
+            if size(u) != L.traits.sizes[1]
+                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
+                    Recievd array of size $(size(u))."""
+                DimensionMismatch(msg) |> throw
+            end
+        end
+
+        if !isnothing(v)
+            if size(v) != L.traits.sizes[2]
+                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
+                    Recievd array of size $(size(u))."""
+                DimensionMismatch(msg) |> throw
+            end
+        end
+    else # !batch
+        if !isnothing(u)
+            if size(u) != L.traits.sizes[1]
+                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
+                    Recievd array of size $(size(u))."""
+                DimensionMismatch(msg) |> throw
+            end
+        end
+
+        if !isnothing(v)
+            if size(v) != L.traits.sizes[2]
+                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
+                    Recievd array of size $(size(u))."""
+                DimensionMismatch(msg) |> throw
+            end
+        end
+    end # batch
+
+    return
+end
+
 # operator application
 function Base.:*(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
+    _sizecheck(L, u, nothing)
 
-    U = reshape(u, L.traits.sizes[1])
-
-    V = L.op(U, L.p, L.t; L.traits.kwargs...)
-
-    #TODO - reshape output?
+    L.op(u, L.p, L.t; L.traits.kwargs...)
 end
 
 function Base.:\(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
+    _sizecheck(L, nothing, u)
 
-    U = reshape(u, L.traits.sizes[1])
-
-    V = L.op_inverse(U, L.p, L.t; L.traits.kwargs...)
+    L.op_inverse(u, L.p, L.t; L.traits.kwargs...)
 end
 
 # fallback *, \ for FunctionOperator with no OOP method
 
 function Base.:*(L::FunctionOperator{true,false}, u::AbstractArray)
-
     _, co = L.cache
     v = zero(co)
 
-    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
-    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+    _sizecheck(L, u, v)
 
     L.op(v, u, L.p, L.t; L.traits.kwargs...)
-
-    v
 end
 
 function Base.:\(L::FunctionOperator{true,false}, u::AbstractArray)
-
     ci, _ = L.cache
     v = zero(ci)
 
-    U = reshape(u, L.traits.sizes[2]) # size(L, 1) -- output size
-    V = reshape(v, L.traits.sizes[1]) # size(L, 2) -- input size
+    _sizecheck(L, v, u)
 
-    L.op_inverse(V, U, L.p, L.t; L.traits.kwargs...)
-
-    v
+    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
 
-    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
-    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+    _sizecheck(L, u, v)
 
-    L.op(V, U, L.p, L.t; L.traits.kwargs...)
-
-    v
+    L.op(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray, args...)
@@ -554,46 +612,37 @@ function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{false}, u::Abs
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, false}, u::AbstractArray, α, β) where{oop}
-    _, Co = L.cache
+    _, co = L.cache
 
-    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
-    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
+    _sizecheck(L, u, v)
 
-    copy!(Co, V)
-    mul!(V, L, U)
-    lmul!(α, V)
-    axpy!(β, Co, V)
-
-    v
+    copy!(co, v)
+    mul!(v, L, u)
+    lmul!(α, v)
+    axpy!(β, co, v)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true}, u::AbstractArray, α, β) where{oop}
-    U = reshape(u, L.traits.sizes[1]) # size(L, 2) -- input size
-    V = reshape(v, L.traits.sizes[2]) # size(L, 1) -- output size
 
-    L.op(V, U, L.p, L.t, α, β; L.traits.kwargs...)
+    _sizecheck(L, u, v)
 
-    v
+    L.op(v, u, L.p, L.t, α, β; L.traits.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
-    U = reshape(u, L.traits.sizes[2]) # size(L, 1) -- output size
-    V = reshape(v, L.traits.sizes[1]) # size(L, 2) -- input  size
 
-    L.op_inverse(V, U, L.p, L.t; L.traits.kwargs...)
+    _sizecheck(L, v, u)
 
-    v
+    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractArray)
-    Ci, _ = L.cache
+    ci, _ = L.cache
 
-    U = reshape(u, L.traits.sizes[2]) # size(L, 1) -- output size
+    _sizecheck(L, nothing, u)
 
-    copy!(Ci, U)
-    ldiv!(U, L, Ci)
-
-    u
+    copy!(ci, u)
+    ldiv!(u, L, ci)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray)

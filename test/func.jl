@@ -122,6 +122,7 @@ end
     f2(du, u, p, t, α, β)  = mul!(du, A, u, α, β)
     f2i(du, u, p, t) = ldiv!(du, F, u)
     f2i(du, u, p, t, α, β) = mul!(du, Ai, u, α, β)
+
    # out of place
     op1 = FunctionOperator(f1, u, A*u;
 
