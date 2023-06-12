@@ -529,7 +529,9 @@ function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
     U = reshape(U, (ni, no, k))
     C = reshape(C, (no, ni, k))
     permutedims!(C, U, PERM)
+    C = reshape(C, (no, ni * k))
     ldiv!(outer, C)
+    C = reshape(C, (no, ni, k))
     permutedims!(U, C, PERM)
 
     u
