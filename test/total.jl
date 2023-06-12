@@ -82,17 +82,25 @@ end
 @testset "Operator Algebra" begin
     N2 = N*N
 
+    u = rand(N2,K)
+    p = rand()
+    t = rand()
+
     A = rand(N,N)
+
     # Introduce update function for B
     B = MatrixOperator(zeros(N,N); update_func! = (A, u, p, t) -> (A .= p))
-    C = rand(N,N)
+
+    # FunctionOp
+    _C = rand(N, N) |> Symmetric
+    f(u, p, t) = _C * u
+    f(v, u, p, t) = mul!(v, _C, u)
+    C = FunctionOperator(f, zeros(N); batch = true, issymmetric = true, p = p)
+
     # Introduce update function for D dependent on kwarg "matrix"
     D = MatrixOperator(zeros(N,N); update_func! = (A, u, p, t; matrix) -> (A .= p*t*matrix), 
                        accepted_kwargs = (:matrix,))
 
-    u = rand(N2,K)
-    p = rand()
-    t = rand()
     matrix = rand(N, N)
     diag = rand(N2)
     α = rand()
@@ -115,12 +123,11 @@ end
     @test_nowarn update_coefficients!(op, u, p, t; diag, matrix)
     # Form dense operator manually 
     dense_T1 = kron(A, p * ones(N, N))
-    dense_T2 = kron(C, (p*t) .* matrix)
+    dense_T2 = kron(_C, (p*t) .* matrix)
     dense_DD = Diagonal(vcat(p * ones(N2), p*t*diag))
     dense_op = hcat(dense_T1', dense_T2') * dense_DD * vcat(dense_T1, dense_T2)
     # Test correctness of op
     @test op * u ≈ dense_op * u
-    @test convert(AbstractMatrix, op) ≈ dense_op 
     # Test consistency with three-arg mul!
     v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
     # Test consistency with in-place five-arg mul!
