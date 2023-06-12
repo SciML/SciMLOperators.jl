@@ -170,22 +170,6 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L
 end
 
-"""
-$SIGNATURES
-
-To cache operator `L` of size `(M, N)`, we flatten `u` to size `(N, K)`
-and pass it on.
-"""
-function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
-    u isa AbstractVecOrMat && @error """cache_operator not defined for
-    $(typeof(L)), $(typeof(u))."""
-
-    sz, _ = _mat_sizes(L, u)
-    U = reshape(u, sz)
-
-    cache_operator(L, U)
-end
-
 cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 

@@ -1,40 +1,6 @@
 #
 
 ###
-# multidim
-###
-function _mat_sizes(L::AbstractSciMLOperator, u::AbstractVector)
-    M, N = size(L)
-
-    if length(u) != N
-        msg = """Length of input array, $(typeof(u)), of size $(size(u))
-            not consistent with second dimension of SciMLOperator of size
-            $(size(L)). """
-        throw(DimensionMismatch(msg))
-    end
-
-    (N,), (M,)
-end
-function _mat_sizes(L::AbstractSciMLOperator, u::AbstractArray)
-    M, N = size(L)
-    NK = length(u)
-
-    K, r = divrem(NK, N)
-
-    if r != 0
-        msg = """Input array, $(typeof(u)), of size $(size(u)), cannot be
-            reshaped to size $((L.traits.sizes[1]..., :K)) for integer `K`
-            (batch size) as expected by FunctionOperator of size $(size(L))."""
-        throw(DimensionMismatch(msg))
-    end
-
-    size_in  =  (N, K)
-    size_out = (M, size(u)[2:end]...)
-
-    size_in, size_out
-end
-
-###
 # kwarg filter
 ###
 
