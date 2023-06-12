@@ -337,12 +337,14 @@ cache_operator(L::FunctionOperator, u::AbstractVecOrMat) = _cache_operator(L, u)
 function _cache_operator(L::FunctionOperator, u::AbstractArray)
 
     U = if L.traits.batch
-        @assert u isa AbstractVecOrMat """`FunctionOperator` constructed with
-        `batch = true` only accepts `AbstractVecOrMat` types with
-        `size(L, 2) == size(u, 1)`."""
+        if !isa(u, AbstractVecOrMat)
+            msg = """$L constructed with `batch = true` only accepts
+                `AbstractVecOrMat` types with `size(L, 2) == size(u, 1)`."""
+            ArgumentError(msg) |> throw
+        end
 
         if size(L, 2) != size(u, 1)
-            msg = """Second dimension of `FunctionOperator` of size $(size(L))
+            msg = """Second dimension of $L of size $(size(L))
                 is not consistent with first dimension of input array `u`
                 of size $(size(u))."""
             DimensionMismatch(msg) |> throw
@@ -357,8 +359,8 @@ function _cache_operator(L::FunctionOperator, u::AbstractArray)
     else
         if size(L, 2) != length(u)
             msg = """Length of input array, $(typeof(u)), of size $(size(u))
-                not consistent with second dimension of FunctionOperator
-                of size $(size(L)). """
+                not consistent with second dimension of $L of size
+                $(size(L))."""
             throw(DimensionMismatch(msg))
         end
 
@@ -383,8 +385,8 @@ function _cache_self(L::FunctionOperator, u::AbstractArray)
 end
 
 function Base.show(io::IO, L::FunctionOperator)
-    a, b = size(L)
-    print(io, "FunctionOperator($a × $b)")
+    M, N = size(L)
+    print(io, "FunctionOperator($M × $N)")
 end
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator)
@@ -470,9 +472,8 @@ function Base.resize!(L::FunctionOperator, n::Integer)
 
     # input/output to `L` must be `AbstractVector`s
     if length(L.traits.sizes[1]) != 1
-        msg = """`Base.resize!` is only supported by `FunctionOperator` whose
-            input/output arrays are `AbstractVector`s.
-            """
+        msg = """`Base.resize!` is only supported by $L whose input/output
+            arrays are `AbstractVector`s."""
         MethodError(msg) |> throw
     end
 
@@ -495,8 +496,7 @@ function LinearAlgebra.opnorm(L::FunctionOperator, p)
     L.traits.opnorm === nothing && error("""
       M.opnorm is nothing, please define opnorm as a function that takes one
       argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is
-      defined")`
-    """)
+      defined")`""")
     opn = L.traits.opnorm
     return opn isa Number ? opn : L.traits.opnorm(p)
 end

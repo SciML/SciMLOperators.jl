@@ -212,7 +212,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`"""
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     outer, inner = L.ops
 
@@ -239,7 +239,7 @@ end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`"""
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     outer, inner = L.ops
 
@@ -267,7 +267,7 @@ end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`"""
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     outer, inner = L.ops
 
@@ -302,7 +302,7 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert issquare(outer) msg
 
     @assert iscached(L) """cache needs to be set up for operator of type
-    $(typeof(L)). Set up cache by calling `cache_operator(L, u)`"""
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     mi = size(inner, 1)
     mo = size(outer, 1)
