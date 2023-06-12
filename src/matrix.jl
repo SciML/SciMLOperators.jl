@@ -395,27 +395,25 @@ v = L(u, p, t) # == A * u + B * (p * t)
 ```
 
 """
-struct AffineOperator{T,AT,BT,bT,C,F,F!} <: AbstractSciMLOperator{T}
+struct AffineOperator{T,AT,BT,bT,F,F!} <: AbstractSciMLOperator{T}
     A::AT
     B::BT
     b::bT
 
-    cache::C
     update_func::F # updates b
     update_func!::F! # updates b
 
-    function AffineOperator(A, B, b, cache, update_func, update_func!)
+    function AffineOperator(A, B, b, update_func, update_func!)
         T = promote_type(eltype.((A,B,b))...)
 
         new{T,
             typeof(A),
             typeof(B),
             typeof(b),
-            typeof(cache),
             typeof(update_func),
             typeof(update_func!),
            }(
-             A, B, b, cache, update_func, update_func!,
+             A, B, b, update_func, update_func!,
             )
     end
 end
@@ -437,9 +435,7 @@ function AffineOperator(A::Union{AbstractMatrix,AbstractSciMLOperator},
     A = A isa AbstractMatrix ? MatrixOperator(A) : A
     B = B isa AbstractMatrix ? MatrixOperator(B) : B
 
-    cache = B * b
-
-    AffineOperator(A, B, b, cache, update_func, update_func!)
+    AffineOperator(A, B, b, update_func, update_func!)
 end
 
 """
@@ -550,6 +546,7 @@ function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
     L
 end
 
+# operator application
 function Base.:*(L::AffineOperator, u::AbstractVecOrMat)
     @assert size(L.b, 2) == size(u, 2)
     (L.A * u) + (L.B * L.b)
@@ -561,15 +558,13 @@ function Base.:\(L::AffineOperator, u::AbstractVecOrMat)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
-    mul!(v, L.A, u)
-    mul!(L.cache, L.B, L.b)
-    axpy!(true, L.cache, v)
+    mul!(v, L.B, L.b)
+    mul!(v, L.A, u, true, true)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat, α, β)
-    mul!(L.cache, L.B, L.b)
-    mul!(v, L.A, u, α, β)
-    axpy!(α, L.cache, v)
+    mul!(v, L.B, L.b, α, β)
+    mul!(v, L.A, u, α, true)
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
@@ -578,8 +573,7 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::Abstract
 end
 
 function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
-    mul!(L.cache, L.B, L.b)
-    axpy!(-true, L.cache, u)
+    mul!(u, L.B, L.b, -1, 1)
     ldiv!(L.A, u)
 end
 #
