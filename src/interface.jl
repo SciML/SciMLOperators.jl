@@ -162,9 +162,8 @@ $SIGNATURES
 
 Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
 """
-function cache_operator end
-
 cache_operator(L, u) = L
+
 cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 
@@ -175,21 +174,20 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L
 end
 
+"""
+$SIGNATURES
+
+To cache operator `L` of size `(M, N)`, we flatten `u` to size `(N, K)`
+and pass it on.
+"""
 function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
     u isa AbstractVecOrMat && @error """cache_operator not defined for
     $(typeof(L)), $(typeof(u))."""
 
-    n = size(L, 2)
-    s = size(u)
-    k = prod(s[2:end])
+    sz = _mat_sizes(L, u)
+    U = reshape(u, sz)
 
-    # TODO - account for batching in cache_op. use _mat_size
-    @assert s[1] == n "Dimension mismatch"
-
-    U = reshape(u, (n, k))
-    L = cache_operator(L, U)
-
-    L
+    cache_operator(L, U)
 end
 
 ###
