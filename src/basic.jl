@@ -8,8 +8,6 @@ struct IdentityOperator <: AbstractSciMLOperator{Bool}
 end
 
 # constructors
-IdentityOperator(u::AbstractVecOrMat) = IdentityOperator(size(u,1))
-
 function Base.one(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
@@ -105,8 +103,6 @@ struct NullOperator <: AbstractSciMLOperator{Bool}
 end
 
 # constructors
-NullOperator(u::AbstractVecOrMat) = NullOperator(size(u,1))
-
 function Base.zero(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
