@@ -77,7 +77,10 @@ include("batch.jl")
 include("func.jl")
 include("tensor.jl")
 
-export ScalarOperator,
+export
+       IdentityOperator,
+       NullOperator,
+       ScalarOperator,
        MatrixOperator,
        DiagonalOperator,
        InvertibleOperator,
