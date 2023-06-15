@@ -8,8 +8,6 @@ struct IdentityOperator <: AbstractSciMLOperator{Bool}
 end
 
 # constructors
-IdentityOperator(u::AbstractArray) = IdentityOperator(size(u,1))
-
 function Base.one(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
@@ -105,8 +103,6 @@ struct NullOperator <: AbstractSciMLOperator{Bool}
 end
 
 # constructors
-NullOperator(u::AbstractArray) = NullOperator(size(u,1))
-
 function Base.zero(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
@@ -636,6 +632,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 
     K = size(u, 2)
     cache = (zero(u),)
+
     for i in reverse(2:length(L.ops))
         op = L.ops[i]
 
@@ -644,8 +641,8 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
 
         T = if op isa FunctionOperator # 
             # FunctionOperator isn't guaranteed to play by the rules of
-            # `promote_type`. For example, an rFFT is a complex operation
-            # that accepts and complex vector and returns a real one.
+            # `promote_type`. For example, an irFFT is a complex operation
+            # that accepts complex vector and returns  ones.
             op.traits.eltypes[2]
         else
             promote_type(eltype.((op, cache[1]))...)
@@ -672,8 +669,8 @@ function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     vecs = (v, L.cache[1:end-1]..., u)
     for i in reverse(1:length(L.ops))
@@ -683,8 +680,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat, α, β)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`."""
 
     cache = L.cache[end]
     copy!(cache, v)
@@ -695,8 +692,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::Abstrac
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`."""
 
     vecs = (u, reverse(L.cache[1:end-1])..., v)
     for i in 1:length(L.ops)
@@ -801,8 +798,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstrac
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertedOperator, u::AbstractVecOrMat, α, β)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`."""
 
     copy!(L.cache, v)
     ldiv!(v, L.L, u)
@@ -815,8 +812,8 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::InvertedOperator, u::Abstra
 end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`."""
 
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)

@@ -7,28 +7,32 @@ using SciMLOperators: ⊗
 Random.seed!(0)
 N = 8
 K = 12
+NK = N * K
 
-@testset "FunctionOperator" begin
-    u = rand(N,K)
+@testset "(Unbatched) FunctionOperator" begin
+    u = rand(N, K)
     p = nothing
     t = 0.0
     α = rand()
     β = rand()
 
-    A = rand(N,N) |> Symmetric
+    _mul(A, u) = reshape(A * vec(u), N, K)
+    _div(A, u) = reshape(A \ vec(u), N, K)
+
+    A = rand(NK, NK) |> Symmetric
     F = lu(A)
     Ai = inv(A)
 
-    f1(u, p, t)  = A * u
-    f1i(u, p, t) = A \ u
+    f1(u, p, t)  = _mul(A, u)
+    f1i(u, p, t) = _div(A, u)
 
-    f2(du, u, p, t)  = mul!(du, A, u)
-    f2(du, u, p, t, α, β)  = mul!(du, A, u, α, β)
-    f2i(du, u, p, t) = ldiv!(du, F, u)
-    f2i(du, u, p, t, α, β) = mul!(du, Ai, u, α, β)
+    f2(du, u, p, t)  = (mul!(vec(du), A, vec(u)); du)
+    f2(du, u, p, t, α, β)  = (mul!(vec(du), A, vec(u), α, β); du)
+    f2i(du, u, p, t) = (ldiv!(vec(du), F, vec(u)); du)
+    f2i(du, u, p, t, α, β) = (mul!(vec(du), Ai, vec(u), α, β); du)
 
     # out of place
-    op1 = FunctionOperator(f1, u, A*u;
+    op1 = FunctionOperator(f1, u;
 
                            op_inverse=f1i,
 
@@ -42,7 +46,7 @@ K = 12
                           )
 
     # in place
-    op2 = FunctionOperator(f2, u, A*u;
+    op2 = FunctionOperator(f2, u;
 
                            op_inverse=f2i,
 
@@ -63,14 +67,14 @@ K = 12
 
     @test op1' === op1
 
-    @test size(op1) == (N*K,N*K)
+    @test size(op1) == (NK, NK)
     @test has_adjoint(op1)
     @test has_mul(op1)
     @test !has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
-    @test size(op2) == (N*K,N*K)
+    @test size(op2) == (NK, NK)
     @test has_adjoint(op2)
     @test has_mul(op2)
     @test has_mul!(op2)
@@ -84,24 +88,24 @@ K = 12
     @test op2.traits.has_mul5
 
     # 5-arg mul! (w/o cache)
-    v = rand(N,K); w=copy(v); @test α*(A*u)+ β*w ≈ mul!(v, op2, u, α, β)
+    v = rand(N,K); w=copy(v); @test α * _mul(A, u) + β * w ≈ mul!(v, op2, u, α, β)
 
-    op1 = cache_operator(op1, u, A * u)
-    op2 = cache_operator(op2, u, A * u)
+    op1 = cache_operator(op1, u)
+    op2 = cache_operator(op2, u)
 
     @test iscached(op1)
     @test iscached(op2)
 
-    v = rand(N,K); @test A * u ≈ op1 * u ≈ mul!(v, op2, u)
-    v = rand(N,K); @test A * u ≈ op1(u,p,t) ≈ op2(v,u,p,t)
-    v = rand(N,K); w=copy(v); @test α*(A*u)+ β*w ≈ mul!(v, op2, u, α, β)
+    v = rand(N,K); @test _mul(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
+    v = rand(N,K); @test _mul(A, u) ≈ op1(u,p,t) ≈ op2(v,u,p,t)
+    v = rand(N,K); w=copy(v); @test α * _mul(A, u)+ β * w ≈ mul!(v, op2, u, α, β)
 
-    v = rand(N,K); @test A \ u ≈ op1 \ u ≈ ldiv!(v, op2, u)
-    v = copy(u);   @test A \ v ≈ ldiv!(op2, u)
+    v = rand(N,K); @test _div(A, u) ≈ op1 \ u ≈ ldiv!(v, op2, u)
+    v = copy(u);   @test _div(A, v) ≈ ldiv!(op2, u)
 end
 
-@testset "Batch FunctionOperator" begin
-    u = rand(N,K)
+@testset "Batched FunctionOperator" begin
+    u = rand(N, K)
     p = nothing
     t = 0.0
     α = rand()
@@ -118,6 +122,7 @@ end
     f2(du, u, p, t, α, β)  = mul!(du, A, u, α, β)
     f2i(du, u, p, t) = ldiv!(du, F, u)
     f2i(du, u, p, t, α, β) = mul!(du, Ai, u, α, β)
+
    # out of place
     op1 = FunctionOperator(f1, u, A*u;
 
@@ -154,14 +159,14 @@ end
 
     @test op1' === op1
 
-    @test size(op1) == (N,N)
+    @test size(op1) == (N, N)
     @test has_adjoint(op1)
     @test has_mul(op1)
     @test !has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
-    @test size(op2) == (N,N)
+    @test size(op2) == (N, N)
     @test has_adjoint(op2)
     @test has_mul(op2)
     @test has_mul!(op2)
@@ -173,10 +178,26 @@ end
 
     @test !op1.traits.has_mul5
     @test op2.traits.has_mul5 
+
+    # 5-arg mul! (w/o cache)
+    v = rand(N,K); w=copy(v); @test α * *(A, u) + β * w ≈ mul!(v, op2, u, α, β)
+
+    op1 = cache_operator(op1, u)
+    op2 = cache_operator(op2, u)
+
+    @test iscached(op1)
+    @test iscached(op2)
+
+    v = rand(N,K); @test *(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
+    v = rand(N,K); @test *(A, u) ≈ op1(u,p,t) ≈ op2(v,u,p,t)
+    v = rand(N,K); w=copy(v); @test α * *(A, u)+ β * w ≈ mul!(v, op2, u, α, β)
+
+    v = rand(N,K); @test \(A, u) ≈ op1 \ u ≈ ldiv!(v, op2, u)
+    v = copy(u);   @test \(A, v) ≈ ldiv!(op2, u)
 end
 
 @testset "FunctionOperator update test" begin
-    u = rand(N,K)
+    u = rand(N, K)
     p = rand(N)
     t = rand()
     scale = rand()
@@ -185,8 +206,10 @@ end
     f(du,u,p,t; scale = 1.0) = mul!(du, Diagonal(p*t*scale), u)
     f(u, p, t; scale = 1.0) = Diagonal(p * t * scale) * u
 
-    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t),
+    L = FunctionOperator(f, u, u; p=zero(p), t=zero(t), batch = true,
                          accepted_kwargs = (:scale,))
+
+    @test size(L) == (N, N)
 
     ans = @. u * p * t * scale 
     @test L(u,p,t; scale) ≈ ans

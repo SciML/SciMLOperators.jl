@@ -29,9 +29,11 @@ K = 12
 
     @test issquare(Id)
     @test islinear(Id)
-    @test IdentityOperator(u) isa IdentityOperator
-    @test one(A) isa IdentityOperator
     @test convert(AbstractMatrix, Id) == Matrix(I, N, N)
+
+    _Id = one(A)
+    @test _Id isa IdentityOperator
+    @test size(_Id) == (N, N)
 
     @test iscached(Id)
     @test size(Id) == (N, N)
@@ -68,12 +70,13 @@ end
 
     @test issquare(Z)
     @test islinear(Z)
-    @test NullOperator(u) isa NullOperator
     @test isconstant(Z)
     @test_throws MethodError resize!(Z, N)
-
-    @test zero(A) isa NullOperator
     @test convert(AbstractMatrix, Z) == zeros(size(Z))
+
+    _Z = zero(A)
+    @test _Z isa NullOperator
+    @test size(_Z) == (N, N)
 
     @test iscached(Z)
     @test size(Z) == (N, N)

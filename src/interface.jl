@@ -1,10 +1,7 @@
 #
-###
-# Operator interface
-###
 
 ###
-# Utilities for update functions
+# operator update interface
 ###
 
 """
@@ -13,31 +10,7 @@ $SIGNATURES
 The default update function for `AbstractSciMLOperator`s, a no-op that
 leaves the operator state unchanged.
 """
-DEFAULT_UPDATE_FUNC(A,u,p,t) = A
-
-"""
-$SIGNATURES
-
-This type indicates to `preprocess_update_func` to not to filter keyword
-arguments. Required in implementation of lazy `Base.adjoint`,
-`Base.conj`, `Base.transpose`.
-"""
-struct NoKwargFilter end
-
-function preprocess_update_func(update_func, accepted_kwargs)
-    _update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
-    _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs 
-    # accepted_kwargs can be passed as nothing to indicate that we should not filter 
-    # (e.g. if the function already accepts all kwargs...). 
-    return (_accepted_kwargs isa NoKwargFilter) ? _update_func : FilterKwargs(_update_func, _accepted_kwargs)
-end
-function update_func_isconstant(update_func)
-    if update_func isa FilterKwargs
-        return update_func.f == DEFAULT_UPDATE_FUNC
-    else
-        return update_func == DEFAULT_UPDATE_FUNC
-    end
-end
+DEFAULT_UPDATE_FUNC(A, u, p, t) = A
 
 const UPDATE_COEFFS_WARNING = """
 !!! warning
@@ -54,6 +27,8 @@ const UPDATE_COEFFS_WARNING = """
 """
 
 """
+$SIGNATURES
+
 Update the state of `L` based on `u`, input vector, `p` parameter object,
 `t`, and keyword arguments. Internally, `update_coefficients` calls the
 user-provided `update_func` method for every component operator in `L`
@@ -86,9 +61,11 @@ L * u
 ```
 
 """
-update_coefficients
+update_coefficients(L, u, p, t; kwargs...) = L
 
 """
+$SIGNATURES
+
 Update in-place the state of `L` based on `u`, input vector, `p` parameter
 object, `t`, and keyword arguments. Internally, `update_coefficients!` calls
 the user-provided mutating `update_func!` method for every component operator
@@ -119,16 +96,18 @@ L * u
 ```
 
 """
-update_coefficients!
+update_coefficients!(L, u, p, t; kwargs...) = nothing
 
-update_coefficients(L,u,p,t; kwargs...) = L
-update_coefficients!(L,u,p,t; kwargs...) = nothing
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
     end
     L
 end
+
+###
+# operator evaluation interface
+###
 
 (L::AbstractSciMLOperator)(u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
 (L::AbstractSciMLOperator)(du, u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
@@ -141,7 +120,7 @@ function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs
 end
 
 ###
-# caching interface
+# operator caching interface
 ###
 
 getops(L) = ()
@@ -182,19 +161,7 @@ $SIGNATURES
 
 Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
 """
-function cache_operator end
-
 cache_operator(L, u) = L
-cache_operator(L, u, v) = L
-cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
-cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat...) = L
-
-function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat, v::AbstractVecOrMat)
-
-    L = cache_self(L, u, v)
-    L = cache_internals(L, u, v)
-    L
-end
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
 
@@ -203,22 +170,11 @@ function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
     L
 end
 
-function cache_operator(L::AbstractSciMLOperator, u::AbstractArray)
-    u isa AbstractVecOrMat && @error "cache_operator not defined for $(typeof(L)), $(typeof(u))."
-
-    n = size(L, 2)
-    s = size(u)
-    k = prod(s[2:end])
-
-    @assert s[1] == n "Dimension mismatch"
-
-    U = reshape(u, (n, k))
-    L = cache_operator(L, U)
-    L
-end
+cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
+cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 
 ###
-# Operator Traits
+# operator traits
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
@@ -236,12 +192,12 @@ Check if `adjoint(L)` is lazily defined.
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
 Check if `expmv!(v, L, u, t)`, equivalent to `mul!(v, exp(t * A), u)`, is
-defined for `Number` `t`, and `AbstractVecOrMat`s `u, v` of appropriate sizes.
+defined for `Number` `t`, and `AbstractArray`s `u, v` of appropriate sizes.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
 Check if `expmv(L, u, t)`, equivalent to `exp(t * A) * u`, is defined for
-`Number` `t`, and `AbstractVecOrMat` `u` of appropriate size.
+`Number` `t`, and `AbstractArray` `u` of appropriate size.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 """
@@ -249,20 +205,20 @@ Check if `exp(L)` is defined lazily defined.
 """
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
-Check if `L * u` is defined for `AbstractVecOrMat` `u` of appropriate size.
+Check if `L * u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
-Check if `mul!(v, L, u)` is defined for `AbstractVecOrMat`s `u, v` of
+Check if `mul!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
-Check if `L \\ u` is defined for `AbstractVecOrMat` `u` of appropriate size.
+Check if `L \\ u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
-Check if `ldiv!(v, L, u)` is defined for `AbstractVecOrMat`s `u, v` of
+Check if `ldiv!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
@@ -392,19 +348,23 @@ expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 
 function Base.conj(L::AbstractSciMLOperator)
     isreal(L) && return L
+    @warn """using convert-based fallback for Base.conj"""
     convert(AbstractMatrix, L) |> conj
 end
 
 function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
+    @warn """using convert-based fallback for Base.=="""
     size(L1) != size(L2) && return false
     convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
 end
 
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Any,N}) where {N}
+    @warn """using convert-based fallback for Base.getindex"""
     convert(AbstractMatrix, L)[I...]
 end
 function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
-    convert(AbstractMatrix,L)[I...]
+    @warn """using convert-based fallback for Base.getindex"""
+    convert(AbstractMatrix, L)[I...]
 end
 
 function Base.resize!(L::AbstractSciMLOperator, n::Integer)
@@ -412,29 +372,39 @@ function Base.resize!(L::AbstractSciMLOperator, n::Integer)
 end
 
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
-LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2) = opnorm(convert(AbstractMatrix,L), p)
+
+function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
+    @warn """using convert-based fallback in LinearAlgebra.opnorm."""
+    opnorm(convert(AbstractMatrix, L), p)
+end
+
 for pred in (
              :issymmetric,
              :ishermitian,
              :isposdef,
             )
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
+        @warn """using convert-based fallback in $pred."""
         $pred(convert(AbstractMatrix, L))
     end
 end
+
 for op in (
            :sum,:prod
           )
-  @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
-      $op(convert(AbstractMatrix, L); kwargs...)
-  end
+    @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
+        @warn """using convert-based fallback in $op."""
+        $op(convert(AbstractMatrix, L); kwargs...)
+    end
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat)
-    mul!(v, convert(AbstractMatrix,L), u)
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
+    @warn """using convert-based fallback in mul!."""
+    mul!(v, convert(AbstractMatrix, L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AbstractSciMLOperator, u::AbstractVecOrMat, α, β)
-    mul!(v, convert(AbstractMatrix,L), u, α, β)
+function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
+    @warn """using convert-based fallback in mul!."""
+    mul!(v, convert(AbstractMatrix, L), u, α, β)
 end
 #

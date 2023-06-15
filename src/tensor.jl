@@ -198,12 +198,12 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
 
     outer, inner = L.ops
 
-    _ , ni = size(inner)
-    _ , no = size(outer)
+    mi , ni = size(inner)
+    _  , no = size(outer)
     k = size(u, 2)
 
     uinner = reshape(u, (ni, no*k))
-    uouter = L.cache[2]
+    uouter = reshape(L.cache[2], (no, mi * k))
 
     @set! L.ops[2] = cache_operator(inner, uinner)
     @set! L.ops[1] = cache_operator(outer, uouter)
@@ -211,8 +211,8 @@ function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     outer, inner = L.ops
 
@@ -238,8 +238,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat, α, β)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     outer, inner = L.ops
 
@@ -266,8 +266,8 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::Ab
 end
 
 function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     outer, inner = L.ops
 
@@ -301,8 +301,8 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert issquare(inner) msg
     @assert issquare(outer) msg
 
-    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
-    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+    @assert iscached(L) """cache needs to be set up for operator of type
+    $L. Set up cache by calling `cache_operator(L, u)`"""
 
     mi = size(inner, 1)
     mo = size(outer, 1)
@@ -529,7 +529,9 @@ function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
     U = reshape(U, (ni, no, k))
     C = reshape(C, (no, ni, k))
     permutedims!(C, U, PERM)
+    C = reshape(C, (no, ni * k))
     ldiv!(outer, C)
+    C = reshape(C, (no, ni, k))
     permutedims!(U, C, PERM)
 
     u
