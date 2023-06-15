@@ -133,7 +133,10 @@ function Base.conj(L::MatrixOperator)
     isconstant(L) && return MatrixOperator(conj(L.A))
 
     update_func  = (A, u, p, t; kwargs...) -> conj(L.update_func(conj(L.A), u, p, t; kwargs...))
-    update_func! = (A, u, p, t; kwargs...) -> conj(L.update_func!(conj(L.A), u, p, t; kwargs...))
+    update_func! = (A, u, p, t; kwargs...) -> begin
+        L.update_func!(conj!(L.A), u, p, t; kwargs...)
+        conj!(L.A)
+    end
 
     MatrixOperator(conj(L.A);
                    update_func = update_func,

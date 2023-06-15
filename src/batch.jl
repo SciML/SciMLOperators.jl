@@ -3,8 +3,8 @@
     BatchedDiagonalOperator(diag; update_func, update_func!, accepted_kwargs)
 
 Represents a time-dependent elementwise scaling (diagonal-scaling) operation.
-Acts on `AbstractArray`s of the same size as `diag`. The update function is called
-by `update_coefficients!` and is assumed to have the following signature:
+Acts on `AbstractArray`s of the same size as `diag`. The update function is
+called by `update_coefficients!` and is assumed to have the following signature:
 
     update_func(diag::AbstractArray, u, p, t; <accepted kwarg fields>) -> [modifies diag]
 """
@@ -48,13 +48,23 @@ Base.iszero(L::BatchedDiagonalOperator) = iszero(L.diag)
 Base.transpose(L::BatchedDiagonalOperator) = L
 Base.adjoint(L::BatchedDiagonalOperator) = conj(L)
 function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
-    diag = conj(L.diag)
-    update_func = if isreal(L)
-        L.update_func
+
+    update_func, update_func! = if isreal(L)
+        L.update_func, L.update_func!
     else
-        (L,u,p,t; kwargs...) -> conj(L.update_func(conj(L.diag),u,p,t; kwargs...))
+        uf  = (L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag), u, p, t; kwargs...))
+        uf! = (L, u, p, t; kwargs...) -> begin
+            L.update_func(conj!(L.diag), u, p, t; kwargs...)
+            conj!(L.diag)
+        end
+        uf, uf!
     end
-    BatchedDiagonalOperator(diag; update_func=update_func)
+
+    DiagonalOperator(conj(L.diag);
+                     update_func = update_func,
+                     update_func! = update_func!,
+                     accepted_kwargs = NoKwargFilter(),
+                    )
 end
 
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
