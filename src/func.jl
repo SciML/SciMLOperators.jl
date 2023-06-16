@@ -138,6 +138,7 @@ function FunctionOperator(op,
                           has_mul5::Union{Nothing,Bool}=nothing,
                           isconstant::Bool = false,
                           islinear::Bool = false,
+                          isconcrete::Bool = false,
 
                           batch::Bool = false,
                           ifcache::Bool = true,
@@ -248,6 +249,7 @@ function FunctionOperator(op,
 
     traits = (;
               islinear = islinear,
+              isconcrete = isconcrete,
               isconstant = isconstant,
 
               opnorm = opnorm,
@@ -467,6 +469,8 @@ function Base.inv(L::FunctionOperator)
                      cache,
                     )
 end
+
+Base.convert(::Type{AbstractMatrix}, L::FunctionOperator) = convert(AbstractMatrix, L.op)
 
 function Base.resize!(L::FunctionOperator, n::Integer)
 

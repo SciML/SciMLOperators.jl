@@ -187,37 +187,53 @@ Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
 Base.iszero(::AbstractSciMLOperator) = false # TODO
 
 """
+$SIGNATURES
+
 Check if `adjoint(L)` is lazily defined.
 """
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
+$SIGNATURES
+
 Check if `expmv!(v, L, u, t)`, equivalent to `mul!(v, exp(t * A), u)`, is
 defined for `Number` `t`, and `AbstractArray`s `u, v` of appropriate sizes.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
+$SIGNATURES
+
 Check if `expmv(L, u, t)`, equivalent to `exp(t * A) * u`, is defined for
 `Number` `t`, and `AbstractArray` `u` of appropriate size.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 """
+$SIGNATURES
+
 Check if `exp(L)` is defined lazily defined.
 """
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
+$SIGNATURES
+
 Check if `L * u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
+$SIGNATURES
+
 Check if `mul!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
+$SIGNATURES
+
 Check if `L \\ u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
+$SIGNATURES
+
 Check if `ldiv!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
@@ -244,7 +260,24 @@ isconstant(::Union{
           ) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 
-#islinear(L) = false
+"""
+$SIGNATURES
+
+Checks if `L` can be cheaply converted to an `AbstractMatrix`
+"""
+isconcrete(L::AbstractSciMLOperator) = all(isconcrete, getops(L))
+
+isconcrete(::Union{
+                   # LinearAlgebra
+                   AbstractMatrix,
+                   UniformScaling,
+                   Factorization,
+
+                   # Base
+                   Number,
+                  }
+          ) = true
+
 """
 $SIGNATURES
 

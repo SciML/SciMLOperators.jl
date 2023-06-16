@@ -103,6 +103,8 @@ end
                            has_ldiv,
                            has_ldiv!,
                           )
+
+isconcrete(::MatrixOperator) = true
 islinear(::MatrixOperator) = true
 
 function Base.show(io::IO, L::MatrixOperator)
