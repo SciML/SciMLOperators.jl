@@ -518,6 +518,7 @@ function getops(L::FunctionOperator)
 end
 
 islinear(L::FunctionOperator) = L.traits.islinear
+isconcrete(L::FunctionOperator) = L.traits.isconcrete
 isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(::FunctionOperator{iip}) where{iip} = true
