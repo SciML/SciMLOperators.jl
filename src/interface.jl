@@ -5,21 +5,24 @@
 ###
 
 """
-$SIGNATURES
+    DEFAULT_UPDATE_FUNC(u, p, t) -> nothing
+
+    DEFAULT_UPDATE_FUNC(A, u, p, t) -> A
 
 The default update function for `AbstractSciMLOperator`s, a no-op that
 leaves the operator state unchanged.
 """
+DEFAULT_UPDATE_FUNC(u, p, t) = nothing
 DEFAULT_UPDATE_FUNC(A, u, p, t) = A
 
 const UPDATE_COEFFS_WARNING = """
 !!! warning
-    The user-provided `update_func[!]` must not use `u` in
-    its computation. Positional argument `(u, p, t)` to `update_func[!]` are
+    The user-provided `update_func` must not use `u` in
+    its computation. Positional argument `(u, p, t)` to `update_func` are
     passed down by `update_coefficients[!](L, u, p, t)`, where `u` is the
     input-vector to the composite `AbstractSciMLOperator`. For that reason,
     the values of `u`, or even shape, may not correspond to the input
-    expected by `update_func[!]`. If an operator's state depends on its
+    expected by `update_func`. If an operator's state depends on its
     input vector, then it is, by definition, a nonlinear operator.
     We recommend sticking such nonlinearities in `FunctionOperator.`
     This topic is further discussed in

@@ -9,6 +9,7 @@ to `update_coefficients[!](L, u, p, t)`. Both recursively call the
 `update_function`, `update_func` which is assumed to have the signature
 
     update_func(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> newA
+
 or
 
     update_func!(A::AbstractMatrix, u ,p , t; <accepted kwargs>) -> [modifies A]
