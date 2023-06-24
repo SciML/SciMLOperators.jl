@@ -384,6 +384,18 @@ function _cache_self(L::FunctionOperator, u::AbstractArray)
     @set! L.cache = (_u, _v)
 end
 
+# fix method amg bw AbstractArray, AbstractVecOrMat
+cache_internals(L::FunctionOperator, u::AbstractArray) = _cache_internals(L, u)
+cache_internals(L::FunctionOperator, u::AbstractVecOrMat) = _cache_internals(L, u)
+
+function _cache_internals(L::FunctionOperator, u::AbstractArray)
+
+    @set! L.op = cache_operator(L.op, u)
+    @set! L.op_adjoint = cache_operator(L.op_adjoint, u)
+    @set! L.op_inverse = cache_operator(L.op_inverse, u)
+    @set! L.op_adjoint_inverse = cache_operator(L.op_adjoint_inverse, u)
+end
+
 function Base.show(io::IO, L::FunctionOperator)
     M, N = size(L)
     print(io, "FunctionOperator($M × $N)")
