@@ -9,6 +9,54 @@ N = 8
 K = 12
 NK = N * K
 
+@testset "(Unbatched) FunctionOperator ND array" begin
+    N1, N2, N3 = 3, 4, 5
+    M1, M2, M3 = 4, 5, 6
+
+    p = nothing
+    t = 0.0
+    α = rand()
+    β = rand()
+
+    for (sz_in, sz_out) in (
+        ((N1, N2, N3), (N1, N2, N3)), # equal size
+        ((N1, N2, N3), (M1, M2, M3)), # different size
+    )
+        N = prod(sz_in)
+        M = prod(sz_out)
+        
+        A = rand(M, N)
+        u = rand(sz_in... )
+        v = rand(sz_out...)
+
+        _mul(A, u) = reshape(A * vec(u), sz_out)
+        f(u, p, t) = _mul(A, u)
+        f(du, u, p, t)  = (mul!( vec(du), A, vec(u)); du)
+
+        kw = (;) # FunctionOp kwargs
+
+        if sz_in == sz_out
+            F = lu(A)
+            _div(A, v) = reshape(A \ vec(v), sz_in)
+            fi(u, p, t) = _div(A, u)
+            fi(du, u, p, t) = (ldiv!(vec(du), F, vec(u)); du)
+
+            kw = (; op_inverse = fi)
+        end
+
+        L = FunctionOperator(f, u, v; kw...)
+        L = cache_operator(L, u)
+
+        @test _mul(A, u) ≈ L(u, p, t) ≈ L * u ≈ mul!(zero(v), L, u)
+        @test α * _mul(A, u)+ β * v ≈ mul!(copy(v), L, u, α, β)
+
+        if sz_in == sz_out
+            @test _div(A, v) ≈ L \ v ≈ ldiv!(zero(u), L, v) ≈ ldiv!(L, copy(v))
+        end
+    end
+
+end
+
 @testset "(Unbatched) FunctionOperator" begin
     u = rand(N, K)
     p = nothing
