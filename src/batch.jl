@@ -97,6 +97,7 @@ function isconstant(L::BatchedDiagonalOperator)
     update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)
 end
 islinear(::BatchedDiagonalOperator) = true
+isconvertible(::BatchedDiagonalOperator) = false
 has_adjoint(L::BatchedDiagonalOperator) = true
 has_ldiv(L::BatchedDiagonalOperator) = all(x -> !iszero(x), L.diag)
 has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)

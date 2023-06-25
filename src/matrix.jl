@@ -324,6 +324,7 @@ end
 
 getops(L::InvertibleOperator) = (L.L, L.F,)
 islinear(L::InvertibleOperator) = islinear(L.L)
+isconvertible(L::InvertibleOperator) = isconvertible(L.L)
 
 @forward InvertibleOperator.L (
                                # LinearAlgebra
@@ -512,6 +513,7 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 
 islinear(::AffineOperator) = false
+isconvertible(::AffineOperator) = false
 
 function Base.show(io::IO, L::AffineOperator)
     show(io, L.A)
