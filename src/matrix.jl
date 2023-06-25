@@ -104,7 +104,7 @@ end
                            has_ldiv!,
                           )
 
-isconcrete(::MatrixOperator) = true
+isconvertible(::MatrixOperator) = true
 islinear(::MatrixOperator) = true
 
 function Base.show(io::IO, L::MatrixOperator)
@@ -164,7 +164,7 @@ SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
-Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = L.A
+Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = convert(AbstractMatrix, L.A)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, I::Vararg{Int, N}) where{N} = (L.A[I...] = v)
 
@@ -537,6 +537,12 @@ function Base.resize!(L::AffineOperator, n::Integer)
     resize!(L.b, n)
 
     L
+end
+
+function Base.convert(::Type{AbstractMatrix}, L::AffineOperator)
+    m, n = size(L)
+    msg = """$L cannot be represented by an $m × $n AbstractMatrix"""
+    throw(ArgumentError(msg))
 end
 
 has_adjoint(L::AffineOperator) = false

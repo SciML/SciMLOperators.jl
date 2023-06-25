@@ -261,22 +261,58 @@ isconstant(::Union{
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 
 """
-$SIGNATURES
+    isconvertible(L) -> Bool
 
-Checks if `L` can be cheaply converted to an `AbstractMatrix`
+Checks if `L` can be cheaply converted to an `AbstractMatrix` via eager fusion.
 """
-isconcrete(L::AbstractSciMLOperator) = all(isconcrete, getops(L))
+isconvertible(L::AbstractSciMLOperator) = all(isconvertible, getops(L))
 
-isconcrete(::Union{
-                   # LinearAlgebra
-                   AbstractMatrix,
-                   UniformScaling,
-                   Factorization,
+isconvertible(::Union{
+                      # LinearAlgebra
+                      AbstractMatrix,
+                      UniformScaling,
+                      Factorization,
 
-                   # Base
-                   Number,
-                  }
-          ) = true
+                      # Base
+                      Number,
+
+                      # SciMLOperators
+                      AbstractSciMLScalarOperator,
+                     }
+             ) = true
+
+"""
+    concretize(L) -> AbstractMatrix
+
+    concretize(L) -> Number
+
+Convert `SciMLOperator` to a concrete type via eager fusion. This method is a
+no-op for types that are already concrete.
+"""
+concretize(L::Union{
+                    # LinearAlgebra
+                    AbstractMatrix,
+                    Factorization,
+
+                    # Base
+                    Number,
+
+                    # SciMLOperators
+                    AbstractSciMLOperator,
+                   }
+          ) =  convert(AbstractMatrix, L)
+
+concretize(L::Union{
+                    # LinearAlgebra
+                    UniformScaling,
+
+                    # Base
+                    Number,
+
+                    # SciMLOperators
+                    AbstractSciMLScalarOperator,
+                   }
+          ) = convert(Number, L)
 
 """
 $SIGNATURES

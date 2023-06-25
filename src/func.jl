@@ -111,6 +111,7 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
 * `isconstant` - `true` if the operator is constant, and doesn't need to be updated via `update_coefficients[!]` during operator evaluation.
 * `islinear` - `true` if the operator is linear. Defaults to `false`.
+* `isconvertible` - `true` a cheap `convert(AbstractMatrix, L.op)` method is available. Defaults to `false`.
 * `batch` - Boolean indicating if the input/output arrays comprise of batched column-vectors stacked in a matrix. If `true`, the input/output arrays must be `AbstractVecOrMat`s, and the length of the  second dimension (the batch dimension) must be the same. The batch dimension is not involved in size computation. For example, with `batch = true`, and `size(output), size(input) = (M, K), (N, K)`, the `FunctionOperator` size is set to `(M, N)`. If `batch = false`, which is the default, the `input`/`output` arrays may of any size so long as `ndims(input) == ndims(output)`, and the `size` of `FunctionOperator` is set to `(length(input), length(output))`.
 * `ifcache` - Allocate cache arrays in constructor. Defaults to `true`. Cache can be generated afterwards by calling `cache_operator(L, input, output)`
 * `cache` - Pregenerated cache arrays for in-place evaluations. Expected to be of type and shape `(similar(input), similar(output),)`. The constructor generates cache if no values are provided. Cache generation by the constructor can be disabled by setting the kwarg `ifcache = false`.
@@ -138,7 +139,7 @@ function FunctionOperator(op,
                           has_mul5::Union{Nothing,Bool}=nothing,
                           isconstant::Bool = false,
                           islinear::Bool = false,
-                          isconcrete::Bool = false,
+                          isconvertible::Bool = false,
 
                           batch::Bool = false,
                           ifcache::Bool = true,
@@ -249,7 +250,7 @@ function FunctionOperator(op,
 
     traits = (;
               islinear = islinear,
-              isconcrete = isconcrete,
+              isconvertible = isconvertible,
               isconstant = isconstant,
 
               opnorm = opnorm,
@@ -518,7 +519,7 @@ function getops(L::FunctionOperator)
 end
 
 islinear(L::FunctionOperator) = L.traits.islinear
-isconcrete(L::FunctionOperator) = L.traits.isconcrete
+isconvertible(L::FunctionOperator) = L.traits.isconvertible
 isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(::FunctionOperator{iip}) where{iip} = true

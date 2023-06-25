@@ -67,6 +67,12 @@ function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
                     )
 end
 
+function Base.convert(::Type{AbstractMatrix}, L::BatchedDiagonalOperator)
+    m, n = size(L)
+    msg = """$L cannot be represented by an $m × $n AbstractMatrix"""
+    throw(ArgumentError(msg))
+end
+
 LinearAlgebra.issymmetric(L::BatchedDiagonalOperator) = true
 function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
     if isreal(L)
