@@ -384,6 +384,18 @@ function _cache_self(L::FunctionOperator, u::AbstractArray)
     @set! L.cache = (_u, _v)
 end
 
+# fix method amg bw AbstractArray, AbstractVecOrMat
+cache_internals(L::FunctionOperator, u::AbstractArray) = _cache_internals(L, u)
+cache_internals(L::FunctionOperator, u::AbstractVecOrMat) = _cache_internals(L, u)
+
+function _cache_internals(L::FunctionOperator, u::AbstractArray)
+
+    @set! L.op = cache_operator(L.op, u)
+    @set! L.op_adjoint = cache_operator(L.op_adjoint, u)
+    @set! L.op_inverse = cache_operator(L.op_inverse, u)
+    @set! L.op_adjoint_inverse = cache_operator(L.op_adjoint_inverse, u)
+end
+
 function Base.show(io::IO, L::FunctionOperator)
     M, N = size(L)
     print(io, "FunctionOperator($M × $N)")
@@ -542,7 +554,7 @@ function _sizecheck(L::FunctionOperator, u, v)
         if !isnothing(v)
             if size(v) != L.traits.sizes[2]
                 msg = """$L expects input arrays of size $(L.traits.sizes[1]).
-                    Recievd array of size $(size(u))."""
+                    Recievd array of size $(size(v))."""
                 DimensionMismatch(msg) |> throw
             end
         end
@@ -558,7 +570,7 @@ function _sizecheck(L::FunctionOperator, u, v)
         if !isnothing(v)
             if size(v) != L.traits.sizes[2]
                 msg = """$L expects input arrays of size $(L.traits.sizes[1]).
-                    Recievd array of size $(size(u))."""
+                    Recievd array of size $(size(v))."""
                 DimensionMismatch(msg) |> throw
             end
         end
@@ -618,8 +630,7 @@ function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, fal
 
     copy!(co, v)
     mul!(v, L, u)
-    lmul!(α, v)
-    axpy!(β, co, v)
+    axpby!(β, co, α, v)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true}, u::AbstractArray, α, β) where{oop}
@@ -638,8 +649,6 @@ end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractArray)
     ci, _ = L.cache
-
-    _sizecheck(L, nothing, u)
 
     copy!(ci, u)
     ldiv!(u, L, ci)
