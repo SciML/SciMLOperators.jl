@@ -449,7 +449,7 @@ for op in (
           )
     @eval function Base.$op(L::AbstractSciMLOperator; kwargs...)
         @warn """using convert-based fallback in $($op)."""
-        $op(convert(AbstractMatrix, L); kwargs...)
+        $op(concretize(L); kwargs...)
     end
 end
 
