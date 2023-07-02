@@ -453,15 +453,6 @@ for op in (
     end
 end
 
-for op in (
-           :sum, :prod,
-          )
-    @eval function Base.$op(L::AbstractSciMLOperator; kwargs...)
-        @warn """using convert-based fallback in $($op)."""
-        $op(convert(AbstractMatrix, L); kwargs...)
-    end
-end
-
 for pred in (
              :issymmetric,
              :ishermitian,
