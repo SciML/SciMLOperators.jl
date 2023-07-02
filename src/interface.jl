@@ -384,17 +384,8 @@ for pred in (
              :isposdef,
             )
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
-        @warn """using convert-based fallback in $pred."""
+        @warn """using convert-based fallback in $($pred)."""
         $pred(convert(AbstractMatrix, L))
-    end
-end
-
-for op in (
-           :sum,:prod
-          )
-    @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
-        @warn """using convert-based fallback in $op."""
-        $op(convert(AbstractMatrix, L); kwargs...)
     end
 end
 
