@@ -389,6 +389,15 @@ for pred in (
     end
 end
 
+for op in (
+           :sum,:prod
+          )
+    @eval function LinearAlgebra.$op(L::AbstractSciMLOperator; kwargs...)
+        @warn """using convert-based fallback in $op."""
+        $op(convert(AbstractMatrix, L); kwargs...)
+    end
+end
+
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
     @warn """using convert-based fallback in mul!."""
     mul!(v, convert(AbstractMatrix, L), u)
