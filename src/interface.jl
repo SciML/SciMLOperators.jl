@@ -378,6 +378,15 @@ function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
     opnorm(convert(AbstractMatrix, L), p)
 end
 
+for op in (
+           :sum, :prod,
+          )
+    @eval function Base.$op(L::AbstractSciMLOperator; kwargs...)
+        @warn """using convert-based fallback in $($op)."""
+        $op(convert(AbstractMatrix, L); kwargs...)
+    end
+end
+
 for pred in (
              :issymmetric,
              :ishermitian,
