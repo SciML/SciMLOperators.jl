@@ -173,7 +173,7 @@ function FunctionOperator(op,
             msg = """`FunctionOperator` constructed with `batch = true` only
                 accepts `AbstractVecOrMat` types with
                 `size(L, 2) == size(u, 1)`."""
-            ArgumentError(msg) |> throw
+            throw(ArgumentError(msg))
         end
 
         if input isa AbstractMatrix
@@ -184,7 +184,7 @@ function FunctionOperator(op,
                     array, $(typeof(input)), has size $(size(input)), whereas
                     output array, $(typeof(output)), has size
                     $(size(output))."""
-                ArgumentError(msg) |> throw
+                throw(ArgumentError(msg))
             end
         end
     end
@@ -340,14 +340,14 @@ function _cache_operator(L::FunctionOperator, u::AbstractArray)
         if !isa(u, AbstractVecOrMat)
             msg = """$L constructed with `batch = true` only accepts
                 `AbstractVecOrMat` types with `size(L, 2) == size(u, 1)`."""
-            ArgumentError(msg) |> throw
+            throw(ArgumentError(msg))
         end
 
         if size(L, 2) != size(u, 1)
             msg = """Second dimension of $L of size $(size(L))
                 is not consistent with first dimension of input array `u`
                 of size $(size(u))."""
-            DimensionMismatch(msg) |> throw
+            throw(DimensionMismatch(msg))
         end
 
         M = size(L, 1)
@@ -486,7 +486,7 @@ function Base.resize!(L::FunctionOperator, n::Integer)
     if length(L.traits.sizes[1]) != 1
         msg = """`Base.resize!` is only supported by $L whose input/output
             arrays are `AbstractVector`s."""
-        MethodError(msg) |> throw
+        throw(MethodError(msg))
     end
 
     for op in getops(L)
@@ -534,131 +534,187 @@ has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
 
 function _sizecheck(L::FunctionOperator, u, v)
-
+    sizes = L.traits.sizes
     if L.traits.batch
         if !isnothing(u)
             if !isa(u, AbstractVecOrMat)
                 msg = """$L constructed with `batch = true` only
                     accept input arrays that are `AbstractVecOrMat`s with
-                    `size(L, 2) == size(u, 1)`."""
-                ArgumentError(msg) |> throw
+                    `size(L, 2) == size(u, 1)`. Recieved $(typeof(u))."""
+                throw(ArgumentError(msg))
             end
 
-            if size(u) != L.traits.sizes[1]
-                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
-                    Recievd array of size $(size(u))."""
-                DimensionMismatch(msg) |> throw
+            if size(L, 2) != size(u, 1)
+                msg = """$L accepts input `AbstractVecOrMat`s of size
+                    ($(size(L, 2)), K). Recievd array of size $(size(u))."""
+                throw(DimensionMismatch(msg))
             end
-        end
+        end # u
 
         if !isnothing(v)
-            if size(v) != L.traits.sizes[2]
-                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
-                    Recievd array of size $(size(v))."""
-                DimensionMismatch(msg) |> throw
+            if !isa(v, AbstractVecOrMat)
+                msg = """$L constructed with `batch = true` only
+                    returns output arrays that are `AbstractVecOrMat`s with
+                    `size(L, 1) == size(v, 1)`. Recieved $(typeof(v))."""
+                throw(ArgumentError(msg))
             end
-        end
+
+            if size(L, 1) != size(v, 1)
+                msg = """$L accepts output `AbstractVecOrMat`s of size
+                    ($(size(L, 1)), K). Recievd array of size $(size(v))."""
+                throw(DimensionMismatch(msg))
+            end
+        end # v
+
+        if !isnothing(u) & !isnothing(v)
+            if size(u, 2) != size(v, 2)
+                msg = """input array $u, and output array, $v, must have the
+                    same batch size (i.e. length of second dimension). Got
+                    $(size(u)), $(size(v)). If you encounter this error during
+                    an in-place evaluation (`LinearAlgebra.mul!`, `ldiv!`),
+                    ensure that the operator $L has been cached with an input
+                    array of the correct size. Do so by calling
+                    `L = cache_operator(L, u)`."""
+                throw(DimensionMismatch(msg))
+            end
+        end # u, v
+
     else # !batch
+
         if !isnothing(u)
-            if size(u) != L.traits.sizes[1]
-                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
-                    Recievd array of size $(size(u))."""
-                DimensionMismatch(msg) |> throw
+            if size(u) ∉ (sizes[1], tuple(size(L, 2)),)
+                msg = """$L recievd input array of size $(size(u)), but only
+                    accepts input arrays of size $(sizes[1]), or vectors like
+                    `vec(u)` of size $(tuple(prod(sizes[1])))."""
+                throw(DimensionMismatch(msg))
             end
-        end
+        end # u
 
         if !isnothing(v)
-            if size(v) != L.traits.sizes[2]
-                msg = """$L expects input arrays of size $(L.traits.sizes[1]).
-                    Recievd array of size $(size(v))."""
-                DimensionMismatch(msg) |> throw
+            if size(v) ∉ (sizes[2], tuple(size(L, 1)),)
+                msg = """$L recievd output array of size $(size(v)), but only
+                    accepts output arrays of size $(sizes[2]), or vectors like
+                    `vec(u)` of size $(tuple(prod(sizes[2])))"""
+                throw(DimensionMismatch(msg))
             end
-        end
+        end # v
     end # batch
 
     return
 end
 
+function _unvec(L::FunctionOperator, u, v)
+    if L.traits.batch
+        return u, v, false
+    else
+        sizes = L.traits.sizes
+
+        # no need to vec since expected input/output are AbstractVectors
+        if length(sizes[1]) == 1
+            return u, v, false
+        end
+
+        vec_u = isnothing(u) ? false : size(u) != sizes[1]
+        vec_v = isnothing(v) ? false : size(v) != sizes[2]
+
+        if !isnothing(u) & !isnothing(v)
+            if (vec_u & !vec_v) | (!vec_u & vec_v)
+                msg = """Input/output to $L can either be of sizes
+                    $(sizes[1])/ $(sizes[2]), or
+                    $(tuple(prod(sizes[1])))/ $(tuple(prod(sizes[2]))). Got
+                    $(size(u)), $(size(v))."""
+                throw(DimensionMismatch(msg))
+            end
+        end
+
+        U = vec_u ? reshape(u, sizes[1]) : u
+        V = vec_v ? reshape(v, sizes[2]) : v
+        vec_output = vec_u | vec_v
+
+        return U, V, vec_output
+    end
+end
+
 # operator application
 function Base.:*(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
     _sizecheck(L, u, nothing)
+    U, _, vec_output = _unvec(L, u, nothing)
 
-    L.op(u, L.p, L.t; L.traits.kwargs...)
+    V = L.op(U, L.p, L.t; L.traits.kwargs...)
+
+    vec_output ? vec(V) : V
 end
 
-function Base.:\(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
-    _sizecheck(L, nothing, u)
+function Base.:\(L::FunctionOperator{iip,true}, v::AbstractArray) where{iip}
+    _sizecheck(L, nothing, v)
+    _, V, vec_output = _unvec(L, nothing, v)
 
-    L.op_inverse(u, L.p, L.t; L.traits.kwargs...)
-end
+    U = L.op_inverse(V, L.p, L.t; L.traits.kwargs...)
 
-# fallback *, \ for FunctionOperator with no OOP method
-
-function Base.:*(L::FunctionOperator{true,false}, u::AbstractArray)
-    _, co = L.cache
-    v = zero(co)
-
-    _sizecheck(L, u, v)
-
-    L.op(v, u, L.p, L.t; L.traits.kwargs...)
-end
-
-function Base.:\(L::FunctionOperator{true,false}, u::AbstractArray)
-    ci, _ = L.cache
-    v = zero(ci)
-
-    _sizecheck(L, v, u)
-
-    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
+    vec_output ? vec(U) : U
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
-
     _sizecheck(L, u, v)
+    U, V, vec_output = _unvec(L, u, v)
 
-    L.op(v, u, L.p, L.t; L.traits.kwargs...)
+    L.op(V, U, L.p, L.t; L.traits.kwargs...)
+
+    vec_output ? vec(V) : V
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray, args...)
-    @error "LinearAlgebra.mul! not defined for out-of-place FunctionOperators"
+function LinearAlgebra.mul!(::AbstractArray, L::FunctionOperator{false}, ::AbstractArray, args...)
+    @error "LinearAlgebra.mul! not defined for out-of-place operator $L"
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, false}, u::AbstractArray, α, β) where{oop}
-    _, co = L.cache
+    _, Co = L.cache
 
     _sizecheck(L, u, v)
+    U, V, _ = _unvec(L, u, v)
 
-    copy!(co, v)
-    mul!(v, L, u)
-    axpby!(β, co, α, v)
+    copy!(Co, V)
+    L.op(V, U, L.p, L.t; L.traits.kwargs...) # mul!(V, L, U)
+    axpby!(β, Co, α, V)
+
+    v
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true}, u::AbstractArray, α, β) where{oop}
-
     _sizecheck(L, u, v)
+    U, V, _ = _unvec(L, u, v)
 
-    L.op(v, u, L.p, L.t, α, β; L.traits.kwargs...)
+    L.op(V, U, L.p, L.t, α, β; L.traits.kwargs...)
+
+    v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{true}, u::AbstractArray)
+function LinearAlgebra.ldiv!(u::AbstractArray, L::FunctionOperator{true}, v::AbstractArray)
+    _sizecheck(L, u, v)
+    U, V, _ = _unvec(L, u, v)
 
-    _sizecheck(L, v, u)
+    L.op_inverse(U, V, L.p, L.t; L.traits.kwargs...)
 
-    L.op_inverse(v, u, L.p, L.t; L.traits.kwargs...)
+    u
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, u::AbstractArray)
-    ci, _ = L.cache
+    V, _ = L.cache
 
-    copy!(ci, u)
-    ldiv!(u, L, ci)
+    _sizecheck(L, u, V)
+    U, _, _ = _unvec(L, u, nothing)
+
+    copy!(V, U)
+    L.op_inverse(U, V, L.p, L.t; L.traits.kwargs...) # ldiv!(U, L, V)
+
+    u
 end
 
 function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray)
-    @error "LinearAlgebra.ldiv! not defined for out-of-place FunctionOperators"
+    @error "LinearAlgebra.ldiv! not defined for out-of-place $L"
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{false}, u::AbstractArray)
-    @error "LinearAlgebra.ldiv! not defined for out-of-place FunctionOperators"
+    @error "LinearAlgebra.ldiv! not defined for out-of-place $L"
 end
 #
