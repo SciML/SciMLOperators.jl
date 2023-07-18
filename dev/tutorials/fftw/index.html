@@ -14,21 +14,22 @@ x  = range(start=-L/2, stop=L/2-dx, length=n) |&gt; Array
 u  = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-k  = rfftfreq(n, 2π*n/L) |&gt; Array
-m  = length(k)
-transform = plan_rfft(x)
+k = rfftfreq(n, 2π*n/L) |&gt; Array
+m = length(k)
+P = plan_rfft(x)
 
-T = FunctionOperator((du,u,p,t) -&gt; mul!(du, transform, u), x, im*k;
-                     isinplace=true,
-                     T=ComplexF64,
+F = FunctionOperator(fwd, x, im*k;
+        T=ComplexF64,
 
-                     op_adjoint = (du,u,p,t) -&gt; ldiv!(du, transform, u),
-                     op_inverse = (du,u,p,t) -&gt; ldiv!(du, transform, u),
-                     op_adjoint_inverse = (du,u,p,t) -&gt; ldiv!(du, transform, u),
-                    )
+        op_adjoint = bwd,
+        op_inverse = bwd,
+        op_adjoint_inverse = fwd,
+
+        islinear=true,
+        )
 
 ik = im * DiagonalOperator(k)
-Dx = T \ ik * T
+Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
@@ -45,16 +46,17 @@ u  = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 </code></pre><p>Now, we define the Fourier transform. Since our input is purely Real, we use the real Fast Fourier Transform. The funciton <code>plan_rfft</code> outputs a real fast fourier transform object that can be applied to inputs that are like <code>x</code> as follows: <code>xhat = transform * x</code>, and <code>LinearAlgebra.mul!(xhat, transform, x)</code>.  We also get <code>k</code>, the frequency modes sampled by our finite grid, via the function <code>rfftfreq</code>.</p><pre><code class="nohighlight hljs">k  = rfftfreq(n, 2π*n/L) |&gt; Array
 m  = length(k)
-tr = plan_rfft(x)</code></pre><p>Now we are ready to define our wrapper for the FFT object. To <code>FunctionOperator</code>, we pass the in-place forward application of the transform, <code>(du,u,p,t) -&gt; mul!(du, transform, u)</code>, its inverse application, <code>(du,u,p,t) -&gt; ldiv!(du, transform, u)</code>, as well as input and output prototype vectors. We also set the flag <code>isinplace</code> to <code>true</code> to signal that we intend to use the operator in a non-allocating way, and pass in the element-type and size of the operator.</p><pre><code class="nohighlight hljs">T = FunctionOperator((du,u,p,t) -&gt; mul!(du, transform, u), x, im*k;
-                     isinplace=true,
-                     T=ComplexF64,
+tr = plan_rfft(x)</code></pre><p>Now we are ready to define our wrapper for the FFT object. To <code>FunctionOperator</code>, we pass the in-place forward application of the transform, <code>(du,u,p,t) -&gt; mul!(du, transform, u)</code>, its inverse application, <code>(du,u,p,t) -&gt; ldiv!(du, transform, u)</code>, as well as input and output prototype vectors.</p><pre><code class="nohighlight hljs">F = FunctionOperator(fwd, x, im*k;
+        T=ComplexF64,
 
-                     op_adjoint = (du,u,p,t) -&gt; ldiv!(du, transform, u),
-                     op_inverse = (du,u,p,t) -&gt; ldiv!(du, transform, u),
-                     op_adjoint_inverse = (du,u,p,t) -&gt; ldiv!(du, transform, u),
-                    )</code></pre><p>After wrapping the FFT with <code>FunctionOperator</code>, we are ready to compose it with other SciMLOperators. Below we form the derivative operator, and cache it via the function <code>cache_operator</code> that requires an input prototype. We can test our derivative operator both in-place, and out-of-place by comparing its output to the analytical derivative.</p><pre><code class="nohighlight hljs">ik = im * DiagonalOperator(k)
-Dx = T \ ik * T
+        op_adjoint = bwd,
+        op_inverse = bwd,
+        op_adjoint_inverse = fwd,
+
+        islinear=true,
+        )</code></pre><p>After wrapping the FFT with <code>FunctionOperator</code>, we are ready to compose it with other SciMLOperators. Below we form the derivative operator, and cache it via the function <code>cache_operator</code> that requires an input prototype. We can test our derivative operator both in-place, and out-of-place by comparing its output to the analytical derivative.</p><pre><code class="nohighlight hljs">ik = im * DiagonalOperator(k)
+Dx = F \ ik * F
 
 @show ≈(Dx * u, du; atol=1e-8)
 @show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)</code></pre><pre><code class="nohighlight hljs">≈(Dx * u, du; atol = 1.0e-8) = true
-≈(mul!(copy(u), Dx, u), du; atol = 1.0e-8) = true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade Operators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Sunday 2 July 2023 20:00">Sunday 2 July 2023</span>. Using Julia version 1.9.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+≈(mul!(copy(u), Dx, u), du; atol = 1.0e-8) = true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade Operators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 18 July 2023 17:55">Tuesday 18 July 2023</span>. Using Julia version 1.9.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
