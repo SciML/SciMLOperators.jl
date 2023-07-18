@@ -121,6 +121,7 @@ end
 
 getops(L::TensorProductOperator) = L.ops
 islinear(L::TensorProductOperator) = reduce(&, islinear.(L.ops))
+isconvertible(::TensorProductOperator) = false
 Base.iszero(L::TensorProductOperator) = reduce(|, iszero.(L.ops))
 has_adjoint(L::TensorProductOperator) = reduce(&, has_adjoint.(L.ops))
 has_mul(L::TensorProductOperator) = reduce(&, has_mul.(L.ops))

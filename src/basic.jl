@@ -761,6 +761,7 @@ end
 
 getops(L::InvertedOperator) = (L.L,)
 islinear(L::InvertedOperator) = islinear(L.L)
+isconvertible(::InvertedOperator) = false
 
 has_mul(L::InvertedOperator) = has_ldiv(L.L)
 has_mul!(L::InvertedOperator) = has_ldiv!(L.L)

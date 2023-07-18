@@ -187,37 +187,53 @@ Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
 Base.iszero(::AbstractSciMLOperator) = false # TODO
 
 """
+$SIGNATURES
+
 Check if `adjoint(L)` is lazily defined.
 """
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
+$SIGNATURES
+
 Check if `expmv!(v, L, u, t)`, equivalent to `mul!(v, exp(t * A), u)`, is
 defined for `Number` `t`, and `AbstractArray`s `u, v` of appropriate sizes.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
+$SIGNATURES
+
 Check if `expmv(L, u, t)`, equivalent to `exp(t * A) * u`, is defined for
 `Number` `t`, and `AbstractArray` `u` of appropriate size.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 """
+$SIGNATURES
+
 Check if `exp(L)` is defined lazily defined.
 """
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
+$SIGNATURES
+
 Check if `L * u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
+$SIGNATURES
+
 Check if `mul!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
+$SIGNATURES
+
 Check if `L \\ u` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
+$SIGNATURES
+
 Check if `ldiv!(v, L, u)` is defined for `AbstractArray`s `u, v` of
 appropriate sizes.
 """
@@ -244,7 +260,57 @@ isconstant(::Union{
           ) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 
-#islinear(L) = false
+"""
+    isconvertible(L) -> Bool
+
+Checks if `L` can be cheaply converted to an `AbstractMatrix` via eager fusion.
+"""
+isconvertible(L::AbstractSciMLOperator) = all(isconvertible, getops(L))
+
+isconvertible(::Union{
+                      # LinearAlgebra
+                      AbstractMatrix,
+                      UniformScaling,
+                      Factorization,
+
+                      # Base
+                      Number,
+
+                      # SciMLOperators
+                      AbstractSciMLScalarOperator,
+                     }
+             ) = true
+
+"""
+    concretize(L) -> AbstractMatrix
+
+    concretize(L) -> Number
+
+Convert `SciMLOperator` to a concrete type via eager fusion. This method is a
+no-op for types that are already concrete.
+"""
+concretize(L::Union{
+                    # LinearAlgebra
+                    AbstractMatrix,
+                    Factorization,
+
+                    # SciMLOperators
+                    AbstractSciMLOperator,
+                   }
+          ) =  convert(AbstractMatrix, L)
+
+concretize(L::Union{
+                    # LinearAlgebra
+                    UniformScaling,
+
+                    # Base
+                    Number,
+
+                    # SciMLOperators
+                    AbstractSciMLScalarOperator,
+                   }
+          ) = convert(Number, L)
+
 """
 $SIGNATURES
 
@@ -349,22 +415,22 @@ expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 function Base.conj(L::AbstractSciMLOperator)
     isreal(L) && return L
     @warn """using convert-based fallback for Base.conj"""
-    convert(AbstractMatrix, L) |> conj
+    concretize(L) |> conj
 end
 
 function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
     @warn """using convert-based fallback for Base.=="""
     size(L1) != size(L2) && return false
-    convert(AbstractMatrix, L1) == convert(AbstractMatrix, L1)
+    concretize(L1) == concretize(L2)
 end
 
 Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Any,N}) where {N}
     @warn """using convert-based fallback for Base.getindex"""
-    convert(AbstractMatrix, L)[I...]
+    concretize(L)[I...]
 end
 function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
     @warn """using convert-based fallback for Base.getindex"""
-    convert(AbstractMatrix, L)[I...]
+    concretize(L)[I...]
 end
 
 function Base.resize!(L::AbstractSciMLOperator, n::Integer)
@@ -375,7 +441,7 @@ LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
 
 function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
     @warn """using convert-based fallback in LinearAlgebra.opnorm."""
-    opnorm(convert(AbstractMatrix, L), p)
+    opnorm(concretize(L), p)
 end
 
 for op in (
@@ -383,7 +449,7 @@ for op in (
           )
     @eval function Base.$op(L::AbstractSciMLOperator; kwargs...)
         @warn """using convert-based fallback in $($op)."""
-        $op(convert(AbstractMatrix, L); kwargs...)
+        $op(concretize(L); kwargs...)
     end
 end
 
@@ -394,17 +460,17 @@ for pred in (
             )
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
         @warn """using convert-based fallback in $($pred)."""
-        $pred(convert(AbstractMatrix, L))
+        $pred(concretize(L))
     end
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
     @warn """using convert-based fallback in mul!."""
-    mul!(v, convert(AbstractMatrix, L), u)
+    mul!(v, concretize(L), u)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
     @warn """using convert-based fallback in mul!."""
-    mul!(v, convert(AbstractMatrix, L), u, α, β)
+    mul!(v, concretize(L), u, α, β)
 end
 #

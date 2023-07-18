@@ -98,6 +98,8 @@ export update_coefficients!,
 
        issquare,
        islinear,
+       concretize,
+       isconvertible,
 
        has_adjoint,
        has_expmv,
