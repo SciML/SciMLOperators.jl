@@ -47,13 +47,25 @@ NK = N * K
         L = FunctionOperator(f, u, v; kw...)
         L = cache_operator(L, u)
 
+        # test with ND-arrays
         @test _mul(A, u) ≈ L(u, p, t) ≈ L * u ≈ mul!(zero(v), L, u)
         @test α * _mul(A, u)+ β * v ≈ mul!(copy(v), L, u, α, β)
 
         if sz_in == sz_out
             @test _div(A, v) ≈ L \ v ≈ ldiv!(zero(u), L, v) ≈ ldiv!(L, copy(v))
         end
-    end
+
+        # test with vec(Array)
+        @test vec(_mul(A, u)) ≈ L(vec(u), p, t) ≈ L * vec(u) ≈ mul!(vec(zero(v)), L, vec(u))
+        @test vec(α * _mul(A, u)+ β * v) ≈ mul!(vec(copy(v)), L, vec(u), α, β)
+
+        if sz_in == sz_out
+            @test vec(_div(A, v)) ≈ L \ vec(v) ≈ ldiv!(vec(zero(u)), L, vec(v)) ≈ ldiv!(L, vec(copy(v)))
+        end
+
+        @test_throws DimensionMismatch mul!(vec(v), L, u)
+        @test_throws DimensionMismatch mul!(v, L, vec(u))
+    end # for
 
 end
 
