@@ -619,9 +619,9 @@ function _unvec(L::FunctionOperator, u, v)
 
         if !isnothing(u) & !isnothing(v)
             if (vec_u & !vec_v) | (!vec_u & vec_v)
-                msg = """Input/output to $L can either be of sizes
-                    $(sizes[1])/ $(sizes[2]), or
-                    $(tuple(prod(sizes[1])))/ $(tuple(prod(sizes[2]))). Got
+                msg = """Input / output to $L can either be of sizes
+                    $(sizes[1]) / $(sizes[2]), or
+                    $(tuple(prod(sizes[1]))) / $(tuple(prod(sizes[2]))). Got
                     $(size(u)), $(size(v))."""
                 throw(DimensionMismatch(msg))
             end
