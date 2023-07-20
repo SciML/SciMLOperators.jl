@@ -155,6 +155,7 @@ M(u, p, t; scale = 1.0) != zero(N)
 update_coefficients
 update_coefficients!
 cache_operator
+concretize
 ```
 
 ## Traits
@@ -164,6 +165,7 @@ isconstant
 iscached
 issquare
 islinear
+isconvertible
 has_adjoint
 has_expmv
 has_expmv!
