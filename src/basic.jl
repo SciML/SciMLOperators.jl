@@ -259,6 +259,10 @@ has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
+function concretize!(A, L::ScaledOperator{T}, α, β) where {T}
+    concretize!(A, L.L, L.λ * α, β)
+end
+
 function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     @set! L.λ = cache_operator(L.λ, u)
@@ -418,6 +422,13 @@ function update_coefficients(L::AddedOperator, u, p, t)
     end
 
     @set! L.ops = ops
+end
+
+function concretize!(A, L::AddedOperator{T}, α, β) where {T}
+    A .*= β
+    for op in L.ops
+        concretize!(A, op, α, one(T))
+    end
 end
 
 getops(L::AddedOperator) = L.ops
