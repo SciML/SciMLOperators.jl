@@ -87,7 +87,8 @@ export
        AffineOperator,
        AddVector,
        FunctionOperator,
-       TensorProductOperator
+       TensorProductOperator,
+       ConcretizedOperator
 
 export update_coefficients!,
        update_coefficients,

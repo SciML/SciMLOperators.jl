@@ -323,7 +323,7 @@ end
 function concretize!(A, L::Union{Factorization, AbstractSciMLOperator}, α, β) 
     @warn """using concretize-based fallback for concretize!"""
     # TODO: could also use a mul! based fallback on the unit vectors
-    concretize!(A, concertize(L), α, β)
+    concretize!(A, concretize(L), α, β)
 end
 
 """

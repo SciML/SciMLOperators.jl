@@ -867,12 +867,12 @@ function Base.resize!(L::ConcretizedOperator, n::Integer)
     concretize!(L.A, L.L)
 end
 
-function update_coefficients(L::ConcretizedOperator, u, p, t)
-    @set! L.L = update_coefficients(L.L, u, p, t)
+function update_coefficients(L::ConcretizedOperator, u, p, t; kwargs...)
+    @set! L.L = update_coefficients(L.L, u, p, t; kwargs...)
     @set! L.A = concretize(L.L)
 end
 
-function update_coefficients!(L::ConcretizedOperator, u, p, t)
+function update_coefficients!(L::ConcretizedOperator, u, p, t; kwargs...)
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
     end

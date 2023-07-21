@@ -326,4 +326,14 @@ end
     v=rand(N); @test ldiv!(v, Di, u) ≈ u .* s
     v=copy(u); @test ldiv!(Di, u) ≈ v .* s
 end
+
+@testset "ConcretizedOperator" begin
+    A = rand(2, 2); B = rand(2, 2);
+    L = MatrixOperator(A; update_func=(u,p,t)->t * A) + MatrixOperator(B; update_func=(u,p,t)->t * B)
+    C = ConcretizedOperator(L)
+    v = rand(2)
+    C * v ≈ L * v
+    update_coefficients!(C, nothing, nothing, 2.0)
+    C * v ≈ L * v
+end
 #
