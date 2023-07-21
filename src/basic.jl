@@ -38,6 +38,14 @@ has_mul!(::IdentityOperator) = true
 has_ldiv(::IdentityOperator) = true
 has_ldiv!(::IdentityOperator) = true
 
+function concretize!(A, L::IdentityOperator, α, β) 
+    @assert size(A) == (L.len, L.len)
+    A .*= β
+    for i in 1:L.len
+        A[i, i] += α
+    end
+end
+
 # opeator application
 for op in (
            :*, :\,

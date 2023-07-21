@@ -329,7 +329,7 @@ end
 
 @testset "ConcretizedOperator" begin
     A = rand(2, 2); B = rand(2, 2);
-    L = MatrixOperator(A; update_func=(u,p,t)->t * A) + 2 * MatrixOperator(B; update_func=(u,p,t)->t * B)
+    L = MatrixOperator(A; update_func=(u,p,t)->t * A) + 2 * MatrixOperator(B; update_func=(u,p,t)->t * B) + I
     C = ConcretizedOperator(L)
     v = rand(2)
     C * v ≈ L * v
