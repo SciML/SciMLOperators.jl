@@ -866,7 +866,7 @@ function update_coefficients!(L::ConcretizedOperator, u, p, t)
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
     end
-    concretize!(L.A, L.L) # TODO: this needs to be supported
+    concretize!(L.A, L.L) # TODO: this needs to be supported. Also, problematic if L.A is scalar, should we only support matrix?
 end
 
 getops(L::ConcretizedOperator) = (L.L,)

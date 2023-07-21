@@ -311,6 +311,19 @@ concretize(L::Union{
                    }
           ) = convert(Number, L)
 
+function concretize!(A, L::AbstractMatrix)
+    A .= L 
+end
+
+function concretize!(A, L::Union{Factorization, AbstractSciMLOperator}) 
+    @warn """using concretize-based fallback for concretize!"""
+    A .= concretize(L)
+end
+
+"""
+
+"""
+
 """
 $SIGNATURES
 
