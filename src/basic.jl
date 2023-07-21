@@ -849,7 +849,6 @@ function Base.show(io::IO, L::ConcretizedOperator)
 end
 Base.size(L::ConcretizedOperator) = size(L.A)
 function Base.resize!(L::ConcretizedOperator, n::Integer)
-
     resize!(L.L, n)
     resize!(L.cache, n)
     # TODO: these next two lines seem dangerous... in which cases do they make sense?
