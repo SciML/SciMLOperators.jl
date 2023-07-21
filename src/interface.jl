@@ -321,10 +321,6 @@ function concretize!(A, L::Union{Factorization, AbstractSciMLOperator})
 end
 
 """
-
-"""
-
-"""
 $SIGNATURES
 
 Checks if `L` is a linear operator.
