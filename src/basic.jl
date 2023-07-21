@@ -260,7 +260,7 @@ has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
 function concretize!(A, L::ScaledOperator{T}, α, β) where {T}
-    concretize!(A, L.L, L.λ * α, β)
+    concretize!(A, L.L, convert(Number, L.λ) * α, β)
 end
 
 function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
