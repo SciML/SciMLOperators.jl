@@ -333,7 +333,9 @@ end
     C = ConcretizedOperator(L)
     v = rand(2)
     C * v ≈ L * v
+    @test C.A ≈ convert(AbstractMatrix, L)
     update_coefficients!(C, nothing, nothing, 2.0)
     C * v ≈ L * v
+    @test C.A ≈ convert(AbstractMatrix, L)
 end
 #

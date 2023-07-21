@@ -321,7 +321,7 @@ function concretize!(A, L::AbstractMatrix, α, β)
 end
 
 function concretize!(A, L::Union{Factorization, AbstractSciMLOperator}, α, β) 
-    @warn """using concretize-based fallback for concretize!"""
+    @warn """using concretize-based fallback for concretize! for $(typeof(L))"""
     # TODO: could also use a mul! based fallback on the unit vectors
     concretize!(A, concretize(L), α, β)
 end
