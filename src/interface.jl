@@ -414,22 +414,24 @@ expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
 
 function Base.conj(L::AbstractSciMLOperator)
     isreal(L) && return L
-    @warn """using convert-based fallback for Base.conj"""
+    if !isconvertible(L)
+        @warn """using convert-based fallback for Base.conj"""
+    end
     concretize(L) |> conj
 end
 
 function Base.:(==)(L1::AbstractSciMLOperator, L2::AbstractSciMLOperator)
-    @warn """using convert-based fallback for Base.=="""
+    if !isconvertible(L1) || !isconvertible(L2)
+        @warn """using convert-based fallback for Base.=="""
+    end
     size(L1) != size(L2) && return false
     concretize(L1) == concretize(L2)
 end
 
-Base.@propagate_inbounds function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Any,N}) where {N}
-    @warn """using convert-based fallback for Base.getindex"""
-    concretize(L)[I...]
-end
 function Base.getindex(L::AbstractSciMLOperator, I::Vararg{Int, N}) where {N}
-    @warn """using convert-based fallback for Base.getindex"""
+    if !isconvertible(L)
+        @warn """using convert-based fallback for Base.getindex"""
+    end
     concretize(L)[I...]
 end
 
@@ -440,7 +442,9 @@ end
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
 
 function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
-    @warn """using convert-based fallback in LinearAlgebra.opnorm."""
+    if !isconvertible(L)
+        @warn """using convert-based fallback in LinearAlgebra.opnorm."""
+    end
     opnorm(concretize(L), p)
 end
 
@@ -448,7 +452,9 @@ for op in (
            :sum, :prod,
           )
     @eval function Base.$op(L::AbstractSciMLOperator; kwargs...)
-        @warn """using convert-based fallback in $($op)."""
+        if !isconvertible(L)
+            @warn """using convert-based fallback in $($op)."""
+        end
         $op(concretize(L); kwargs...)
     end
 end
@@ -459,18 +465,24 @@ for pred in (
              :isposdef,
             )
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
-        @warn """using convert-based fallback in $($pred)."""
+        if !isconvertible(L)
+            @warn """using convert-based fallback in $($pred)."""
+        end
         $pred(concretize(L))
     end
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray)
-    @warn """using convert-based fallback in mul!."""
+    if !isconvertible(L)
+        @warn """using convert-based fallback in mul!."""
+    end
     mul!(v, concretize(L), u)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
-    @warn """using convert-based fallback in mul!."""
+    if !isconvertible(L)
+        @warn """using convert-based fallback in mul!."""
+    end
     mul!(v, concretize(L), u, α, β)
 end
 #
