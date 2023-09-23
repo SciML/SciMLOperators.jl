@@ -7,12 +7,12 @@ operators, fast tensor-product evaluations, pre-cached mutating
 evaluations, as well as `Zygote`-compatible non-mutating evaluations.
 
 The lazily implemented operator algebra allows the user to update the
-operator state by passing in an update function that accepts arbirary
+operator state by passing in an update function that accepts arbitrary
 parameter objects. Further, our operators behave like `AbstractMatrix` types
-thanks to  overloads defined for methods in `Base`, and `LinearAlgebra`.
+thanks to overloads defined for methods in `Base`, and `LinearAlgebra`.
 
 Therefore, an `AbstractSciMLOperator` can be passed to `LinearSolve.jl`,
-or `NonlinearSolve.jl` as a linear/nonlinear operator, or to
+or `NonlinearSolve.jl` as a linear or nonlinear operator, or to
 `OrdinaryDiffEq.jl` as an `ODEFunction`. Examples of usage within the
 `SciML` ecosystem are provided in the documentation.
 
@@ -62,8 +62,8 @@ u_kron = rand(N ^ 3)
 v_kron = L3(u_kron, p, t) # == L3 * u_kron
 ```
 
-For mutating operator evaluations, call `cache_operator` to generate
-in-place cache so the operation is nonallocating.
+For mutating operator evaluations, call `cache_operator` to generate an
+in-place cache, so the operation is nonallocating.
 
 ```julia
 α, β = rand(2)
@@ -77,7 +77,7 @@ L2(v, u, p, t) # == mul!(v, L2, u)
 L4(v, u, p, t, α, β) # == mul!(v, L4, u, α, β)
 ```
 
-The calling signature `L(u, p, t)`, for out-of-place evaluations is
+The calling signature `L(u, p, t)`, for out-of-place evaluations, is
 equivalent to `L * u`, and the in-place evaluation `L(v, u, p, t, args...)`
 is equivalent to `LinearAlgebra.mul!(v, L, u, args...)`, where the arguments
 `p, t` are passed to `L` to update its state. More details are provided
@@ -96,11 +96,11 @@ object `p`.
 
 * Matrix-free operators with `FunctionOperator`
 * Fast tensor product evaluation with `TensorProductOperator`
-* Lazy algebra: addition, subtraction, multiplication, inverse, adjoint, transpose
+* Lazy algebra: addition, subtraction, multiplication, inverse, adjoint, and transpose
 * Couple fast methods for operator evaluation with inversion via `InvertibleOperator`
 * One-line API to update operator state depending on arbitrary parameters.
-* Mutating, nonmutating update behaviour (Zygote compatible)
-* One-line API to pre-caching operators for in-place operator evaluations
+* Mutating and nonmutating update behavior (Zygote compatible)
+* One-line API for pre-caching operators for in-place operator evaluations
 
 ## Contributing
 
