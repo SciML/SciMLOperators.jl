@@ -107,8 +107,8 @@ $SIGNATURES
 Represents a linear scaling operator that may be applied to a `Number`,
 or an `AbstractArray` subtype. Its state is updated by the user-provided
 `update_func` during operator evaluation (`L([v,] u, p, t)`), or by
-calls to `update_coefficients[!]`. Both recursively call the 
-update function, `update_func` which is assumed to have the signautre:
+calls to `update_coefficients[!]`. Both recursively call the
+update function, `update_func` which is assumed to have the signature:
 
     update_func(oldval::Number, u, p, t; <accepted kwargs>) -> newval
 

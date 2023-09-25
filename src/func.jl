@@ -81,7 +81,7 @@ and optionally
     op(v, u, p, t, α, β; <accepted_kwargs>) -> [modifies v]
 
 where `u`, `v` are `AbstractArray`s, `p` is a parameter object, and
-`t`, `α`, `β` are scalars. The first signautre corresponds to applying
+`t`, `α`, `β` are scalars. The first signature corresponds to applying
 the operator with `Base.*`, and the latter two correspond to the
 three-argument, and the five-argument `mul!` respectively.
 

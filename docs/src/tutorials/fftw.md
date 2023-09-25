@@ -47,7 +47,7 @@ Dx = cache_operator(Dx, x)
 We load `SciMLOperators`, `LinearAlgebra`, and `FFTW` (short for Fastest Fourier Transform
 in the West), a common Fourier transform library. Next, we define an equispaced grid from
 -π to π, and write the function `u` that we intend to differentiate. Since this is a
-trivial example, we already know the derivative, `du` and write it down to later test our
+trivial example, we already know the derivative, `du`, and write it down to later test our
 FFT wrapper.
 
 ```
@@ -65,7 +65,7 @@ du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 ```
 
 Now, we define the Fourier transform. Since our input is purely Real, we use the real
-Fast Fourier Transform. The funciton `plan_rfft` outputs a real fast fourier transform
+Fast Fourier Transform. The function `plan_rfft` outputs a real fast Fourier transform
 object that can be applied to inputs that are like `x` as follows: `xhat = transform * x`,
 and `LinearAlgebra.mul!(xhat, transform, x)`.  We also get `k`, the frequency modes sampled by
 our finite grid, via the function `rfftfreq`.
@@ -94,7 +94,7 @@ F = FunctionOperator(fwd, x, im*k;
 ```
 
 After wrapping the FFT with `FunctionOperator`, we are ready to compose it with other
-SciMLOperators. Below we form the derivative operator, and cache it via the function
+SciMLOperators. Below, we form the derivative operator, and cache it via the function
 `cache_operator` that requires an input prototype. We can test our derivative operator
 both in-place, and out-of-place by comparing its output to the analytical derivative.
 
