@@ -38,6 +38,14 @@ has_mul!(::IdentityOperator) = true
 has_ldiv(::IdentityOperator) = true
 has_ldiv!(::IdentityOperator) = true
 
+function concretize!(A, L::IdentityOperator, α, β) 
+    @assert size(A) == (L.len, L.len)
+    A .*= β
+    for i in 1:L.len
+        A[i, i] += α
+    end
+end
+
 # opeator application
 for op in (
            :*, :\,
@@ -259,6 +267,10 @@ has_mul!(L::ScaledOperator) = has_mul!(L.L)
 has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
+function concretize!(A, L::ScaledOperator{T}, α, β) where {T}
+    concretize!(A, L.L, convert(Number, L.λ) * α, β)
+end
+
 function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
     @set! L.L = cache_operator(L.L, u)
     @set! L.λ = cache_operator(L.λ, u)
@@ -418,6 +430,13 @@ function update_coefficients(L::AddedOperator, u, p, t)
     end
 
     @set! L.ops = ops
+end
+
+function concretize!(A, L::AddedOperator{T}, α, β) where {T}
+    A .*= β
+    for op in L.ops
+        concretize!(A, op, α, one(T))
+    end
 end
 
 getops(L::AddedOperator) = L.ops
@@ -819,4 +838,100 @@ function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
 end
+
+struct ConcretizedOperator{T, LType, AType} <: AbstractSciMLOperator{T}
+    L::LType
+    A::AType
+    function ConcretizedOperator(L::AbstractSciMLOperator{T}, A::AbstractMatrix) where {T}
+        new{T,typeof(L),typeof(A)}(L, A)
+    end
+end
+
+
+"""
+    ConcretizedOperator(L::AbstractSciMLOperator)
+
+Concretization of a SciMLOperator `L`, with a concrete backing `A = concretize(L)` that is used
+for all linear algebra operations. Unlike `A` itself, a concretized operator correctly supports
+updates to the operator state, by first updating `L` and then updating `A` accordingly.
+"""
+function ConcretizedOperator(L::AbstractSciMLOperator{T}) where {T}
+    ConcretizedOperator(L, convert(AbstractMatrix, L))
+end
+
+Base.convert(::Type{AbstractMatrix}, L::ConcretizedOperator) = L.A
+
+function Base.show(io::IO, L::ConcretizedOperator)
+    print(io, "ConcretizedOperator(")
+    show(io, L.L)
+    print(io, ")")
+end
+Base.size(L::ConcretizedOperator) = size(L.A)
+function Base.resize!(L::ConcretizedOperator, n::Integer)
+    resize!(L.L, n)
+    resize!(L.cache, n)
+    # TODO: these next two lines seem dangerous... in which cases do they make sense?
+    resize!(L.A, n)
+    concretize!(L.A, L.L)
+end
+
+function update_coefficients(L::ConcretizedOperator, u, p, t; kwargs...)
+    @set! L.L = update_coefficients(L.L, u, p, t; kwargs...)
+    @set! L.A = concretize(L.L)
+end
+
+function update_coefficients!(L::ConcretizedOperator, u, p, t; kwargs...)
+    for op in getops(L)
+        update_coefficients!(op, u, p, t; kwargs...)
+    end
+    concretize!(L.A, L.L) # TODO: this needs to be supported. Also, problematic if L.A is scalar, should we only support matrix?
+end
+
+getops(L::ConcretizedOperator) = (L.L,)
+islinear(L::ConcretizedOperator) = islinear(L.L)
+isconvertible(::ConcretizedOperator) = true 
+
+for op in (
+           :adjoint,
+           :transpose,
+           :conj,
+          )
+    @eval Base.$op(L::ConcretizedOperator) = ConcretizedOperator($op(L.L), $op(L.A))
+end
+
+@forward ConcretizedOperator.L (
+                             # LinearAlgebra
+                             LinearAlgebra.issymmetric,
+                             LinearAlgebra.ishermitian,
+                             LinearAlgebra.isposdef,
+                             LinearAlgebra.opnorm,
+
+                             # SciML
+                             isconstant,
+                             has_adjoint,
+                             has_mul,
+                             has_mul!,
+                             has_ldiv,
+                             has_ldiv!
+                            )
+
+Base.:*(L::ConcretizedOperator, u::AbstractVecOrMat) = L.A * u
+Base.:\(L::ConcretizedOperator, u::AbstractVecOrMat) = L.A \ u
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ConcretizedOperator, u::AbstractVecOrMat)
+    mul!(v, L.A, u)
+end
+
+function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ConcretizedOperator, u::AbstractVecOrMat, α, β)
+    mul!(v, L.A, u, α, β)
+end
+
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::ConcretizedOperator, u::AbstractVecOrMat)
+    ldiv!(v, L.A, u)
+end
+
+function LinearAlgebra.ldiv!(L::ConcretizedOperator, u::AbstractVecOrMat)
+    ldiv!(L.A, u)
+end
+
 #

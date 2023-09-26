@@ -159,6 +159,10 @@ function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     L.update_func!(L.A, u, p, t; kwargs...)
 end
 
+function concretize!(A, L::MatrixOperator, α, β)
+    return concretize!(A, L.A, α, β)
+end
+
 SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
 SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
 

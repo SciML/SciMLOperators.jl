@@ -311,6 +311,21 @@ concretize(L::Union{
                    }
           ) = convert(Number, L)
 
+function concretize!(A, L)
+    T = eltype(L)
+    concretize!(A, L, one(T), zero(T))
+end
+
+function concretize!(A, L::AbstractMatrix, α, β)
+    A .= α .* L .+ β .* A
+end
+
+function concretize!(A, L::Union{Factorization, AbstractSciMLOperator}, α, β) 
+    @warn """using concretize-based fallback for concretize! for $(typeof(L))"""
+    # TODO: could also use a mul! based fallback on the unit vectors
+    concretize!(A, concretize(L), α, β)
+end
+
 """
 $SIGNATURES
 
