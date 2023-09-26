@@ -16,20 +16,25 @@ K = 12
     dx = L / n
     x  = -L/2:dx:L/2-dx |> Array
 
-    k  = rfftfreq(n, 2π*n/L) |> Array
-    m  = length(k)
-    tr = plan_rfft(x)
+    k = rfftfreq(n, 2π*n/L) |> Array
+    m = length(k)
+    P = plan_rfft(x)
 
-    ftr = FunctionOperator((du,u,p,t) -> mul!(du, tr, u), x, im*k;
-                           isinplace=true,
-                           T=ComplexF64,
+    fwd(u, p, t) = P * u
+    bwd(u, p, t) = P \ u
 
-                           op_adjoint = (du,u,p,t) -> ldiv!(du, tr, u),
-                           op_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
-                           op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, tr, u),
+    fwd(du, u, p, t) = mul!(du, P, u)
+    bwd(du, u, p, t) = ldiv!(du, P, u)
 
-                           islinear=true,
-                          )
+    ftr = FunctionOperator(fwd, x, im*k;
+        T=ComplexF64,
+
+        op_adjoint = bwd,
+        op_inverse = bwd,
+        op_adjoint_inverse = fwd,
+
+        islinear=true,
+    )
 
     @test size(ftr) == (length(k), length(x))
 

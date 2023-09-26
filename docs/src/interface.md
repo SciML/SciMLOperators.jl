@@ -5,14 +5,14 @@
 These are the formal properties that an `AbstractSciMLOperator` should obey
 for it to work in the solvers.
 
-1. An `AbstractSciMLOperator` represents a linear or nonlinear operator with input/output
-   being `AbstractArray`s. Specifically, a SciMLOperator, `L`, of size `(M, N)` accepts
+1. An `AbstractSciMLOperator` represents a linear or nonlinear operator, with input/output
+   being `AbstractArray`s. Specifically, a SciMLOperator, `L`, of size `(M, N)` accepts an
    input argument `u` with leading length `N`, i.e. `size(u, 1) == N`, and returns an
    `AbstractArray` of the same dimension with leading length `M`, i.e. `size(L * u, 1) == M`.
 2. SciMLOperators can be applied to an `AbstractArray` via overloaded `Base.*`, or
    the in-place `LinearAlgebra.mul!`. Additionally, operators are allowed to be time,
    or parameter dependent. The state of a SciMLOperator can be updated by calling
-   the mutating function `update_coefficients!(L, u, p, t)` where `p` representes
+   the mutating function `update_coefficients!(L, u, p, t)` where `p` represents
    parameters, and `t`, time.  Calling a SciMLOperator as `L(du, u, p, t)` or out-of-place
    `L(u, p, t)` will automatically update the state of `L` before applying it to `u`.
    `L(u, p, t)` is the same operation as `L(u, p, t) * u`.
@@ -25,11 +25,11 @@ for it to work in the solvers.
 ## Overloaded Traits
 
 Thanks to overloads defined for evaluation methods and traits in
-`Base`, `LinearAlgebra`, the behaviour of a `SciMLOperator` is
+`Base`, `LinearAlgebra`, the behavior of a `SciMLOperator` is
 indistinguishable from an `AbstractMatrix`. These operators can be
 passed to linear solver packages, and even to ordinary differential
 equation solvers. The list of overloads to the `AbstractMatrix`
-interface include, but are not limited, the following:
+interface includes, but is not limited to, the following:
 
 - `Base: size, zero, one, +, -, *, /, \, ∘, inv, adjoint, transpose, convert`
 - `LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, issymmetric, ishermitian, isposdef`
@@ -94,13 +94,13 @@ L(u, p, t) != zeros(N) # true
 The out-of-place evaluation function `L(u, p, t)` calls
 `update_coefficients` under the hood, which recursively calls
 the `update_func` for each component `SciMLOperator`.
-Therefore the out-of-place evaluation function is equivalent to
+Therefore, the out-of-place evaluation function is equivalent to
 calling `update_coefficients` followed by `Base.*`. Notice that
 the out-of-place evaluation does not return the updated operator.
 
-On the other hand,, the in-place evaluation function, `L(v, u, p, t)`,
+On the other hand, the in-place evaluation function, `L(v, u, p, t)`,
 mutates `L`, and is equivalent to calling `update_coefficients!`
-followed by `mul!`. The in-place update behaviour works the same way
+followed by `mul!`. The in-place update behavior works the same way,
 with a few `<!>`s appended here and there. For example,
 
 ```julia
@@ -133,11 +133,11 @@ mul!(v, u, p, t) != zero(N) # true
 L(v, u, p, t) != zero(N) # true
 ```
 
-The update behaviour makes this package flexible enough to be used
+The update behavior makes this package flexible enough to be used
 in `OrdianryDiffEq`. As the parameter object `p` is often reserved
-for sensitivy computation via automatic-differentiation, a user may
+for sensitivity computation via automatic-differentiation, a user may
 prefer to pass in state information via other arguments. For that
-reason, we allow for update functions with arbitrary keyword arguments.
+reason, we allow update functions with arbitrary keyword arguments.
 
 ```julia
 mat_update_func = (A, u, p, t; scale = 0.0) -> scale * (p * p')
@@ -155,6 +155,7 @@ M(u, p, t; scale = 1.0) != zero(N)
 update_coefficients
 update_coefficients!
 cache_operator
+concretize
 ```
 
 ## Traits
@@ -164,6 +165,7 @@ isconstant
 iscached
 issquare
 islinear
+isconvertible
 has_adjoint
 has_expmv
 has_expmv!
@@ -176,24 +178,24 @@ has_ldiv!
 
 ## Note About Affine Operators
 
-Affine operators are operators which have the action `Q*x = A*x + b`. These operators have
-no matrix representation, since if there was it would be a linear operator instead of an 
+Affine operators are operators that have the action `Q*x = A*x + b`. These operators have
+no matrix representation, since if there was, it would be a linear operator instead of an 
 affine operator. You can only represent an affine operator as a linear operator in a 
 dimension of one larger via the operation: `[A b] * [u;1]`, so it would require something modified 
 to the input as well. As such, affine operators are a distinct generalization of linear operators.
 
-While it this seems like it might doom the idea of using matrix-free affine operators, it turns out 
+While it seems like it might doom the idea of using matrix-free affine operators, it turns out 
 that affine operators can be used in all cases where matrix-free linear solvers are used due to
-an easy genearlization of the standard convergence proofs. If Q is the affine operator 
+an easy generalization of the standard convergence proofs. If Q is the affine operator 
 ``Q(x) = Ax + b``, then solving ``Qx = c`` is equivalent to solving ``Ax + b = c`` or ``Ax = c-b``. 
-If you know do this same "plug-and-chug" handling of the affine operator in into the GMRES/CG/etc. 
+If you now do this same “plug-and-chug” handling of the affine operator into the GMRES/CG/etc. 
 convergence proofs, move the affine part to the rhs residual, and show it converges to solving 
 ``Ax = c-b``, and thus GMRES/CG/etc. solves ``Q(x) = c`` for an affine operator properly. 
 
-That same trick then can be used pretty much anywhere you would've had a linear operator to extend 
+That same trick can be used mostly anywhere you would've had a linear operator to extend 
 the proof to affine operators, so then ``exp(A*t)*v`` operations via Krylov methods work for A being 
-affine as well, and all sorts of things. Thus affine operators have no matrix representation but they 
-are still compatible with essentially any Krylov method which would otherwise be compatible with
+affine as well, and all sorts of things. Thus, affine operators have no matrix representation, but they 
+are still compatible with essentially any Krylov method, which would otherwise be compatible with
 matrix-free representations, hence their support in the SciMLOperators interface.
 
 ## Note about keyword arguments to `update_coefficients!`

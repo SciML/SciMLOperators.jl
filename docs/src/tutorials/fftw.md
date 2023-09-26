@@ -19,21 +19,22 @@ x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
 u  = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-k  = rfftfreq(n, 2π*n/L) |> Array
-m  = length(k)
-transform = plan_rfft(x)
+k = rfftfreq(n, 2π*n/L) |> Array
+m = length(k)
+P = plan_rfft(x)
 
-T = FunctionOperator((du,u,p,t) -> mul!(du, transform, u), x, im*k;
-                     isinplace=true,
-                     T=ComplexF64,
+F = FunctionOperator(fwd, x, im*k;
+        T=ComplexF64,
 
-                     op_adjoint = (du,u,p,t) -> ldiv!(du, transform, u),
-                     op_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
-                     op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
-                    )
+        op_adjoint = bwd,
+        op_inverse = bwd,
+        op_adjoint_inverse = fwd,
+
+        islinear=true,
+        )
 
 ik = im * DiagonalOperator(k)
-Dx = T \ ik * T
+Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
@@ -46,7 +47,7 @@ Dx = cache_operator(Dx, x)
 We load `SciMLOperators`, `LinearAlgebra`, and `FFTW` (short for Fastest Fourier Transform
 in the West), a common Fourier transform library. Next, we define an equispaced grid from
 -π to π, and write the function `u` that we intend to differentiate. Since this is a
-trivial example, we already know the derivative, `du` and write it down to later test our
+trivial example, we already know the derivative, `du`, and write it down to later test our
 FFT wrapper.
 
 ```
@@ -64,7 +65,7 @@ du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 ```
 
 Now, we define the Fourier transform. Since our input is purely Real, we use the real
-Fast Fourier Transform. The funciton `plan_rfft` outputs a real fast fourier transform
+Fast Fourier Transform. The function `plan_rfft` outputs a real fast Fourier transform
 object that can be applied to inputs that are like `x` as follows: `xhat = transform * x`,
 and `LinearAlgebra.mul!(xhat, transform, x)`.  We also get `k`, the frequency modes sampled by
 our finite grid, via the function `rfftfreq`.
@@ -79,28 +80,27 @@ Now we are ready to define our wrapper for the FFT object. To `FunctionOperator`
 pass the in-place forward application of the transform,
 `(du,u,p,t) -> mul!(du, transform, u)`, its inverse application,
 `(du,u,p,t) -> ldiv!(du, transform, u)`, as well as input and output prototype vectors.
-We also set the flag `isinplace` to `true` to signal that we intend to use the operator
-in a non-allocating way, and pass in the element-type and size of the operator.
 
 ```
-T = FunctionOperator((du,u,p,t) -> mul!(du, transform, u), x, im*k;
-                     isinplace=true,
-                     T=ComplexF64,
+F = FunctionOperator(fwd, x, im*k;
+        T=ComplexF64,
 
-                     op_adjoint = (du,u,p,t) -> ldiv!(du, transform, u),
-                     op_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
-                     op_adjoint_inverse = (du,u,p,t) -> ldiv!(du, transform, u),
-                    )
+        op_adjoint = bwd,
+        op_inverse = bwd,
+        op_adjoint_inverse = fwd,
+
+        islinear=true,
+        )
 ```
 
 After wrapping the FFT with `FunctionOperator`, we are ready to compose it with other
-SciMLOperators. Below we form the derivative operator, and cache it via the function
+SciMLOperators. Below, we form the derivative operator, and cache it via the function
 `cache_operator` that requires an input prototype. We can test our derivative operator
 both in-place, and out-of-place by comparing its output to the analytical derivative.
 
 ```
 ik = im * DiagonalOperator(k)
-Dx = T \ ik * T
+Dx = F \ ik * F
 
 @show ≈(Dx * u, du; atol=1e-8)
 @show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)

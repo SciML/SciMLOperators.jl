@@ -104,6 +104,8 @@ end
                            has_ldiv,
                            has_ldiv!,
                           )
+
+isconvertible(::MatrixOperator) = true
 islinear(::MatrixOperator) = true
 
 function Base.show(io::IO, L::MatrixOperator)
@@ -163,7 +165,7 @@ SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
-Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = L.A
+Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = convert(AbstractMatrix, L.A)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, I::Vararg{Int, N}) where{N} = (L.A[I...] = v)
 
@@ -192,7 +194,7 @@ LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
 """
 $SIGNATURES
 
-Represents a elementwise scaling (diagonal-scaling) operation that may
+Represents an elementwise scaling (diagonal-scaling) operation that may
 be applied to an `AbstractVecOrMat`. When `diag` is an `AbstractVector`
 of length N, `L = DiagonalOpeator(diag, ...)` can be applied to
 `AbstractArray`s with `size(u, 1) == N`. Each column of the `u` will be
@@ -323,6 +325,7 @@ end
 
 getops(L::InvertibleOperator) = (L.L, L.F,)
 islinear(L::InvertibleOperator) = islinear(L.L)
+isconvertible(L::InvertibleOperator) = isconvertible(L.L)
 
 @forward InvertibleOperator.L (
                                # LinearAlgebra
@@ -361,10 +364,10 @@ $SIGNATURES
 
 Represents a generalized affine operation (`v = A * u + B * b`) that may
 be applied to an `AbstractVecOrMat`. The user-provided update functions,
-`update_func[!]` update the `AbstractVecOrMat` `b`, and are called during
+`update_func[!]` update the `AbstractVecOrMat` `b`, and are called
 during operator evaluation (`L([v,], u, p, t)`), or by calls
 to `update_coefficients[!](L, u, p, t)`. The update functions are
-assumped to have the syntax
+assumed to have the syntax
 
     update_func(b::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> new_b
 or
@@ -446,7 +449,7 @@ end
 $SIGNATURES
 
 Represents the affine operation `v = I * u + I * b`. The update functions,
-`update_func[!]` update the state of `AbstractVecOrMat ` `b`. see
+`update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
 documentation of `AffineOperator` for more details.
 """
 function AddVector(b::AbstractVecOrMat;
@@ -469,7 +472,7 @@ end
 $SIGNATURES
 
 Represents the affine operation `v = I * u + B * b`. The update functions,
-`update_func[!]` update the state of `AbstractVecOrMat ` `b`. see
+`update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
 documentation of `AffineOperator` for more details.
 """
 function AddVector(B, b::AbstractVecOrMat;
@@ -511,6 +514,7 @@ end
 getops(L::AffineOperator) = (L.A, L.B, L.b)
 
 islinear(::AffineOperator) = false
+isconvertible(::AffineOperator) = false
 
 function Base.show(io::IO, L::AffineOperator)
     show(io, L.A)
@@ -536,6 +540,12 @@ function Base.resize!(L::AffineOperator, n::Integer)
     resize!(L.b, n)
 
     L
+end
+
+function Base.convert(::Type{AbstractMatrix}, L::AffineOperator)
+    m, n = size(L)
+    msg = """$L cannot be represented by an $m × $n AbstractMatrix"""
+    throw(ArgumentError(msg))
 end
 
 has_adjoint(L::AffineOperator) = false

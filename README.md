@@ -42,7 +42,8 @@ Let `M`, `D`, `F` be matrix-based, diagonal-matrix-based, and function-based
 
 ```julia
 N = 4
-f = (u, p, t) -> u .* u
+f(u, p, t) = u .* u
+f(v, u, p, t) = v .= u .* u
 
 M = MatrixOperator(rand(N, N))
 D = DiagonalOperator(rand(N))
