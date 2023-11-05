@@ -8,7 +8,7 @@
 [![codecov](https://codecov.io/gh/SciML/SciMLOperators.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/SciML/SciMLOperators.jl)
 [![Build Status](https://github.com/SciML/SciMLOperators.jl/workflows/CI/badge.svg)](https://github.com/SciML/SciMLOperators.jl/actions?query=workflow%3ACI)
 
-[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+[![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor%27s%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
 [![SciML Code Style](https://img.shields.io/static/v1?label=code%20style&message=SciML&color=9558b2&labelColor=389826)](https://github.com/SciML/SciMLStyle)
 
 `SciMLOperators` is a package for managing linear, nonlinear,
@@ -28,6 +28,7 @@ or `NonlinearSolve.jl` as a linear/nonlinear operator, or to
 `SciML` ecosystem are provided in the documentation.
 
 ## Installation
+
 `SciMLOperators.jl` is a registerd package and can be installed via
 
 ```
@@ -69,7 +70,7 @@ t = 0.0     # time
 u = rand(N)
 v = L1(u, p, t) # == L1 * u
 
-u_kron = rand(N ^ 3)
+u_kron = rand(N^3)
 v_kron = L3(u_kron, p, t) # == L3 * u_kron
 ```
 
@@ -90,9 +91,9 @@ L4(v, u, p, t, α, β) # == mul!(v, L4, u, α, β)
 
 ## Roadmap
 
-- [ ] [Complete integration with `SciML` ecosystem](https://github.com/SciML/SciMLOperators.jl/issues/142)
-- [ ] [Block-matrices](https://github.com/SciML/SciMLOperators.jl/issues/161)
-- [x] [Benchmark and speed-up tensorbproduct evaluations](https://github.com/SciML/SciMLOperators.jl/issues/58)
-- [ ] [Fast tensor-sum (`kronsum`) evaluation](https://github.com/SciML/SciMLOperators.jl/issues/53)
-- [ ] [Fully flesh out operator array algebra](https://github.com/SciML/SciMLOperators.jl/issues/62)
-- [ ] [Operator fusion/matrix chain multiplication at constant `(u, p, t)`-slices](https://github.com/SciML/SciMLOperators.jl/issues/51)
+  - [ ] [Complete integration with `SciML` ecosystem](https://github.com/SciML/SciMLOperators.jl/issues/142)
+  - [ ] [Block-matrices](https://github.com/SciML/SciMLOperators.jl/issues/161)
+  - [x] [Benchmark and speed-up tensorbproduct evaluations](https://github.com/SciML/SciMLOperators.jl/issues/58)
+  - [ ] [Fast tensor-sum (`kronsum`) evaluation](https://github.com/SciML/SciMLOperators.jl/issues/53)
+  - [ ] [Fully flesh out operator array algebra](https://github.com/SciML/SciMLOperators.jl/issues/62)
+  - [ ] [Operator fusion/matrix chain multiplication at constant `(u, p, t)`-slices](https://github.com/SciML/SciMLOperators.jl/issues/51)

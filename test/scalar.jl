@@ -1,12 +1,12 @@
 #
 using SciMLOperators
 using SciMLOperators: AbstractSciMLScalarOperator,
-                      ComposedScalarOperator,
-                      AddedScalarOperator,
-                      InvertedScalarOperator,
-                      IdentityOperator,
-                      AddedOperator,
-                      ScaledOperator
+    ComposedScalarOperator,
+    AddedScalarOperator,
+    InvertedScalarOperator,
+    IdentityOperator,
+    AddedOperator,
+    ScaledOperator
 
 using LinearAlgebra, Random
 
@@ -19,7 +19,7 @@ K = 12
     b = rand()
     x = rand()
     α = ScalarOperator(x)
-    u = rand(N,K)
+    u = rand(N, K)
 
     @test α isa ScalarOperator
     @test iscached(α)
@@ -32,17 +32,28 @@ K = 12
     @test size(α) == ()
     @test isconstant(α)
 
-    v=copy(u); @test lmul!(α, u) ≈ v * x
-    v=copy(u); @test rmul!(u, α) ≈ x * v
+    v = copy(u)
+    @test lmul!(α, u) ≈ v * x
+    v = copy(u)
+    @test rmul!(u, α) ≈ x * v
 
-    v=rand(N,K); @test mul!(v, α, u) ≈ u * x
-    v=rand(N,K); w=copy(v); @test mul!(v, α, u, a, b) ≈ a*(x*u) + b*w
+    v = rand(N, K)
+    @test mul!(v, α, u) ≈ u * x
+    v = rand(N, K)
+    w = copy(v)
+    @test mul!(v, α, u, a, b) ≈ a * (x * u) + b * w
 
-    v=rand(N,K); @test ldiv!(v, α, u) ≈ u / x
-    w=copy(u);   @test ldiv!(α, u) ≈ w / x
+    v = rand(N, K)
+    @test ldiv!(v, α, u) ≈ u / x
+    w = copy(u)
+    @test ldiv!(α, u) ≈ w / x
 
-    X=rand(N,K); Y=rand(N,K); Z=copy(Y); a=rand(); aa=ScalarOperator(a);
-    @test axpy!(aa,X,Y) ≈ a*X+Z
+    X = rand(N, K)
+    Y = rand(N, K)
+    Z = copy(Y)
+    a = rand()
+    aa = ScalarOperator(a)
+    @test axpy!(aa, X, Y) ≈ a * X + Z
 
     # Test that ScalarOperator's remain AbstractSciMLScalarOperator's under common ops
     β = α + α
@@ -81,9 +92,10 @@ K = 12
         @test (α + op) * u ≈ x * u + op * u
         @test α * op isa SciMLOperators.ScaledOperator
         @test (α * op) * u ≈ x * (op * u)
-        @test all(map(T -> (T isa SciMLOperators.ScaledOperator), (α / op, op / α, op \ α, α \ op)))
+        @test all(map(T -> (T isa SciMLOperators.ScaledOperator),
+            (α / op, op / α, op \ α, α \ op)))
         @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
-        @test (op / α) * u ≈ (α \ op) * u ≈ 1/α * op * u
+        @test (op / α) * u ≈ (α \ op) * u ≈ 1 / α * op * u
     end
 
     # ensure composedscalaroperators doesn't nest
@@ -93,7 +105,6 @@ K = 12
     for op in L.ops
         @test !isa(op, ComposedScalarOperator)
     end
-
 end
 
 @testset "ScalarOperator scalar argument test" begin
@@ -110,15 +121,15 @@ end
 end
 
 @testset "ScalarOperator update test" begin
-    u = ones(N,K)
-    v = zeros(N,K)
+    u = ones(N, K)
+    v = zeros(N, K)
     p = 2.0
     t = 4.0
     a = rand()
     b = rand()
 
-    α = ScalarOperator(0.0; update_func=(a,u,p,t) -> p)
-    β = ScalarOperator(0.0; update_func=(a,u,p,t) -> t)
+    α = ScalarOperator(0.0; update_func = (a, u, p, t) -> p)
+    β = ScalarOperator(0.0; update_func = (a, u, p, t) -> t)
 
     @test !isconstant(α)
     @test !isconstant(β)
@@ -136,12 +147,18 @@ end
     @test convert(Number, β) ≈ t
 
     @test α(u, p, t) ≈ p * u
-    v=rand(N,K); @test α(v, u, p, t) ≈ p * u
-    v=rand(N,K); w=copy(v); @test α(v, u, p, t, a, b) ≈ a*p*u + b*w
+    v = rand(N, K)
+    @test α(v, u, p, t) ≈ p * u
+    v = rand(N, K)
+    w = copy(v)
+    @test α(v, u, p, t, a, b) ≈ a * p * u + b * w
 
     @test β(u, p, t) ≈ t * u
-    v=rand(N,K); @test β(v, u, p, t) ≈ t * u
-    v=rand(N,K); w=copy(v); @test β(v, u, p, t, a, b) ≈ a*t*u + b*w
+    v = rand(N, K)
+    @test β(v, u, p, t) ≈ t * u
+    v = rand(N, K)
+    w = copy(v)
+    @test β(v, u, p, t, a, b) ≈ a * t * u + b * w
 
     num = α + 2 / β * 3 - 4
     val = p + 2 / t * 3 - 4
@@ -151,14 +168,14 @@ end
     # Test scalar operator which expects keyword argument to update,
     # modeled in the style of a DiffEq W-operator.
     γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
-                       accepted_kwargs = (:dtgamma,))
+        accepted_kwargs = (:dtgamma,))
 
     dtgamma = rand()
-    @test γ(u,p,t; dtgamma) ≈ dtgamma * u
-    @test γ(v,u,p,t; dtgamma) ≈ dtgamma * u
- 
+    @test γ(u, p, t; dtgamma) ≈ dtgamma * u
+    @test γ(v, u, p, t; dtgamma) ≈ dtgamma * u
+
     γ_added = γ + α
-    @test γ_added(u,p,t; dtgamma) ≈ (dtgamma + p) * u
-    @test γ_added(v,u,p,t; dtgamma) ≈ (dtgamma + p) * u
+    @test γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
+    @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * u
 end
 #

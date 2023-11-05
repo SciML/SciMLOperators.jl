@@ -8,11 +8,9 @@ function (L::AbstractSciMLScalarOperator)(u::Number, p, t; kwargs...)
     convert(Number, L) * u
 end
 
-SCALINGNUMBERTYPES = (
-                      :AbstractSciMLScalarOperator,
-                      :Number,
-                      :UniformScaling,
-                     )
+SCALINGNUMBERTYPES = (:AbstractSciMLScalarOperator,
+    :Number,
+    :UniformScaling)
 
 #=
 The identity operator must be listed here
@@ -21,10 +19,8 @@ operators take precedence over rules for
 combining with the identity operator when
 the two are combined together.
 =#
-SCALINGCOMBINETYPES = (
-    :AbstractSciMLOperator,
-    :IdentityOperator
-)
+SCALINGCOMBINETYPES = (:AbstractSciMLOperator,
+    :IdentityOperator)
 
 Base.length(::AbstractSciMLScalarOperator) = 1
 Base.size(::AbstractSciMLScalarOperator) = ()
@@ -39,23 +35,33 @@ has_adjoint(::AbstractSciMLScalarOperator) = true
 Base.:*(α::AbstractSciMLScalarOperator, u::AbstractArray) = convert(Number, α) * u
 Base.:\(α::AbstractSciMLScalarOperator, u::AbstractArray) = convert(Number, α) \ u
 
-LinearAlgebra.rmul!(u::AbstractArray, α::AbstractSciMLScalarOperator) = rmul!(u, convert(Number, α))
-LinearAlgebra.lmul!(α::AbstractSciMLScalarOperator, u::AbstractArray) = lmul!(convert(Number, α), u)
-LinearAlgebra.ldiv!(α::AbstractSciMLScalarOperator, u::AbstractArray) = ldiv!(convert(Number, α), u)
-function LinearAlgebra.ldiv!(v::AbstractArray, α::AbstractSciMLScalarOperator, u::AbstractArray)
+function LinearAlgebra.rmul!(u::AbstractArray, α::AbstractSciMLScalarOperator)
+    rmul!(u, convert(Number, α))
+end
+function LinearAlgebra.lmul!(α::AbstractSciMLScalarOperator, u::AbstractArray)
+    lmul!(convert(Number, α), u)
+end
+function LinearAlgebra.ldiv!(α::AbstractSciMLScalarOperator, u::AbstractArray)
+    ldiv!(convert(Number, α), u)
+end
+function LinearAlgebra.ldiv!(v::AbstractArray,
+        α::AbstractSciMLScalarOperator,
+        u::AbstractArray)
     ldiv!(v, convert(Number, α), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, α::AbstractSciMLScalarOperator, u::AbstractArray)
+function LinearAlgebra.mul!(v::AbstractArray,
+        α::AbstractSciMLScalarOperator,
+        u::AbstractArray)
     x = convert(Number, α)
     mul!(v, x, u)
 end
 
 function LinearAlgebra.mul!(v::AbstractArray,
-                            α::AbstractSciMLScalarOperator,
-                            u::AbstractArray,
-                            a::Union{Number,AbstractSciMLScalarOperator},
-                            b::Union{Number,AbstractSciMLScalarOperator})
+        α::AbstractSciMLScalarOperator,
+        u::AbstractArray,
+        a::Union{Number, AbstractSciMLScalarOperator},
+        b::Union{Number, AbstractSciMLScalarOperator})
     α = convert(Number, α)
     a = convert(Number, a)
     b = convert(Number, b)
@@ -63,32 +69,32 @@ function LinearAlgebra.mul!(v::AbstractArray,
 end
 
 function LinearAlgebra.axpy!(α::AbstractSciMLScalarOperator,
-                             x::AbstractArray,
-                             y::AbstractArray)
+        x::AbstractArray,
+        y::AbstractArray)
     α = convert(Number, α)
     axpy!(α, x, y)
 end
 
 function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
-                              x::AbstractArray,
-                              β::Number,
-                              y::AbstractArray)
+        x::AbstractArray,
+        β::Number,
+        y::AbstractArray)
     α = convert(Number, α)
     axpby!(α, x, β, y)
 end
 
 function LinearAlgebra.axpby!(α::Number,
-                              x::AbstractArray,
-                              β::AbstractSciMLScalarOperator,
-                              y::AbstractArray)
+        x::AbstractArray,
+        β::AbstractSciMLScalarOperator,
+        y::AbstractArray)
     β = convert(Number, β)
     axpby!(α, x, β, y)
 end
 
 function LinearAlgebra.axpby!(α::AbstractSciMLScalarOperator,
-                              x::AbstractArray,
-                              β::AbstractSciMLScalarOperator,
-                              y::AbstractArray)
+        x::AbstractArray,
+        β::AbstractSciMLScalarOperator,
+        y::AbstractArray)
     α = convert(Number, α)
     β = convert(Number, β)
     axpby!(α, x, β, y)
@@ -96,7 +102,7 @@ end
 
 Base.:+(α::AbstractSciMLScalarOperator) = α
 
-mutable struct ScalarOperator{T<:Number,F} <: AbstractSciMLScalarOperator{T}
+mutable struct ScalarOperator{T <: Number, F} <: AbstractSciMLScalarOperator{T}
     val::T
     update_func::F
 end
@@ -144,10 +150,8 @@ val_update = (a, u, p, t; scale = 0.0) -> copy(scale)
 ```
 """
 function ScalarOperator(val;
-                        update_func = DEFAULT_UPDATE_FUNC,
-                        accepted_kwargs = nothing,
-                       )
-
+        update_func = DEFAULT_UPDATE_FUNC,
+        accepted_kwargs = nothing,)
     update_func = preprocess_update_func(update_func, accepted_kwargs)
     ScalarOperator(val, update_func)
 end
@@ -163,12 +167,16 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 Base.show(io::IO, α::ScalarOperator) = print(io, "ScalarOperator($(α.val))")
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
-    update_func = (oldval,u,p,t; kwargs...) -> α.update_func(oldval |> conj,u,p,t; kwargs...) |> conj
-    ScalarOperator(val; update_func=update_func, accepted_kwargs=NoKwargFilter())
+    update_func = (oldval, u, p, t; kwargs...) -> α.update_func(oldval |> conj,
+        u,
+        p,
+        t;
+        kwargs...) |> conj
+    ScalarOperator(val; update_func = update_func, accepted_kwargs = NoKwargFilter())
 end
 
-Base.one(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(one(T))
-Base.zero(::AbstractSciMLScalarOperator{T}) where{T} = ScalarOperator(zero(T))
+Base.one(::AbstractSciMLScalarOperator{T}) where {T} = ScalarOperator(one(T))
+Base.zero(::AbstractSciMLScalarOperator{T}) where {T} = ScalarOperator(zero(T))
 
 Base.one(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(true)
 Base.zero(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(false)
@@ -181,7 +189,7 @@ isconstant(α::ScalarOperator) = update_func_isconstant(α.update_func)
 has_ldiv(α::ScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
-function update_coefficients!(L::ScalarOperator,u,p,t; kwargs...)
+function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     L.val = L.update_func(L.val, u, p, t; kwargs...)
 end
 
@@ -194,13 +202,13 @@ $TYPEDEF
 
 Lazy addition of `AbstractSciMLScalarOperator`s
 """
-struct AddedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
+struct AddedScalarOperator{T, O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
-    function AddedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
+    function AddedScalarOperator(ops::NTuple{N, AbstractSciMLScalarOperator}) where {N}
         @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
-        new{T,typeof(ops)}(ops)
+        new{T, typeof(ops)}(ops)
     end
 end
 
@@ -210,17 +218,25 @@ function AddedScalarOperator(ops::AbstractSciMLScalarOperator...)
 end
 
 Base.:+(ops::AbstractSciMLScalarOperator...) = AddedScalarOperator(ops...)
-Base.:+(A::AddedScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A.ops..., B.ops...)
-Base.:+(A::AbstractSciMLScalarOperator, B::AddedScalarOperator) = AddedScalarOperator(A, B.ops...)
-Base.:+(A::AddedScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A.ops..., B)
-Base.:-(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = AddedScalarOperator(A, -B)
+function Base.:+(A::AddedScalarOperator, B::AddedScalarOperator)
+    AddedScalarOperator(A.ops..., B.ops...)
+end
+function Base.:+(A::AbstractSciMLScalarOperator, B::AddedScalarOperator)
+    AddedScalarOperator(A, B.ops...)
+end
+function Base.:+(A::AddedScalarOperator, B::AbstractSciMLScalarOperator)
+    AddedScalarOperator(A.ops..., B)
+end
+function Base.:-(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator)
+    AddedScalarOperator(A, -B)
+end
 
-for op in (
-           :-, :+,
-          )
+for op in (:-, :+)
     for T in SCALINGNUMBERTYPES[2:end]
-        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = AddedScalarOperator(α, ScalarOperator($op(x)))
-        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = AddedScalarOperator(ScalarOperator(x), $op(α))
+        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = AddedScalarOperator(α,
+            ScalarOperator($op(x)))
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = AddedScalarOperator(ScalarOperator(x),
+            $op(α))
     end
 end
 
@@ -242,7 +258,7 @@ Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 function update_coefficients(L::AddedScalarOperator, u, p, t)
     ops = ()
     for op in L.ops
-        ops = (ops...,  update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u, p, t))
     end
 
     @set! L.ops = ops
@@ -257,13 +273,13 @@ $TYPEDEF
 
 Lazy multiplication of `AbstractSciMLScalarOperator`s
 """
-struct ComposedScalarOperator{T,O} <: AbstractSciMLScalarOperator{T}
+struct ComposedScalarOperator{T, O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
-    function ComposedScalarOperator(ops::NTuple{N,AbstractSciMLScalarOperator}) where{N}
+    function ComposedScalarOperator(ops::NTuple{N, AbstractSciMLScalarOperator}) where {N}
         @assert !isempty(ops)
         T = promote_type(eltype.(ops)...)
-        new{T,typeof(ops)}(ops)
+        new{T, typeof(ops)}(ops)
     end
 end
 
@@ -272,18 +288,22 @@ function ComposedScalarOperator(ops::AbstractSciMLScalarOperator...)
     ComposedScalarOperator(ops)
 end
 
-for op in (
-           :*, :∘,
-          )
+for op in (:*, :∘)
     @eval Base.$op(ops::AbstractSciMLScalarOperator...) = reduce($op, ops)
-    @eval Base.$op(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A, B)
-    @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops..., B)
-    @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A, B.ops...)
-    @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops..., B.ops...)
+    @eval Base.$op(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A,
+        B)
+    @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(A.ops...,
+        B)
+    @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A,
+        B.ops...)
+    @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(A.ops...,
+        B.ops...)
 
     for T in SCALINGNUMBERTYPES[2:end]
-        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = ComposedScalarOperator(α, ScalarOperator(x))
-        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ComposedScalarOperator(ScalarOperator(x), α)
+        @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = ComposedScalarOperator(α,
+            ScalarOperator(x))
+        @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ComposedScalarOperator(ScalarOperator(x),
+            α)
     end
 end
 
@@ -302,12 +322,12 @@ function Base.show(io::IO, α::ComposedScalarOperator)
     print(io, ")")
 end
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
-Base.:-(α::AbstractSciMLScalarOperator{T}) where{T} = (-one(T)) * α
+Base.:-(α::AbstractSciMLScalarOperator{T}) where {T} = (-one(T)) * α
 
 function update_coefficients(L::ComposedScalarOperator, u, p, t)
     ops = ()
     for op in L.ops
-        ops = (ops...,  update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u, p, t))
     end
 
     @set! L.ops = ops
@@ -323,11 +343,11 @@ $TYPEDEF
 Lazy inverse of `AbstractSciMLScalarOperator`s
 
 """
-struct InvertedScalarOperator{T,λType} <: AbstractSciMLScalarOperator{T}
+struct InvertedScalarOperator{T, λType} <: AbstractSciMLScalarOperator{T}
     λ::λType
 
     function InvertedScalarOperator(λ::AbstractSciMLScalarOperator{T}) where {T}
-        new{T,typeof(λ)}(λ)
+        new{T, typeof(λ)}(λ)
     end
 end
 #=
@@ -336,26 +356,24 @@ have a specialized type for this purpose that subtypes AbstractSciMLScalarOperat
 =#
 Base.inv(L::AbstractSciMLScalarOperator) = InvertedScalarOperator(L)
 
-for op in (
-           :/,
-          )
+for op in (:/,)
     for T in SCALINGNUMBERTYPES[2:end]
         @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = α * inv(ScalarOperator(x))
         @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ScalarOperator(x) * inv(α)
     end
 
-    @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = α * inv(β)
+    @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = α *
+                                                                                     inv(β)
 end
 
-for op in (
-           :\,
-          )
+for op in (:\,)
     for T in SCALINGNUMBERTYPES[2:end]
         @eval Base.$op(α::AbstractSciMLScalarOperator, x::$T) = inv(α) * ScalarOperator(x)
         @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = inv(ScalarOperator(x)) * α
     end
 
-    @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = inv(α) * β
+    @eval Base.$op(α::AbstractSciMLScalarOperator, β::AbstractSciMLScalarOperator) = inv(α) *
+                                                                                     β
 end
 
 function Base.convert(T::Type{<:Number}, α::InvertedScalarOperator)

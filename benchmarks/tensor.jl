@@ -4,9 +4,9 @@ using SciMLOperators: IdentityOperator, ⊗
 N = 12
 K = 100
 Id = IdentityOperator(N)
-A = rand(N,N)
-B = rand(N,N)
-C = rand(N,N)
+A = rand(N, N)
+B = rand(N, N)
+C = rand(N, N)
 
 println("#===============================#")
 println("2D Tensor Products")
