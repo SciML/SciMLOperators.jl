@@ -16,8 +16,8 @@ struct NoKwargFilter end
 function preprocess_update_func(update_func, accepted_kwargs)
     _update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
     _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs
-    # accepted_kwargs can be passed as nothing to indicate that we should not filter 
-    # (e.g. if the function already accepts all kwargs...). 
+    # accepted_kwargs can be passed as nothing to indicate that we should not filter
+    # (e.g. if the function already accepts all kwargs...).
     return (_accepted_kwargs isa NoKwargFilter) ? _update_func :
            FilterKwargs(_update_func, _accepted_kwargs)
 end
@@ -48,3 +48,6 @@ function (f::FilterKwargs)(args...; kwargs...)
     f.f(args...; filtered_kwargs...)
 end
 #
+
+_unwrap_val(x) = x
+_unwrap_val(::Val{X}) where {X} = X
