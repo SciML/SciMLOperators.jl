@@ -633,11 +633,11 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
         M = size(op, 1)
         sz = u isa AbstractMatrix ? (M, K) : (M,)
 
-        T = if op isa FunctionOperator # 
+        T = if op isa FunctionOperator #
             # FunctionOperator isn't guaranteed to play by the rules of
             # `promote_type`. For example, an irFFT is a complex operation
             # that accepts complex vector and returns  ones.
-            op.traits.eltypes[2]
+            output_eltype(op)
         else
             promote_type(eltype.((op, cache[1]))...)
         end

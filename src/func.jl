@@ -100,6 +100,18 @@ function set_cache(f::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, P,
         f.p, f.t, cache)
 end
 
+function input_eltype(::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, P, Tt, C,
+        iType, oType,
+    }) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, P, Tt, C, iType, oType}
+    return iType
+end
+
+function output_eltype(::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, P, Tt, C,
+        iType, oType,
+    }) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, P, Tt, C, iType, oType}
+    return oType
+end
+
 """
 $(SIGNATURES)
 
@@ -300,9 +312,6 @@ function FunctionOperator(op,
         typeof(_op_adjoint_inverse), typeof(traits), typeof(p), typeof(_t), typeof(cache),
         eltype(input), eltype(output)}(op,
         _op_adjoint, op_inverse, _op_adjoint_inverse, traits, p, _t, cache)
-
-    # L = FunctionOperator(op, _op_adjoint, op_inverse, _op_adjoint_inverse, traits, p, _t,
-    #     cache, eltype(input), eltype(output))
 
     # create cache
 
