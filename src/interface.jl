@@ -109,9 +109,15 @@ end
 # operator evaluation interface
 ###
 
-(L::AbstractSciMLOperator)(u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
-(L::AbstractSciMLOperator)(du, u, p, t; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
-(L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...) = (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
+function (L::AbstractSciMLOperator)(u, p, t; kwargs...)
+    update_coefficients(L, u, p, t; kwargs...) * u
+end
+function (L::AbstractSciMLOperator)(du, u, p, t; kwargs...)
+    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
+end
+function (L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...)
+    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
+end
 
 function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs...)
     msg = """Nonallocating L(v, u, p, t) type methods are not available for
@@ -131,7 +137,6 @@ $SIGNATURES
 Checks whether `L` has preallocated caches for inplace evaluations.
 """
 function iscached(L::AbstractSciMLOperator)
-
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
     isset = has_cache ? !isnothing(L.cache) : true
 
@@ -144,17 +149,11 @@ computation.
 """
 iscached(L) = true
 
-iscached(::Union{
-                 # LinearAlgebra
-                 AbstractMatrix,
-                 UniformScaling,
-                 Factorization,
-
-                 # Base
-                 Number,
-
-                }
-        ) = true
+iscached(::Union{# LinearAlgebra
+AbstractMatrix,
+UniformScaling,
+Factorization, # Base
+Number}) = true
 
 """
 $SIGNATURES
@@ -164,7 +163,6 @@ Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
 cache_operator(L, u) = L
 
 function cache_operator(L::AbstractSciMLOperator, u::AbstractVecOrMat)
-
     L = cache_self(L, u)
     L = cache_internals(L, u)
     L
@@ -178,8 +176,8 @@ cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
-Base.eltype(::Type{AbstractSciMLOperator{T}}) where T = T
-Base.eltype(::AbstractSciMLOperator{T}) where T = T
+Base.eltype(::Type{AbstractSciMLOperator{T}}) where {T} = T
+Base.eltype(::AbstractSciMLOperator{T}) where {T} = T
 
 Base.oneunit(L::AbstractSciMLOperator) = one(L)
 Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
@@ -247,17 +245,11 @@ $SIGNATURES
 Checks if an `L`'s state is constant or needs to be updated by calling
 `update_coefficients`.
 """
-isconstant(::Union{
-                   # LinearAlgebra
-                   AbstractMatrix,
-                   UniformScaling,
-                   Factorization,
-
-                   # Base
-                   Number,
-
-                  }
-          ) = true
+isconstant(::Union{# LinearAlgebra
+AbstractMatrix,
+UniformScaling,
+Factorization, # Base
+Number}) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 
 """
@@ -267,19 +259,20 @@ Checks if `L` can be cheaply converted to an `AbstractMatrix` via eager fusion.
 """
 isconvertible(L::AbstractSciMLOperator) = all(isconvertible, getops(L))
 
-isconvertible(::Union{
-                      # LinearAlgebra
-                      AbstractMatrix,
-                      UniformScaling,
-                      Factorization,
+function isconvertible(::Union{
+        # LinearAlgebra
+        AbstractMatrix,
+        UniformScaling,
+        Factorization,
 
-                      # Base
-                      Number,
+        # Base
+        Number,
 
-                      # SciMLOperators
-                      AbstractSciMLScalarOperator,
-                     }
-             ) = true
+        # SciMLOperators
+        AbstractSciMLScalarOperator,
+    })
+    true
+end
 
 """
     concretize(L) -> AbstractMatrix
@@ -289,27 +282,24 @@ isconvertible(::Union{
 Convert `SciMLOperator` to a concrete type via eager fusion. This method is a
 no-op for types that are already concrete.
 """
-concretize(L::Union{
-                    # LinearAlgebra
-                    AbstractMatrix,
-                    Factorization,
+concretize(L::Union{# LinearAlgebra
+AbstractMatrix,
+Factorization, # SciMLOperators
+AbstractSciMLOperator
+}) = convert(AbstractMatrix, L)
 
-                    # SciMLOperators
-                    AbstractSciMLOperator,
-                   }
-          ) =  convert(AbstractMatrix, L)
+function concretize(L::Union{
+        # LinearAlgebra
+        UniformScaling,
 
-concretize(L::Union{
-                    # LinearAlgebra
-                    UniformScaling,
+        # Base
+        Number,
 
-                    # Base
-                    Number,
-
-                    # SciMLOperators
-                    AbstractSciMLScalarOperator,
-                   }
-          ) = convert(Number, L)
+        # SciMLOperators
+        AbstractSciMLScalarOperator,
+    })
+    convert(Number, L)
+end
 
 """
 $SIGNATURES
@@ -318,95 +308,71 @@ Checks if `L` is a linear operator.
 """
 islinear(::AbstractSciMLOperator) = false
 
-islinear(::Union{
-                 # LinearAlgebra
-                 AbstractMatrix,
-                 UniformScaling,
-                 Factorization,
-
-                 # Base
-                 Number,
-                }
-        ) = true
+islinear(::Union{# LinearAlgebra
+AbstractMatrix,
+UniformScaling,
+Factorization, # Base
+Number
+}) = true
 
 has_mul(L) = false
-has_mul(::Union{
-                # LinearAlgebra
-                AbstractVecOrMat,
-                AbstractMatrix,
-                UniformScaling,
-
-                # Base
-                Number,
-               }
-       ) = true
+has_mul(::Union{# LinearAlgebra
+AbstractVecOrMat,
+AbstractMatrix,
+UniformScaling, # Base
+Number
+}) = true
 
 has_mul!(L) = false
-has_mul!(::Union{
-                 # LinearAlgebra
-                 AbstractVecOrMat,
-                 AbstractMatrix,
-                 UniformScaling,
-
-                 # Base
-                 Number,
-                }
-        ) = true
+has_mul!(::Union{# LinearAlgebra
+AbstractVecOrMat,
+AbstractMatrix,
+UniformScaling, # Base
+Number
+}) = true
 
 has_ldiv(L) = false
 has_ldiv(::Union{
-                 AbstractMatrix,
-                 Factorization,
-                 Number,
-                }
-        ) = true
+AbstractMatrix,
+Factorization,
+Number
+}) = true
 
 has_ldiv!(L) = false
 has_ldiv!(::Union{
-                  Diagonal,
-                  Bidiagonal,
-                  Factorization
-                 }
-         ) = true
+Diagonal,
+Bidiagonal,
+Factorization
+}) = true
 
 has_adjoint(L) = islinear(L)
-has_adjoint(::Union{
-                    # LinearAlgebra
-                    AbstractMatrix,
-                    UniformScaling,
-                    Factorization,
-
-                    # Base
-                    Number,
-                   }
-           ) = true
+has_adjoint(::Union{# LinearAlgebra
+AbstractMatrix,
+UniformScaling,
+Factorization, # Base
+Number
+}) = true
 
 """
 Checks if `size(L, 1) == size(L, 2)`.
 """
 issquare(L) = ndims(L) >= 2 && size(L, 1) == size(L, 2)
 issquare(::AbstractVector) = false
-issquare(::Union{
-                 # LinearAlgebra
-                 UniformScaling,
-
-                 # SciMLOperators
-                 AbstractSciMLScalarOperator,
-
-                 # Base
-                 Number,
-                }
-        ) = true
+issquare(::Union{# LinearAlgebra
+UniformScaling, # SciMLOperators
+AbstractSciMLScalarOperator, # Base
+Number
+}) = true
 issquare(A...) = @. (&)(issquare(A)...)
 
 Base.length(L::AbstractSciMLOperator) = prod(size(L))
 Base.ndims(L::AbstractSciMLOperator) = length(size(L))
-Base.isreal(L::AbstractSciMLOperator{T}) where{T} = T <: Real
+Base.isreal(L::AbstractSciMLOperator{T}) where {T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
 
-LinearAlgebra.exp(L::AbstractSciMLOperator,t) = exp(t*L)
-expmv(L::AbstractSciMLOperator,u,p,t) = exp(L,t)*u
-expmv!(v,L::AbstractSciMLOperator,u,p,t) = mul!(v,exp(L,t),u)
+LinearAlgebra.exp(L::AbstractSciMLOperator, t) = exp(t * L)
+expmv(L::AbstractSciMLOperator, u, p, t) = exp(L, t) * u
+expmv!(v, L::AbstractSciMLOperator, u, p, t) = mul!(v, exp(L, t), u)
 
 ###
 # fallback implementations
@@ -441,16 +407,14 @@ end
 
 LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
 
-function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real=2)
+function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real = 2)
     if !isconvertible(L)
         @warn """using convert-based fallback in LinearAlgebra.opnorm."""
     end
     opnorm(concretize(L), p)
 end
 
-for op in (
-           :sum, :prod,
-          )
+for op in (:sum, :prod)
     @eval function Base.$op(L::AbstractSciMLOperator; kwargs...)
         if !isconvertible(L)
             @warn """using convert-based fallback in $($op)."""
@@ -459,11 +423,9 @@ for op in (
     end
 end
 
-for pred in (
-             :issymmetric,
-             :ishermitian,
-             :isposdef,
-            )
+for pred in (:issymmetric,
+    :ishermitian,
+    :isposdef)
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
         if !isconvertible(L)
             @warn """using convert-based fallback in $($pred)."""
@@ -479,7 +441,11 @@ function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::Abstr
     mul!(v, concretize(L), u)
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::AbstractSciMLOperator, u::AbstractArray, α, β)
+function LinearAlgebra.mul!(v::AbstractArray,
+        L::AbstractSciMLOperator,
+        u::AbstractArray,
+        α,
+        β)
     if !isconvertible(L)
         @warn """using convert-based fallback in mul!."""
     end

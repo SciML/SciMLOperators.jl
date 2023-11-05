@@ -110,5 +110,3 @@ Dx = F \ ik * F
 ≈(Dx * u, du; atol = 1.0e-8) = true
 ≈(mul!(copy(u), Dx, u), du; atol = 1.0e-8) = true
 ```
-
-

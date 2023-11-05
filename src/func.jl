@@ -4,7 +4,20 @@ Matrix free operator given by a function
 
 $(FIELDS)
 """
-mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <: AbstractSciMLOperator{T}
+mutable struct FunctionOperator{
+    iip,
+    oop,
+    mul5,
+    T <: Number,
+    F,
+    Fa,
+    Fi,
+    Fai,
+    Tr,
+    P,
+    Tt,
+    C,
+} <: AbstractSciMLOperator{T}
     """ Function with signature op(u, p, t) and (if isinplace) op(v, u, p, t) """
     op::F
     """ Adjoint operator"""
@@ -22,21 +35,18 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <:
     """ Cache """
     cache::C
 
-    function FunctionOperator(
-                              op,
-                              op_adjoint,
-                              op_inverse,
-                              op_adjoint_inverse,
-                              traits,
-                              p,
-                              t,
-                              cache
-                             )
-
+    function FunctionOperator(op,
+            op_adjoint,
+            op_inverse,
+            op_adjoint_inverse,
+            traits,
+            p,
+            t,
+            cache)
         iip = traits.isinplace
         oop = traits.outofplace
         mul5 = traits.has_mul5
-        T   = traits.T
+        T = traits.T
 
         new{
             iip,
@@ -51,16 +61,14 @@ mutable struct FunctionOperator{iip,oop,mul5,T<:Number,F,Fa,Fi,Fai,Tr,P,Tt,C} <:
             typeof(p),
             typeof(t),
             typeof(cache),
-           }(
-             op,
-             op_adjoint,
-             op_inverse,
-             op_adjoint_inverse,
-             traits,
-             p,
-             t,
-             cache,
-            )
+        }(op,
+            op_adjoint,
+            op_inverse,
+            op_adjoint_inverse,
+            traits,
+            p,
+            t,
+            cache)
     end
 end
 
@@ -121,54 +129,47 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `isposdef` - `true` if the operator is linear and positive-definite. Defaults to `false`.
 """
 function FunctionOperator(op,
-                          input::AbstractArray,
-                          output::AbstractArray = input;
+        input::AbstractArray,
+        output::AbstractArray = input; op_adjoint = nothing,
+        op_inverse = nothing,
+        op_adjoint_inverse = nothing, p = nothing,
+        t::Union{Number, Nothing} = nothing,
+        accepted_kwargs::NTuple{N, Symbol} = (),
 
-                          op_adjoint=nothing,
-                          op_inverse=nothing,
-                          op_adjoint_inverse=nothing,
+        # traits
+        T::Union{Type{<:Number}, Nothing} = nothing,
+        isinplace::Union{Nothing, Bool} = nothing,
+        outofplace::Union{Nothing, Bool} = nothing,
+        has_mul5::Union{Nothing, Bool} = nothing,
+        isconstant::Bool = false,
+        islinear::Bool = false,
+        isconvertible::Bool = false, batch::Bool = false,
+        ifcache::Bool = true,
+        cache::Union{Nothing, NTuple{2}} = nothing,
 
-                          p=nothing,
-                          t::Union{Number,Nothing}=nothing,
-                          accepted_kwargs::NTuple{N,Symbol} = (),
-
-                          # traits
-                          T::Union{Type{<:Number},Nothing}=nothing,
-                          isinplace::Union{Nothing,Bool}=nothing,
-                          outofplace::Union{Nothing,Bool}=nothing,
-                          has_mul5::Union{Nothing,Bool}=nothing,
-                          isconstant::Bool = false,
-                          islinear::Bool = false,
-                          isconvertible::Bool = false,
-
-                          batch::Bool = false,
-                          ifcache::Bool = true,
-                          cache::Union{Nothing, NTuple{2}}=nothing,
-
-                          # LinearAlgebra traits
-                          opnorm = nothing,
-                          issymmetric::Bool = false,
-                          ishermitian::Bool = false,
-                          isposdef::Bool = false,
-                         ) where{N}
+        # LinearAlgebra traits
+        opnorm = nothing,
+        issymmetric::Bool = false,
+        ishermitian::Bool = false,
+        isposdef::Bool = false,) where {N}
 
     # establish types
 
     # store eltype of input/output for caching with ComposedOperator.
     eltypes = eltype(input), eltype(output)
-    T  = isnothing(T) ? promote_type(eltypes...) : T
-    t  = isnothing(t) ? zero(real(T)) : t
+    T = isnothing(T) ? promote_type(eltypes...) : T
+    t = isnothing(t) ? zero(real(T)) : t
 
-    @assert T <: Number """The `eltype` of `FunctionOperator`, as well as
-    the `input`/`output` arrays must be `<:Number`."""
+    @assert T<:Number """The `eltype` of `FunctionOperator`, as well as
+  the `input`/`output` arrays must be `<:Number`."""
 
     # establish sizes
 
-    @assert ndims(output) == ndims(input) """`input`/`output` arrays,
-    ($(typeof(input)), $(typeof(output))) provided to `FunctionOperator`
-    do not have the same number of dimensions. Further, if `batch = true`,
-    then both arrays must be `AbstractVector`s, or both must be
-    `AbstractMatrix` types."""
+    @assert ndims(output)==ndims(input) """`input`/`output` arrays,
+  ($(typeof(input)), $(typeof(output))) provided to `FunctionOperator`
+  do not have the same number of dimensions. Further, if `batch = true`,
+  then both arrays must be `AbstractVector`s, or both must be
+  `AbstractMatrix` types."""
 
     if batch
         if !isa(input, AbstractVecOrMat)
@@ -222,9 +223,7 @@ function FunctionOperator(op,
 
     has_mul5 = if isnothing(has_mul5)
         has_mul5 = true
-        for f in (
-                  op, op_adjoint, op_inverse, op_adjoint_inverse,
-                 )
+        for f in (op, op_adjoint, op_inverse, op_adjoint_inverse)
             if !isnothing(f)
                 has_mul5 *= static_hasmethod(f, typeof((output, input, p, t, t, t)))
             end
@@ -238,7 +237,7 @@ function FunctionOperator(op,
     isreal = T <: Real
     selfadjoint = ishermitian | (isreal & issymmetric)
     adjointable = !(op_adjoint isa Nothing) | selfadjoint
-    invertible  = !(op_inverse isa Nothing)
+    invertible = !(op_inverse isa Nothing)
 
     if selfadjoint & (op_adjoint isa Nothing)
         op_adjoint = op
@@ -249,38 +248,31 @@ function FunctionOperator(op,
     end
 
     traits = (;
-              islinear = islinear,
-              isconvertible = isconvertible,
-              isconstant = isconstant,
+        islinear = islinear,
+        isconvertible = isconvertible,
+        isconstant = isconstant, opnorm = opnorm,
+        issymmetric = issymmetric,
+        ishermitian = ishermitian,
+        isposdef = isposdef, isinplace = isinplace,
+        outofplace = outofplace,
+        has_mul5 = has_mul5,
+        ifcache = ifcache,
+        T = T,
+        batch = batch,
+        size = _size,
+        sizes = sizes,
+        eltypes = eltypes,
+        accepted_kwargs = accepted_kwargs,
+        kwargs = Dict{Symbol, Any}(),)
 
-              opnorm = opnorm,
-              issymmetric = issymmetric,
-              ishermitian = ishermitian,
-              isposdef = isposdef,
-
-              isinplace = isinplace,
-              outofplace = outofplace,
-              has_mul5 = has_mul5,
-              ifcache = ifcache,
-              T = T,
-              batch = batch,
-              size = _size,
-              sizes = sizes,
-              eltypes = eltypes,
-              accepted_kwargs = accepted_kwargs,
-              kwargs = Dict{Symbol, Any}(),
-             )
-
-    L = FunctionOperator(
-                         op,
-                         op_adjoint,
-                         op_inverse,
-                         op_adjoint_inverse,
-                         traits,
-                         p,
-                         t,
-                         cache
-                        )
+    L = FunctionOperator(op,
+        op_adjoint,
+        op_inverse,
+        op_adjoint_inverse,
+        traits,
+        p,
+        t,
+        cache)
 
     # create cache
 
@@ -306,7 +298,11 @@ function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
     @set! L.op = update_coefficients(L.op, u, p, t; filtered_kwargs...)
     @set! L.op_adjoint = update_coefficients(L.op_adjoint, u, p, t; filtered_kwargs...)
     @set! L.op_inverse = update_coefficients(L.op_inverse, u, p, t; filtered_kwargs...)
-    @set! L.op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse, u, p, t; filtered_kwargs...)
+    @set! L.op_adjoint_inverse = update_coefficients(L.op_adjoint_inverse,
+        u,
+        p,
+        t;
+        filtered_kwargs...)
 end
 
 function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
@@ -338,7 +334,6 @@ cache_operator(L::FunctionOperator, u::AbstractArray) = _cache_operator(L, u)
 cache_operator(L::FunctionOperator, u::AbstractVecOrMat) = _cache_operator(L, u)
 
 function _cache_operator(L::FunctionOperator, u::AbstractArray)
-
     U = if L.traits.batch
         if !isa(u, AbstractVecOrMat)
             msg = """$L constructed with `batch = true` only accepts
@@ -380,7 +375,6 @@ cache_self(L::FunctionOperator, u::AbstractArray) = _cache_self(L, u)
 cache_self(L::FunctionOperator, u::AbstractVecOrMat) = _cache_self(L, u)
 
 function _cache_self(L::FunctionOperator, u::AbstractArray)
-
     _u = similar(u, L.traits.eltypes[1], L.traits.sizes[1])
     _v = similar(u, L.traits.eltypes[2], L.traits.sizes[2])
 
@@ -392,7 +386,6 @@ cache_internals(L::FunctionOperator, u::AbstractArray) = _cache_internals(L, u)
 cache_internals(L::FunctionOperator, u::AbstractVecOrMat) = _cache_internals(L, u)
 
 function _cache_internals(L::FunctionOperator, u::AbstractArray)
-
     @set! L.op = cache_operator(L.op, u)
     @set! L.op_adjoint = cache_operator(L.op_adjoint, u)
     @set! L.op_inverse = cache_operator(L.op_inverse, u)
@@ -405,7 +398,6 @@ function Base.show(io::IO, L::FunctionOperator)
 end
 Base.size(L::FunctionOperator) = L.traits.size
 function Base.adjoint(L::FunctionOperator)
-
     if ishermitian(L) | (isreal(L) & issymmetric(L))
         return L
     end
@@ -432,14 +424,13 @@ function Base.adjoint(L::FunctionOperator)
     end
 
     FunctionOperator(op,
-                     op_adjoint,
-                     op_inverse,
-                     op_adjoint_inverse,
-                     traits,
-                     L.p,
-                     L.t,
-                     cache,
-                    )
+        op_adjoint,
+        op_inverse,
+        op_adjoint_inverse,
+        traits,
+        L.p,
+        L.t,
+        cache)
 end
 
 function Base.inv(L::FunctionOperator)
@@ -473,14 +464,13 @@ function Base.inv(L::FunctionOperator)
     end
 
     FunctionOperator(op,
-                     op_adjoint,
-                     op_inverse,
-                     op_adjoint_inverse,
-                     traits,
-                     L.p,
-                     L.t,
-                     cache,
-                    )
+        op_adjoint,
+        op_inverse,
+        op_adjoint_inverse,
+        traits,
+        L.p,
+        L.t,
+        cache)
 end
 
 Base.convert(::Type{AbstractMatrix}, L::FunctionOperator) = convert(AbstractMatrix, L.op)
@@ -523,21 +513,20 @@ LinearAlgebra.isposdef(L::FunctionOperator) = L.traits.isposdef
 
 function getops(L::FunctionOperator)
     (;
-     op = L.op,
-     op_adjoint = L.op_adjoint,
-     op_inverse = L.op_inverse,
-     op_adjoint_inverse = L.op_adjoint_inverse,
-    )
+        op = L.op,
+        op_adjoint = L.op_adjoint,
+        op_inverse = L.op_inverse,
+        op_adjoint_inverse = L.op_adjoint_inverse,)
 end
 
 islinear(L::FunctionOperator) = L.traits.islinear
 isconvertible(L::FunctionOperator) = L.traits.isconvertible
 isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
-has_mul(::FunctionOperator{iip}) where{iip} = true
-has_mul!(::FunctionOperator{iip}) where{iip} = iip
-has_ldiv(L::FunctionOperator{iip}) where{iip} = !(L.op_inverse isa Nothing)
-has_ldiv!(L::FunctionOperator{iip}) where{iip} = iip & !(L.op_inverse isa Nothing)
+has_mul(::FunctionOperator{iip}) where {iip} = true
+has_mul!(::FunctionOperator{iip}) where {iip} = iip
+has_ldiv(L::FunctionOperator{iip}) where {iip} = !(L.op_inverse isa Nothing)
+has_ldiv!(L::FunctionOperator{iip}) where {iip} = iip & !(L.op_inverse isa Nothing)
 
 function _sizecheck(L::FunctionOperator, u, v)
     sizes = L.traits.sizes
@@ -586,9 +575,8 @@ function _sizecheck(L::FunctionOperator, u, v)
         end # u, v
 
     else # !batch
-
         if !isnothing(u)
-            if size(u) ∉ (sizes[1], tuple(size(L, 2)),)
+            if size(u) ∉ (sizes[1], tuple(size(L, 2)))
                 msg = """$L recievd input array of size $(size(u)), but only
                     accepts input arrays of size $(sizes[1]), or vectors like
                     `vec(u)` of size $(tuple(prod(sizes[1])))."""
@@ -597,7 +585,7 @@ function _sizecheck(L::FunctionOperator, u, v)
         end # u
 
         if !isnothing(v)
-            if size(v) ∉ (sizes[2], tuple(size(L, 1)),)
+            if size(v) ∉ (sizes[2], tuple(size(L, 1)))
                 msg = """$L recievd output array of size $(size(v)), but only
                     accepts output arrays of size $(sizes[2]), or vectors like
                     `vec(u)` of size $(tuple(prod(sizes[2])))"""
@@ -642,7 +630,7 @@ function _unvec(L::FunctionOperator, u, v)
 end
 
 # operator application
-function Base.:*(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
+function Base.:*(L::FunctionOperator{iip, true}, u::AbstractArray) where {iip}
     _sizecheck(L, u, nothing)
     U, _, vec_output = _unvec(L, u, nothing)
 
@@ -651,7 +639,7 @@ function Base.:*(L::FunctionOperator{iip,true}, u::AbstractArray) where{iip}
     vec_output ? vec(V) : V
 end
 
-function Base.:\(L::FunctionOperator{iip,true}, v::AbstractArray) where{iip}
+function Base.:\(L::FunctionOperator{iip, true}, v::AbstractArray) where {iip}
     _sizecheck(L, nothing, v)
     _, V, vec_output = _unvec(L, nothing, v)
 
@@ -669,11 +657,18 @@ function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true}, u::Abst
     vec_output ? vec(V) : V
 end
 
-function LinearAlgebra.mul!(::AbstractArray, L::FunctionOperator{false}, ::AbstractArray, args...)
+function LinearAlgebra.mul!(::AbstractArray,
+        L::FunctionOperator{false},
+        ::AbstractArray,
+        args...)
     @error "LinearAlgebra.mul! not defined for out-of-place operator $L"
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, false}, u::AbstractArray, α, β) where{oop}
+function LinearAlgebra.mul!(v::AbstractArray,
+        L::FunctionOperator{true, oop, false},
+        u::AbstractArray,
+        α,
+        β) where {oop}
     _, Co = L.cache
 
     _sizecheck(L, u, v)
@@ -686,7 +681,11 @@ function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, fal
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true}, u::AbstractArray, α, β) where{oop}
+function LinearAlgebra.mul!(v::AbstractArray,
+        L::FunctionOperator{true, oop, true},
+        u::AbstractArray,
+        α,
+        β) where {oop}
     _sizecheck(L, u, v)
     U, V, _ = _unvec(L, u, v)
 

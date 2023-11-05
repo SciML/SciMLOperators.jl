@@ -32,8 +32,9 @@ an extended operator interface with all of these properties, hence the
 `AbstractSciMLOperator` interface.
 
 Some packages providing similar functionality are
-* [LinearMaps.jl](https://github.com/JuliaLinearAlgebra/LinearMaps.jl)
-* [`DiffEqOperators.jl`](https://github.com/SciML/DiffEqOperators.jl/tree/master) (deprecated)
+
+  - [LinearMaps.jl](https://github.com/JuliaLinearAlgebra/LinearMaps.jl)
+  - [`DiffEqOperators.jl`](https://github.com/SciML/DiffEqOperators.jl/tree/master) (deprecated)
 
 ## Interoperability and extended Julia ecosystem
 
@@ -58,10 +59,11 @@ We provide below a list of packages that make use of `SciMLOperators`.
 If you are using `SciMLOperators` in your work, feel free to create a PR
 and add your package to this list.
 
-* [`SciML.ai`](https://sciml.ai/) ecosystem: `SciMLOperators` is compatible with, and utilized by every `SciML` package.
-* [`CalculustJL`](https://github.com/CalculustJL) packages use `SciMLOperators` to define matrix-free vector-calculus operators for solving partial differential equations.
-    * [`CalculustCore.jl`](https://github.com/CalculustJL/CalculustCore.jl)
-    * [`FourierSpaces.jl`](https://github.com/CalculustJL/FourierSpaces.jl)
-    * [`NodalPolynomialSpaces.jl`](https://github.com/CalculustJL/NodalPolynomialSpaces.jl)
-* `SparseDiffTools.jl`
+  - [`SciML.ai`](https://sciml.ai/) ecosystem: `SciMLOperators` is compatible with, and utilized by every `SciML` package.
 
+  - [`CalculustJL`](https://github.com/CalculustJL) packages use `SciMLOperators` to define matrix-free vector-calculus operators for solving partial differential equations.
+    
+      + [`CalculustCore.jl`](https://github.com/CalculustJL/CalculustCore.jl)
+      + [`FourierSpaces.jl`](https://github.com/CalculustJL/FourierSpaces.jl)
+      + [`NodalPolynomialSpaces.jl`](https://github.com/CalculustJL/NodalPolynomialSpaces.jl)
+  - `SparseDiffTools.jl`

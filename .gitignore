@@ -26,3 +26,4 @@ Manifest.toml
 # Editor generatoed file
 .*.swp
 .*.swo
+.vscode

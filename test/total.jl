@@ -14,9 +14,9 @@ K = 12
     L = 2π
 
     dx = L / n
-    x  = -L/2:dx:L/2-dx |> Array
+    x = (-L / 2):dx:(L / 2 - dx) |> Array
 
-    k = rfftfreq(n, 2π*n/L) |> Array
+    k = rfftfreq(n, 2π * n / L) |> Array
     m = length(k)
     P = plan_rfft(x)
 
@@ -26,15 +26,10 @@ K = 12
     fwd(du, u, p, t) = mul!(du, P, u)
     bwd(du, u, p, t) = ldiv!(du, P, u)
 
-    ftr = FunctionOperator(fwd, x, im*k;
-        T=ComplexF64,
-
-        op_adjoint = bwd,
+    ftr = FunctionOperator(fwd, x, im * k;
+        T = ComplexF64, op_adjoint = bwd,
         op_inverse = bwd,
-        op_adjoint_inverse = fwd,
-
-        islinear=true,
-    )
+        op_adjoint_inverse = fwd, islinear = true,)
 
     @test size(ftr) == (length(k), length(x))
 
@@ -44,16 +39,18 @@ K = 12
     Dx = cache_operator(Dx, x)
     D2x = cache_operator(Dx * Dx, x)
 
-    u   = @. sin(5x)cos(7x);
-    du  = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
-    d2u = @. 5(-5sin(5x)cos(7x) -7cos(5x)sin(7x)) +
-           - 7(5cos(5x)sin(7x) + 7sin(5x)cos(7x))
+    u = @. sin(5x)cos(7x)
+    du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x)
+    d2u = @. 5(-5sin(5x)cos(7x) - 7cos(5x)sin(7x)) +
+             -7(5cos(5x)sin(7x) + 7sin(5x)cos(7x))
 
-    @test ≈(Dx * u, du; atol=1e-8)
-    @test ≈(D2x * u, d2u; atol=1e-8)
+    @test ≈(Dx * u, du; atol = 1e-8)
+    @test ≈(D2x * u, d2u; atol = 1e-8)
 
-    v = copy(u); @test ≈(mul!(v, D2x, u), d2u; atol=1e-8)
-    v = copy(u); @test ≈(mul!(v, Dx, u), du; atol=1e-8)
+    v = copy(u)
+    @test ≈(mul!(v, D2x, u), d2u; atol = 1e-8)
+    v = copy(u)
+    @test ≈(mul!(v, Dx, u), du; atol = 1e-8)
 
     itr = inv(ftr)
     ftt = ftr'
@@ -85,16 +82,16 @@ K = 12
 end
 
 @testset "Operator Algebra" begin
-    N2 = N*N
+    N2 = N * N
 
-    u = rand(N2,K)
+    u = rand(N2, K)
     p = rand()
     t = rand()
 
-    A = rand(N,N)
+    A = rand(N, N)
 
     # Introduce update function for B
-    B = MatrixOperator(zeros(N,N); update_func! = (A, u, p, t) -> (A .= p))
+    B = MatrixOperator(zeros(N, N); update_func! = (A, u, p, t) -> (A .= p))
 
     # FunctionOp
     _C = rand(N, N) |> Symmetric
@@ -103,8 +100,9 @@ end
     C = FunctionOperator(f, zeros(N); batch = true, issymmetric = true, p = p)
 
     # Introduce update function for D dependent on kwarg "matrix"
-    D = MatrixOperator(zeros(N,N); update_func! = (A, u, p, t; matrix) -> (A .= p*t*matrix), 
-                       accepted_kwargs = (:matrix,))
+    D = MatrixOperator(zeros(N, N);
+        update_func! = (A, u, p, t; matrix) -> (A .= p * t * matrix),
+        accepted_kwargs = (:matrix,))
 
     matrix = rand(N, N)
     diag = rand(N2)
@@ -114,9 +112,9 @@ end
     T1 = ⊗(A, B)
     T2 = ⊗(C, D)
 
-    D1  = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t) -> d .= p)
-    D2  = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t; diag) -> d .= p*t*diag,
-                           accepted_kwargs = (:diag,))
+    D1 = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t) -> d .= p)
+    D2 = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t; diag) -> d .= p * t * diag,
+        accepted_kwargs = (:diag,))
 
     TT = [T1, T2]
     DD = Diagonal([D1, D2])
@@ -128,18 +126,22 @@ end
     @test_nowarn update_coefficients!(op, u, p, t; diag, matrix)
     # Form dense operator manually 
     dense_T1 = kron(A, p * ones(N, N))
-    dense_T2 = kron(_C, (p*t) .* matrix)
-    dense_DD = Diagonal(vcat(p * ones(N2), p*t*diag))
+    dense_T2 = kron(_C, (p * t) .* matrix)
+    dense_DD = Diagonal(vcat(p * ones(N2), p * t * diag))
     dense_op = hcat(dense_T1', dense_T2') * dense_DD * vcat(dense_T1, dense_T2)
     # Test correctness of op
     @test op * u ≈ dense_op * u
     # Test consistency with three-arg mul!
-    v=rand(N2,K); @test mul!(v, op, u) ≈ op * u
+    v = rand(N2, K)
+    @test mul!(v, op, u) ≈ op * u
     # Test consistency with in-place five-arg mul!
-    v=rand(N2,K); w=copy(v); @test mul!(v, op, u, α, β) ≈ α*(op * u) + β * w
+    v = rand(N2, K)
+    w = copy(v)
+    @test mul!(v, op, u, α, β) ≈ α * (op * u) + β * w
     # Test consistency with operator application form
-    @test op(u, p, t; diag, matrix) ≈ op * u 
-    v=rand(N2,K); @test op(v, u, p, t; diag, matrix) ≈ op * u 
+    @test op(u, p, t; diag, matrix) ≈ op * u
+    v = rand(N2, K)
+    @test op(v, u, p, t; diag, matrix) ≈ op * u
 end
 
 @testset "Resize! test" begin
@@ -172,18 +174,15 @@ end
         @test ldiv!(zero(u), L, u) ≈ L \ u
     end
 
-    for (L, LT) in (
-                    (F, FunctionOperator),
-                    (F + F, SciMLOperators.AddedOperator),
-                    (F * 2, SciMLOperators.ScaledOperator),
-                    (F ∘ F, SciMLOperators.ComposedOperator),
-                    (AffineOperator(F, F, u), AffineOperator),
-                    (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
-                    (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
-                    (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
-                    (SciMLOperators.InvertibleOperator(F, F), SciMLOperators.InvertibleOperator),
-                   )
-
+    for (L, LT) in ((F, FunctionOperator),
+        (F + F, SciMLOperators.AddedOperator),
+        (F * 2, SciMLOperators.ScaledOperator),
+        (F ∘ F, SciMLOperators.ComposedOperator),
+        (AffineOperator(F, F, u), AffineOperator),
+        (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
+        (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
+        (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
+        (SciMLOperators.InvertibleOperator(F, F), SciMLOperators.InvertibleOperator))
         L = deepcopy(L)
         L = cache_operator(L, u)
 
@@ -191,12 +190,13 @@ end
         @test size(L) == (N, N)
         multest(L, u)
 
-        resize!(L, M1); @test size(L) == (M1, M1)
+        resize!(L, M1)
+        @test size(L) == (M1, M1)
         multest(L, u1)
 
-        resize!(L, M2); @test size(L) == (M2, M2)
+        resize!(L, M2)
+        @test size(L) == (M2, M2)
         multest(L, u2)
-
     end
 
     # InvertedOperator

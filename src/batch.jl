@@ -8,31 +8,28 @@ called by `update_coefficients!` and is assumed to have the following signature:
 
     update_func(diag::AbstractArray, u, p, t; <accepted kwarg fields>) -> [modifies diag]
 """
-struct BatchedDiagonalOperator{T,D,F,F!} <: AbstractSciMLOperator{T}
+struct BatchedDiagonalOperator{T, D, F, F!} <: AbstractSciMLOperator{T}
     diag::D
     update_func::F
     update_func!::F!
 
     function BatchedDiagonalOperator(diag::AbstractArray, update_func, update_func!)
-
         new{
             eltype(diag),
             typeof(diag),
             typeof(update_func),
             typeof(update_func!),
-           }(
-             diag, update_func, update_func!,
-            )
+        }(diag,
+            update_func,
+            update_func!)
     end
 end
 
 function DiagonalOperator(u::AbstractArray;
-                          update_func = DEFAULT_UPDATE_FUNC,
-                          update_func! = DEFAULT_UPDATE_FUNC,
-                          accepted_kwargs = nothing
-                         )
-
-    update_func  = preprocess_update_func(update_func , accepted_kwargs)
+        update_func = DEFAULT_UPDATE_FUNC,
+        update_func! = DEFAULT_UPDATE_FUNC,
+        accepted_kwargs = nothing)
+    update_func = preprocess_update_func(update_func, accepted_kwargs)
     update_func! = preprocess_update_func(update_func!, accepted_kwargs)
 
     BatchedDiagonalOperator(u, update_func, update_func!)
@@ -48,11 +45,14 @@ Base.iszero(L::BatchedDiagonalOperator) = iszero(L.diag)
 Base.transpose(L::BatchedDiagonalOperator) = L
 Base.adjoint(L::BatchedDiagonalOperator) = conj(L)
 function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
-
     update_func, update_func! = if isreal(L)
         L.update_func, L.update_func!
     else
-        uf  = (L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag), u, p, t; kwargs...))
+        uf = (L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag),
+            u,
+            p,
+            t;
+            kwargs...))
         uf! = (L, u, p, t; kwargs...) -> begin
             L.update_func(conj!(L.diag), u, p, t; kwargs...)
             conj!(L.diag)
@@ -61,10 +61,9 @@ function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     end
 
     DiagonalOperator(conj(L.diag);
-                     update_func = update_func,
-                     update_func! = update_func!,
-                     accepted_kwargs = NoKwargFilter(),
-                    )
+        update_func = update_func,
+        update_func! = update_func!,
+        accepted_kwargs = NoKwargFilter(),)
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::BatchedDiagonalOperator)
@@ -83,7 +82,7 @@ function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
 end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
-function update_coefficients(L::BatchedDiagonalOperator,u ,p, t; kwargs...)
+function update_coefficients(L::BatchedDiagonalOperator, u, p, t; kwargs...)
     @set! L.diag = L.update_func(L.diag, u, p, t; kwargs...)
 end
 
@@ -106,7 +105,9 @@ has_ldiv!(L::BatchedDiagonalOperator) = has_ldiv(L)
 Base.:*(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .* u
 Base.:\(L::BatchedDiagonalOperator, u::AbstractVecOrMat) = L.diag .\ u
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::AbstractVecOrMat)
+function LinearAlgebra.mul!(v::AbstractVecOrMat,
+        L::BatchedDiagonalOperator,
+        u::AbstractVecOrMat)
     V = vec(v)
     U = vec(u)
     d = vec(L.diag)
@@ -116,7 +117,11 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::AbstractVecOrMat, α, β)
+function LinearAlgebra.mul!(v::AbstractVecOrMat,
+        L::BatchedDiagonalOperator,
+        u::AbstractVecOrMat,
+        α,
+        β)
     V = vec(v)
     U = vec(u)
     d = vec(L.diag)
@@ -126,7 +131,9 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::
     v
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::BatchedDiagonalOperator, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
+        L::BatchedDiagonalOperator,
+        u::AbstractVecOrMat)
     V = vec(v)
     U = vec(u)
     d = vec(L.diag)

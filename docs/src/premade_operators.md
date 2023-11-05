@@ -21,6 +21,7 @@ SciMLOperators.AddedScalarOperator
 SciMLOperators.ComposedScalarOperator
 SciMLOperators.InvertedScalarOperator
 ```
+
 ## Lazy Operator Combination
 
 ```@docs

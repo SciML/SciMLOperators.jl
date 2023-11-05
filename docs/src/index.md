@@ -16,7 +16,6 @@ or `NonlinearSolve.jl` as a linear or nonlinear operator, or to
 `OrdinaryDiffEq.jl` as an `ODEFunction`. Examples of usage within the
 `SciML` ecosystem are provided in the documentation.
 
-
 ## Installation
 
 To install SciMLOperators.jl, use the Julia package manager:
@@ -24,6 +23,7 @@ To install SciMLOperators.jl, use the Julia package manager:
 ```julia
 using Pkg
 Pkg.add("SciMLOperators")
+```
 
 ## Examples
 
@@ -58,7 +58,7 @@ t = 0.0     # time
 u = rand(N)
 v = L1(u, p, t) # == L1 * u
 
-u_kron = rand(N ^ 3)
+u_kron = rand(N^3)
 v_kron = L3(u_kron, p, t) # == L3 * u_kron
 ```
 
@@ -94,13 +94,13 @@ object `p`.
 
 ## Features
 
-* Matrix-free operators with `FunctionOperator`
-* Fast tensor product evaluation with `TensorProductOperator`
-* Lazy algebra: addition, subtraction, multiplication, inverse, adjoint, and transpose
-* Couple fast methods for operator evaluation with inversion via `InvertibleOperator`
-* One-line API to update operator state depending on arbitrary parameters.
-* Mutating and nonmutating update behavior (Zygote compatible)
-* One-line API for pre-caching operators for in-place operator evaluations
+  - Matrix-free operators with `FunctionOperator`
+  - Fast tensor product evaluation with `TensorProductOperator`
+  - Lazy algebra: addition, subtraction, multiplication, inverse, adjoint, and transpose
+  - Couple fast methods for operator evaluation with inversion via `InvertibleOperator`
+  - One-line API to update operator state depending on arbitrary parameters.
+  - Mutating and nonmutating update behavior (Zygote compatible)
+  - One-line API for pre-caching operators for in-place operator evaluations
 
 ## Contributing
 
