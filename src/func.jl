@@ -474,7 +474,7 @@ function Base.adjoint(L::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr,
 
     return FunctionOperator{iip, oop, mul5, T, typeof(op), typeof(op_adjoint),
         typeof(op_inverse), typeof(op_adjoint_inverse), typeof(traits), P, Tt,
-        typeof(cache), iType, oType}(op, op_adjoint, op_inverse, op_adjoint_inverse, traits,
+        typeof(cache), oType, iType}(op, op_adjoint, op_inverse, op_adjoint_inverse, traits,
         L.p, L.t, cache)
 end
 
@@ -503,7 +503,7 @@ function Base.inv(L::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, P, 
 
     return FunctionOperator{iip, oop, mul5, T, typeof(op), typeof(op_adjoint),
         typeof(op_inverse), typeof(op_adjoint_inverse), typeof(traits), P, Tt,
-        typeof(cache), iType, oType}(op, op_adjoint, op_inverse, op_adjoint_inverse, traits,
+        typeof(cache), oType, iType}(op, op_adjoint, op_inverse, op_adjoint_inverse, traits,
         L.p, L.t, cache)
 end
 
@@ -691,18 +691,13 @@ function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true}, u::Abst
     vec_output ? vec(V) : V
 end
 
-function LinearAlgebra.mul!(::AbstractArray,
-        L::FunctionOperator{false},
-        ::AbstractArray,
+function LinearAlgebra.mul!(::AbstractArray, L::FunctionOperator{false}, ::AbstractArray,
         args...)
     @error "LinearAlgebra.mul! not defined for out-of-place operator $L"
 end
 
-function LinearAlgebra.mul!(v::AbstractArray,
-        L::FunctionOperator{true, oop, false},
-        u::AbstractArray,
-        α,
-        β) where {oop}
+function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, false},
+        u::AbstractArray, α, β) where {oop}
     _, Co = L.cache
 
     _sizecheck(L, u, v)
@@ -715,11 +710,8 @@ function LinearAlgebra.mul!(v::AbstractArray,
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractArray,
-        L::FunctionOperator{true, oop, true},
-        u::AbstractArray,
-        α,
-        β) where {oop}
+function LinearAlgebra.mul!(v::AbstractArray, L::FunctionOperator{true, oop, true},
+        u::AbstractArray, α, β) where {oop}
     _sizecheck(L, u, v)
     U, V, _ = _unvec(L, u, v)
 
