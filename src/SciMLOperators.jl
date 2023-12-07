@@ -6,12 +6,14 @@ module SciMLOperators
 using DocStringExtensions
 
 using LinearAlgebra
+import ConcreteStructs: @concrete
 import SparseArrays
 import StaticArraysCore
 import ArrayInterface
 import Tricks: static_hasmethod
-import Lazy: @forward
+import MacroTools: @forward
 import Setfield: @set!
+import UnPack: @unpack
 
 # overload
 import Base: show
@@ -75,6 +77,7 @@ include("matrix.jl")
 include("basic.jl")
 include("batch.jl")
 include("func.jl")
+include("next_gen_func.jl")
 include("tensor.jl")
 
 export
@@ -88,6 +91,9 @@ export
     AddVector,
     FunctionOperator,
     TensorProductOperator
+
+# In a later version, we can just rename FunctionOperatorV2 --> FunctionOperator
+export FunctionOperatorV2
 
 export update_coefficients!,
     update_coefficients, isconstant,
