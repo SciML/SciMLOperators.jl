@@ -265,7 +265,7 @@ function FunctionOperator(op,
     end
 
     if !_unwrap_val(_isinplace) & !_unwrap_val(_outofplace)
-        @error """Please provide a funciton with signatures `op(u, p, t)` for
+        @error """Please provide a function with signatures `op(u, p, t)` for
         applying the operator out-of-place, and/or the signature is
         `op(v, u, p, t)` for in-place application."""
     end
@@ -569,13 +569,13 @@ function _sizecheck(L::FunctionOperator, u, v)
             if !isa(u, AbstractVecOrMat)
                 msg = """$L constructed with `batch = true` only
                     accept input arrays that are `AbstractVecOrMat`s with
-                    `size(L, 2) == size(u, 1)`. Recieved $(typeof(u))."""
+                    `size(L, 2) == size(u, 1)`. Received $(typeof(u))."""
                 throw(ArgumentError(msg))
             end
 
             if size(L, 2) != size(u, 1)
                 msg = """$L accepts input `AbstractVecOrMat`s of size
-                    ($(size(L, 2)), K). Recievd array of size $(size(u))."""
+                    ($(size(L, 2)), K). Received array of size $(size(u))."""
                 throw(DimensionMismatch(msg))
             end
         end # u
@@ -584,13 +584,13 @@ function _sizecheck(L::FunctionOperator, u, v)
             if !isa(v, AbstractVecOrMat)
                 msg = """$L constructed with `batch = true` only
                     returns output arrays that are `AbstractVecOrMat`s with
-                    `size(L, 1) == size(v, 1)`. Recieved $(typeof(v))."""
+                    `size(L, 1) == size(v, 1)`. Received $(typeof(v))."""
                 throw(ArgumentError(msg))
             end
 
             if size(L, 1) != size(v, 1)
                 msg = """$L accepts output `AbstractVecOrMat`s of size
-                    ($(size(L, 1)), K). Recievd array of size $(size(v))."""
+                    ($(size(L, 1)), K). Received array of size $(size(v))."""
                 throw(DimensionMismatch(msg))
             end
         end # v
@@ -611,7 +611,7 @@ function _sizecheck(L::FunctionOperator, u, v)
     else # !batch
         if !isnothing(u)
             if size(u) ∉ (sizes[1], tuple(size(L, 2)))
-                msg = """$L recievd input array of size $(size(u)), but only
+                msg = """$L received input array of size $(size(u)), but only
                     accepts input arrays of size $(sizes[1]), or vectors like
                     `vec(u)` of size $(tuple(prod(sizes[1])))."""
                 throw(DimensionMismatch(msg))
@@ -620,7 +620,7 @@ function _sizecheck(L::FunctionOperator, u, v)
 
         if !isnothing(v)
             if size(v) ∉ (sizes[2], tuple(size(L, 1)))
-                msg = """$L recievd output array of size $(size(v)), but only
+                msg = """$L received output array of size $(size(v)), but only
                     accepts output arrays of size $(sizes[2]), or vectors like
                     `vec(u)` of size $(tuple(prod(sizes[2])))"""
                 throw(DimensionMismatch(msg))

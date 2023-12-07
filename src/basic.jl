@@ -36,7 +36,7 @@ has_mul!(::IdentityOperator) = true
 has_ldiv(::IdentityOperator) = true
 has_ldiv!(::IdentityOperator) = true
 
-# opeator application
+# operator application
 for op in (:*, :\)
     @eval function Base.$op(ii::IdentityOperator, u::AbstractVecOrMat)
         @assert size(u, 1) == ii.len
@@ -128,7 +128,7 @@ Base.iszero(::NullOperator) = true
 has_adjoint(::NullOperator) = true
 has_mul!(::NullOperator) = true
 
-# opeator application
+# operator application
 Base.:*(nn::NullOperator, u::AbstractVecOrMat) = (@assert size(u, 1) == nn.len; zero(u))
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, nn::NullOperator, u::AbstractVecOrMat)

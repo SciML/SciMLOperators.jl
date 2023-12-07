@@ -219,7 +219,7 @@ $SIGNATURES
 
 Represents an elementwise scaling (diagonal-scaling) operation that may
 be applied to an `AbstractVecOrMat`. When `diag` is an `AbstractVector`
-of length N, `L = DiagonalOpeator(diag, ...)` can be applied to
+of length N, `L = DiagonalOperator(diag, ...)` can be applied to
 `AbstractArray`s with `size(u, 1) == N`. Each column of the `u` will be
 scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
 
