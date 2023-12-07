@@ -18,7 +18,7 @@ operators, fast tensor-product evaluations, pre-cached mutating
 evaluations, as well as `Zygote`-compatible non-mutating evaluations.
 
 The lazily implemented operator algebra allows the user to update the
-operator state by passing in an update function that accepts arbirary
+operator state by passing in an update function that accepts arbitrary
 parameter objects. Further, our operators behave like `AbstractMatrix` types
 thanks to  overloads defined for methods in `Base`, and `LinearAlgebra`.
 
@@ -29,7 +29,7 @@ or `NonlinearSolve.jl` as a linear/nonlinear operator, or to
 
 ## Installation
 
-`SciMLOperators.jl` is a registerd package and can be installed via
+`SciMLOperators.jl` is a registered package and can be installed via
 
 ```
 julia> import Pkg

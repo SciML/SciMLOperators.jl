@@ -35,7 +35,7 @@ interface includes, but is not limited to, the following:
   - `LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize, issymmetric, ishermitian, isposdef`
   - `SparseArrays: sparse, issparse`
 
-## Multidimension arrays and batching
+## Multidimensional arrays and batching
 
 SciMLOperator can also be applied to `AbstractMatrix` subtypes where
 operator-evaluation is done column-wise.
@@ -134,7 +134,7 @@ L(v, u, p, t) != zero(N) # true
 ```
 
 The update behavior makes this package flexible enough to be used
-in `OrdianryDiffEq`. As the parameter object `p` is often reserved
+in `OrdinaryDiffEq`. As the parameter object `p` is often reserved
 for sensitivity computation via automatic-differentiation, a user may
 prefer to pass in state information via other arguments. For that
 reason, we allow update functions with arbitrary keyword arguments.
