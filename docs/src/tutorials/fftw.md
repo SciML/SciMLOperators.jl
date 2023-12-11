@@ -113,6 +113,8 @@ both in-place, and out-of-place by comparing its output to the analytical deriva
 ik = im * DiagonalOperator(k)
 Dx = F \ ik * F
 
+Dx = cache_operator(Dx, x)
+
 @show ≈(Dx * u, du; atol=1e-8)
 @show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)
 ```
