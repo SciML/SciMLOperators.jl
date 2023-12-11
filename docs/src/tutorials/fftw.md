@@ -23,6 +23,12 @@ k = rfftfreq(n, 2π*n/L) |> Array
 m = length(k)
 P = plan_rfft(x)
 
+fwd(u, p, t) = P * u
+bwd(u, p, t) = P \ u
+
+fwd(du, u, p, t) = mul!(du, P, u)
+bwd(du, u, p, t) = ldiv!(du, P, u)
+
 F = FunctionOperator(fwd, x, im*k;
         T=ComplexF64,
 
@@ -82,6 +88,11 @@ pass the in-place forward application of the transform,
 `(du,u,p,t) -> ldiv!(du, transform, u)`, as well as input and output prototype vectors.
 
 ```
+fwd(u, p, t) = P * u
+bwd(u, p, t) = P \ u
+
+fwd(du, u, p, t) = mul!(du, P, u)
+bwd(du, u, p, t) = ldiv!(du, P, u)
 F = FunctionOperator(fwd, x, im*k;
         T=ComplexF64,
 
