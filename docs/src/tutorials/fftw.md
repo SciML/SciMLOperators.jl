@@ -118,8 +118,3 @@ Dx = cache_operator(Dx, x)
 @show ≈(Dx * u, du; atol=1e-8)
 @show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)
 ```
-
-```@example fft_explanation
-≈(Dx * u, du; atol = 1.0e-8) = true
-≈(mul!(copy(u), Dx, u), du; atol = 1.0e-8) = true
-```
