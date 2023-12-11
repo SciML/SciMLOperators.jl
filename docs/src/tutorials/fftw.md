@@ -79,7 +79,7 @@ our finite grid, via the function `rfftfreq`.
 ```@example fft_explanation
 k  = rfftfreq(n, 2π*n/L) |> Array
 m  = length(k)
-tr = plan_rfft(x)
+P = plan_rfft(x)
 ```
 
 Now we are ready to define our wrapper for the FFT object. To `FunctionOperator`, we
