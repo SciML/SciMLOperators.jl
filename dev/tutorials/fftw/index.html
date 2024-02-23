@@ -6,11 +6,11 @@ n = 256
 L = 2π
 
 dx = L / n
-x  = range(start=-L/2, stop=L/2-dx, length=n) |&gt; Array
-u  = @. sin(5x)cos(7x);
+x = range(start = -L / 2, stop = L / 2 - dx, length = n) |&gt; Array
+u = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-k = rfftfreq(n, 2π*n/L) |&gt; Array
+k = rfftfreq(n, 2π * n / L) |&gt; Array
 m = length(k)
 P = plan_rfft(x)
 
@@ -20,31 +20,27 @@ bwd(u, p, t) = P \ u
 fwd(du, u, p, t) = mul!(du, P, u)
 bwd(du, u, p, t) = ldiv!(du, P, u)
 
-F = FunctionOperator(fwd, x, im*k;
-        T=ComplexF64,
-
-        op_adjoint = bwd,
-        op_inverse = bwd,
-        op_adjoint_inverse = fwd,
-
-        islinear=true,
-        )
+F = FunctionOperator(fwd, x, im * k;
+    T = ComplexF64, op_adjoint = bwd,
+    op_inverse = bwd,
+    op_adjoint_inverse = fwd, islinear = true
+)
 
 ik = im * DiagonalOperator(k)
 Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
-@show ≈(Dx * u, du; atol=1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><h2 id="Explanation"><a class="docs-heading-anchor" href="#Explanation">Explanation</a><a id="Explanation-1"></a><a class="docs-heading-anchor-permalink" href="#Explanation" title="Permalink"></a></h2><p>We load <code>SciMLOperators</code>, <code>LinearAlgebra</code>, and <code>FFTW</code> (short for Fastest Fourier Transform in the West), a common Fourier transform library. Next, we define an equispaced grid from -π to π, and write the function <code>u</code> that we intend to differentiate. Since this is a trivial example, we already know the derivative, <code>du</code>, and write it down to later test our FFT wrapper.</p><pre><code class="language-julia hljs">using SciMLOperators
+@show ≈(Dx * u, du; atol = 1e-8)
+@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><h2 id="Explanation"><a class="docs-heading-anchor" href="#Explanation">Explanation</a><a id="Explanation-1"></a><a class="docs-heading-anchor-permalink" href="#Explanation" title="Permalink"></a></h2><p>We load <code>SciMLOperators</code>, <code>LinearAlgebra</code>, and <code>FFTW</code> (short for Fastest Fourier Transform in the West), a common Fourier transform library. Next, we define an equispaced grid from -π to π, and write the function <code>u</code> that we intend to differentiate. Since this is a trivial example, we already know the derivative, <code>du</code>, and write it down to later test our FFT wrapper.</p><pre><code class="language-julia hljs">using SciMLOperators
 using LinearAlgebra, FFTW
 
-L  = 2π
-n  = 256
+L = 2π
+n = 256
 dx = L / n
-x  = range(start=-L/2, stop=L/2-dx, length=n) |&gt; Array
+x = range(start = -L / 2, stop = L / 2 - dx, length = n) |&gt; Array
 
-u  = @. sin(5x)cos(7x);
+u = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">256-element Vector{Float64}:
   5.0
   4.742846558188079
@@ -65,8 +61,8 @@ du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);</code></pre><pre class="documenter-ex
   1.315315313787294
   2.8171831950170994
   3.993632947143082
-  4.742846558188079</code></pre><p>Now, we define the Fourier transform. Since our input is purely Real, we use the real Fast Fourier Transform. The function <code>plan_rfft</code> outputs a real fast Fourier transform object that can be applied to inputs that are like <code>x</code> as follows: <code>xhat = transform * x</code>, and <code>LinearAlgebra.mul!(xhat, transform, x)</code>.  We also get <code>k</code>, the frequency modes sampled by our finite grid, via the function <code>rfftfreq</code>.</p><pre><code class="language-julia hljs">k  = rfftfreq(n, 2π*n/L) |&gt; Array
-m  = length(k)
+  4.742846558188079</code></pre><p>Now, we define the Fourier transform. Since our input is purely Real, we use the real Fast Fourier Transform. The function <code>plan_rfft</code> outputs a real fast Fourier transform object that can be applied to inputs that are like <code>x</code> as follows: <code>xhat = transform * x</code>, and <code>LinearAlgebra.mul!(xhat, transform, x)</code>.  We also get <code>k</code>, the frequency modes sampled by our finite grid, via the function <code>rfftfreq</code>.</p><pre><code class="language-julia hljs">k = rfftfreq(n, 2π * n / L) |&gt; Array
+m = length(k)
 P = plan_rfft(x)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FFTW real-to-complex plan for 256-element array of Float64
 (rdft2-ct-dit/32
   (hc2c-direct-32/124/1 &quot;hc2cfdftv_32_avx2&quot;
@@ -84,18 +80,14 @@ bwd(u, p, t) = P \ u
 
 fwd(du, u, p, t) = mul!(du, P, u)
 bwd(du, u, p, t) = ldiv!(du, P, u)
-F = FunctionOperator(fwd, x, im*k;
-        T=ComplexF64,
-
-        op_adjoint = bwd,
-        op_inverse = bwd,
-        op_adjoint_inverse = fwd,
-
-        islinear=true,
-        )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FunctionOperator(129 × 256)</code></pre><p>After wrapping the FFT with <code>FunctionOperator</code>, we are ready to compose it with other SciMLOperators. Below, we form the derivative operator, and cache it via the function <code>cache_operator</code> that requires an input prototype. We can test our derivative operator both in-place, and out-of-place by comparing its output to the analytical derivative.</p><pre><code class="language-julia hljs">ik = im * DiagonalOperator(k)
+F = FunctionOperator(fwd, x, im * k;
+    T = ComplexF64, op_adjoint = bwd,
+    op_inverse = bwd,
+    op_adjoint_inverse = fwd, islinear = true
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FunctionOperator(129 × 256)</code></pre><p>After wrapping the FFT with <code>FunctionOperator</code>, we are ready to compose it with other SciMLOperators. Below, we form the derivative operator, and cache it via the function <code>cache_operator</code> that requires an input prototype. We can test our derivative operator both in-place, and out-of-place by comparing its output to the analytical derivative.</p><pre><code class="language-julia hljs">ik = im * DiagonalOperator(k)
 Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
-@show ≈(Dx * u, du; atol=1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade Operators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 6 February 2024 00:37">Tuesday 6 February 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ≈(Dx * u, du; atol = 1e-8)
+@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade Operators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Friday 23 February 2024 05:00">Friday 23 February 2024</span>. Using Julia version 1.10.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

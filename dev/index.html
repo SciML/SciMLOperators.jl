@@ -27,8 +27,8 @@ L2(v, u, p, t) # == mul!(v, L2, u)
 L4(v, u, p, t, α, β) # == mul!(v, L4, u, α, β)</code></pre><p>The calling signature <code>L(u, p, t)</code>, for out-of-place evaluations, is equivalent to <code>L * u</code>, and the in-place evaluation <code>L(v, u, p, t, args...)</code> is equivalent to <code>LinearAlgebra.mul!(v, L, u, args...)</code>, where the arguments <code>p, t</code> are passed to <code>L</code> to update its state. More details are provided in the operator update section below. While overloads to <code>Base.*</code> and <code>LinearAlgebra.mul!</code> are available, where a <code>SciMLOperator</code> behaves like an <code>AbstractMatrix</code>, we recommend sticking with the <code>L(u, p, t)</code>, <code>L(v, u, p, t)</code>, <code>L(v, u, p, t, α, β)</code> calling signatures as the latter internally update the operator state.</p><p>The <code>(u, p, t)</code> calling signature is standardized over the <code>SciML</code> ecosystem and is flexible enough to support use cases such as time-evolution in ODEs, as well as sensitivity computation with respect to the parameter object <code>p</code>.</p><h2 id="Features"><a class="docs-heading-anchor" href="#Features">Features</a><a id="Features-1"></a><a class="docs-heading-anchor-permalink" href="#Features" title="Permalink"></a></h2><ul><li>Matrix-free operators with <code>FunctionOperator</code></li><li>Fast tensor product evaluation with <code>TensorProductOperator</code></li><li>Lazy algebra: addition, subtraction, multiplication, inverse, adjoint, and transpose</li><li>Couple fast methods for operator evaluation with inversion via <code>InvertibleOperator</code></li><li>One-line API to update operator state depending on arbitrary parameters.</li><li>Mutating and nonmutating update behavior (Zygote compatible)</li><li>One-line API for pre-caching operators for in-place operator evaluations</li></ul><h2 id="Contributing"><a class="docs-heading-anchor" href="#Contributing">Contributing</a><a id="Contributing-1"></a><a class="docs-heading-anchor-permalink" href="#Contributing" title="Permalink"></a></h2><ul><li><p>Please refer to the <a href="https://github.com/SciML/ColPrac/blob/master/README.md">SciML ColPrac: Contributor&#39;s Guide on Collaborative Practices for Community Packages</a> for guidance on PRs, issues, and other matters relating to contributing to SciML.</p></li><li><p>See the <a href="https://github.com/SciML/SciMLStyle">SciML Style Guide</a> for common coding practices and other style decisions.</p></li><li><p>There are a few community forums:</p><ul><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.org/slack/">Julia Slack</a></li><li>The #diffeq-bridged and #sciml-bridged channels in the <a href="https://julialang.zulipchat.com/#narrow/stream/279055-sciml-bridged">Julia Zulip</a></li><li>On the <a href="https://discourse.julialang.org">Julia Discourse forums</a></li><li>See also <a href="https://sciml.ai/community/">SciML Community page</a></li></ul></li></ul><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><details><summary>The documentation of this SciML package was built using these direct dependencies,</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/SciMLOperators.jl/SciMLOperators.jl/docs/Project.toml`
   [e30172f5] Documenter v1.2.1
   [7a1cc6ca] FFTW v1.8.0
-  [c0aeaf25] SciMLOperators v0.3.7 `~/work/SciMLOperators.jl/SciMLOperators.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.10.0
-Commit 3120989f39b (2023-12-25 18:01 UTC)
+  [c0aeaf25] SciMLOperators v0.3.7 `~/work/SciMLOperators.jl/SciMLOperators.jl`</code></pre></details><details><summary>and using this machine and Julia version.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.10.1
+Commit 7790d6f0641 (2024-02-13 20:41 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
@@ -37,12 +37,12 @@ Platform Info:
   WORD_SIZE: 64
   LIBM: libopenlibm
   LLVM: libLLVM-15.0.7 (ORCJIT, znver3)
-  Threads: 1 on 4 virtual cores</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/SciMLOperators.jl/SciMLOperators.jl/docs/Manifest.toml`
+Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre></details><details><summary>A more complete overview of all dependencies and their versions is also provided.</summary><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/SciMLOperators.jl/SciMLOperators.jl/docs/Manifest.toml`
   [a4c015fc] ANSIColoredPrinters v0.0.1
   [621f4979] AbstractFFTs v1.5.0
-  [1520ce14] AbstractTrees v0.4.4
+  [1520ce14] AbstractTrees v0.4.5
   [79e6a3ab] Adapt v4.0.1
-  [4fba245c] ArrayInterface v7.7.0
+  [4fba245c] ArrayInterface v7.7.1
   [187b0558] ConstructionBase v1.5.4
   [ffbed154] DocStringExtensions v0.9.3
   [e30172f5] Documenter v1.2.1
@@ -103,16 +103,16 @@ Platform Info:
   [8dfed614] Test
   [cf7118a7] UUIDs
   [4ec0a83e] Unicode
-  [e66e0078] CompilerSupportLibraries_jll v1.0.5+1
+  [e66e0078] CompilerSupportLibraries_jll v1.1.0+0
   [deac9b47] LibCURL_jll v8.4.0+0
   [e37daf67] LibGit2_jll v1.6.4+0
   [29816b5a] LibSSH2_jll v1.11.0+1
   [c8ffd9c3] MbedTLS_jll v2.28.2+1
   [14a3606d] MozillaCACerts_jll v2023.1.10
-  [4536629a] OpenBLAS_jll v0.3.23+2
+  [4536629a] OpenBLAS_jll v0.3.23+4
   [efcefdf7] PCRE2_jll v10.42.0+1
   [bea87d4a] SuiteSparse_jll v7.2.1+1
   [83775a58] Zlib_jll v1.2.13+1
   [8e850b90] libblastrampoline_jll v5.8.0+1
   [8e850ede] nghttp2_jll v1.52.0+1
-  [3f19e933] p7zip_jll v17.4.0+2</code></pre></details><p>You can also download the <a href="https://github.com/SciML/SciMLOperators.jl/tree/gh-pages/v0.3.7/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/SciMLOperators.jl/tree/gh-pages/v0.3.7/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="sciml/">Usage with <code>SciML</code> and beyond »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Tuesday 6 February 2024 00:37">Tuesday 6 February 2024</span>. Using Julia version 1.10.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  [3f19e933] p7zip_jll v17.4.0+2</code></pre></details><p>You can also download the <a href="https://github.com/SciML/SciMLOperators.jl/tree/gh-pages/v0.3.7/assets/Manifest.toml">manifest</a> file and the <a href="https://github.com/SciML/SciMLOperators.jl/tree/gh-pages/v0.3.7/assets/Project.toml">project</a> file.</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="sciml/">Usage with <code>SciML</code> and beyond »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Friday 23 February 2024 05:00">Friday 23 February 2024</span>. Using Julia version 1.10.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
