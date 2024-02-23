@@ -8,5 +8,5 @@ pages = [
     # "tutorials/nonlin.md",
     # "tutorials/ode.md",
     # "tutorials/lux.md",
-    ],
+    ]
 ]

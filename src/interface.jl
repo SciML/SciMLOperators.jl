@@ -269,8 +269,8 @@ function isconvertible(::Union{
         Number,
 
         # SciMLOperators
-        AbstractSciMLScalarOperator,
-    })
+        AbstractSciMLScalarOperator
+})
     true
 end
 
@@ -296,8 +296,8 @@ function concretize(L::Union{
         Number,
 
         # SciMLOperators
-        AbstractSciMLScalarOperator,
-    })
+        AbstractSciMLScalarOperator
+})
     convert(Number, L)
 end
 

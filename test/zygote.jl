@@ -4,12 +4,12 @@ using Random
 
 using SciMLOperators
 using SciMLOperators: AbstractSciMLOperator,
-    IdentityOperator, NullOperator,
-    AdjointOperator, TransposedOperator,
-    InvertedOperator, InvertibleOperator,
-    BatchedDiagonalOperator, AddedOperator, ComposedOperator,
-    AddedScalarOperator, ComposedScalarOperator, ScaledOperator,
-    has_mul, has_ldiv
+                      IdentityOperator, NullOperator,
+                      AdjointOperator, TransposedOperator,
+                      InvertedOperator, InvertibleOperator,
+                      BatchedDiagonalOperator, AddedOperator, ComposedOperator,
+                      AddedScalarOperator, ComposedScalarOperator, ScaledOperator,
+                      has_mul, has_ldiv
 
 Random.seed!(0)
 n = 3

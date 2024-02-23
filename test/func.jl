@@ -94,14 +94,14 @@ end
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true,)
+        isposdef = true)
 
     # in place
     op2 = FunctionOperator(f2, u; op_inverse = f2i, ifcache = false, islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true,)
+        isposdef = true)
 
     @test issquare(op1)
     @test issquare(op2)
@@ -182,7 +182,7 @@ end
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true,)
+        isposdef = true)
 
     # in place
     op2 = FunctionOperator(f2, u, A * u; op_inverse = f2i, ifcache = false,
@@ -191,7 +191,7 @@ end
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true,)
+        isposdef = true)
 
     @test issquare(op1)
     @test issquare(op2)
