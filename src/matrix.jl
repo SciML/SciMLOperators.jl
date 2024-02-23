@@ -69,7 +69,7 @@ struct MatrixOperator{T, AT <: AbstractMatrix{T}, F, F!} <: AbstractSciMLOperato
             eltype(A),
             typeof(A),
             typeof(update_func),
-            typeof(update_func!),
+            typeof(update_func!)
         }(A,
             update_func,
             update_func!)
@@ -79,7 +79,7 @@ end
 function MatrixOperator(A;
         update_func = DEFAULT_UPDATE_FUNC,
         update_func! = DEFAULT_UPDATE_FUNC,
-        accepted_kwargs = nothing,)
+        accepted_kwargs = nothing)
     update_func = preprocess_update_func(update_func, accepted_kwargs)
     update_func! = preprocess_update_func(update_func!, accepted_kwargs)
 
@@ -126,7 +126,7 @@ for op in (:adjoint,
         MatrixOperator($op(L.A);
             update_func = update_func,
             update_func! = update_func!,
-            accepted_kwargs = NoKwargFilter(),)
+            accepted_kwargs = NoKwargFilter())
     end
 end
 
@@ -146,7 +146,7 @@ function Base.conj(L::MatrixOperator)
     MatrixOperator(conj(L.A);
         update_func = update_func,
         update_func! = update_func!,
-        accepted_kwargs = NoKwargFilter(),)
+        accepted_kwargs = NoKwargFilter())
 end
 
 has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
@@ -168,7 +168,8 @@ SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
-Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = convert(AbstractMatrix,
+Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = convert(
+    AbstractMatrix,
     L.A)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, I::Vararg{Int, N}) where {N} = (L.A[I...] = v)
@@ -251,7 +252,7 @@ $(UPDATE_COEFFS_WARNING)
 function DiagonalOperator(diag::AbstractVector;
         update_func = DEFAULT_UPDATE_FUNC,
         update_func! = DEFAULT_UPDATE_FUNC,
-        accepted_kwargs = nothing,)
+        accepted_kwargs = nothing)
     diag_update_func = update_func_isconstant(update_func) ? update_func :
                        (A, u, p, t; kwargs...) -> update_func(A.diag, u, p, t; kwargs...) |>
                                                   Diagonal
@@ -262,7 +263,7 @@ function DiagonalOperator(diag::AbstractVector;
     MatrixOperator(Diagonal(diag);
         update_func = diag_update_func,
         update_func! = diag_update_func!,
-        accepted_kwargs = accepted_kwargs,)
+        accepted_kwargs = accepted_kwargs)
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
@@ -449,7 +450,7 @@ struct AffineOperator{T, AT, BT, bT, F, F!} <: AbstractSciMLOperator{T}
             typeof(B),
             typeof(b),
             typeof(update_func),
-            typeof(update_func!),
+            typeof(update_func!)
         }(A,
             B,
             b,
@@ -463,7 +464,7 @@ function AffineOperator(A::Union{AbstractMatrix, AbstractSciMLOperator},
         b::AbstractArray;
         update_func = DEFAULT_UPDATE_FUNC,
         update_func! = DEFAULT_UPDATE_FUNC,
-        accepted_kwargs = nothing,)
+        accepted_kwargs = nothing)
     @assert size(A, 1)==size(B, 1) "Dimension mismatch: A, B don't output vectors
   of same size"
 
@@ -493,7 +494,7 @@ function AddVector(b::AbstractVecOrMat;
     AffineOperator(Id, Id, b;
         update_func = update_func,
         update_func! = update_func!,
-        accepted_kwargs = accepted_kwargs,)
+        accepted_kwargs = accepted_kwargs)
 end
 
 """
@@ -513,7 +514,7 @@ function AddVector(B, b::AbstractVecOrMat;
     AffineOperator(Id, B, b;
         update_func = update_func,
         update_func! = update_func!,
-        accepted_kwargs = accepted_kwargs,)
+        accepted_kwargs = accepted_kwargs)
 end
 
 function update_coefficients(L::AffineOperator, u, p, t; kwargs...)

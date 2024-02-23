@@ -180,7 +180,7 @@ $TYPEDEF
 """
 struct ScaledOperator{T,
     λType,
-    LType,
+    LType
 } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
@@ -194,7 +194,8 @@ end
 
 # constructors
 for T in SCALINGNUMBERTYPES[2:end]
-    @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(ScalarOperator(λ),
+    @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(
+        ScalarOperator(λ),
         L)
 end
 
@@ -312,7 +313,7 @@ Lazy operator addition
     (A1 + A2 + A3...)u = A1*u + A2*u + A3*u ....
 """
 struct AddedOperator{T,
-    O <: Tuple{Vararg{AbstractSciMLOperator}},
+    O <: Tuple{Vararg{AbstractSciMLOperator}}
 } <: AbstractSciMLOperator{T}
     ops::O
 
@@ -491,9 +492,11 @@ end
 # constructors
 for op in (:*, :∘)
     @eval Base.$op(ops::AbstractSciMLOperator...) = reduce($op, ops)
-    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(A,
+    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(
+        A,
         B)
-    @eval Base.$op(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(A.ops...,
+    @eval Base.$op(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(
+        A.ops...,
         B)
     @eval Base.$op(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A,
         B.ops...)
@@ -553,7 +556,7 @@ Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops), 2))
 for op in (:adjoint,
     :transpose)
     @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...;
-        cache = iscached(L) ? reverse(L.cache) : nothing,)
+        cache = iscached(L) ? reverse(L.cache) : nothing)
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache = L.cache)
 function Base.resize!(L::ComposedOperator, n::Integer)
@@ -596,7 +599,8 @@ for fact in (:lu, :lu!,
     :bunchkaufman, :bunchkaufman!,
     :lq, :lq!,
     :svd, :svd!)
-    @eval LinearAlgebra.$fact(L::ComposedOperator, args...) = prod(op -> $fact(op, args...),
+    @eval LinearAlgebra.$fact(L::ComposedOperator, args...) = prod(
+        op -> $fact(op, args...),
         reverse(L.ops))
 end
 
