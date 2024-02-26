@@ -265,7 +265,7 @@ function FunctionOperator(op,
     # evaluation signatures
 
     _isinplace = if isinplace === nothing
-        Val(static_hasmethod(op, typeof((output, input, p, _t))))
+        Val(hasmethod(op, typeof((output, input, p, _t))))
     elseif isinplace isa Bool
         Val(isinplace)
     else
@@ -273,7 +273,7 @@ function FunctionOperator(op,
     end
 
     _outofplace = if outofplace === nothing
-        Val(static_hasmethod(op, typeof((input, p, _t))))
+        Val(hasmethod(op, typeof((input, p, _t))))
     elseif outofplace isa Bool
         Val(outofplace)
     else
@@ -342,7 +342,7 @@ end
 
 @inline __has_mul5(::Nothing, y, x, p, t) = Val(true)
 @inline function __has_mul5(f::F, y, x, p, t) where {F}
-    return Val(static_hasmethod(f, typeof((y, x, p, t, t, t))))
+    return Val(hasmethod(f, typeof((y, x, p, t, t, t))))
 end
 @inline __and_val(vs...) = mapreduce(_unwrap_val, *, vs)
 
@@ -542,7 +542,7 @@ function Base.resize!(L::FunctionOperator, n::Integer)
     end
 
     for op in getops(L)
-        if static_hasmethod(resize!, typeof((op, n)))
+        if hasmethod(resize!, typeof((op, n)))
             resize!(op, n)
         end
     end
