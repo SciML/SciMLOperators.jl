@@ -9,8 +9,7 @@ using LinearAlgebra
 import SparseArrays
 import StaticArraysCore
 import ArrayInterface
-import Tricks: static_hasmethod
-import Lazy: @forward
+import MacroTools: @forward
 import Setfield: @set!
 
 # overload

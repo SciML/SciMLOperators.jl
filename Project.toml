@@ -1,25 +1,23 @@
 name = "SciMLOperators"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 authors = ["Vedant Puri <vedantpuri@gmail.com>"]
-version = "0.3.7"
+version = "0.3.8"
 
 [deps]
 ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-Lazy = "50d2b5c4-7a5e-59d5-8109-a42b560f39c0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
-Tricks = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
 
 [compat]
 ArrayInterface = "7"
 DocStringExtensions = "0.8, 0.9"
-Lazy = "0.15"
 LinearAlgebra = "1.6"
+MacroTools = "0.5"
 Setfield = "0.8, 1"
-StaticArraysCore = "1"
 SparseArrays = "1.6"
-Tricks = "0.1.6"
-julia = "1.6"
+StaticArraysCore = "1"
+julia = "1.10"
