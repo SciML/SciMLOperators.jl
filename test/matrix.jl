@@ -104,7 +104,7 @@ end
 
     L = MatrixOperator(zeros(N, N);
         update_func = (A, u, p, t) -> p * p',
-        update_func! = (A, u, p, t) -> A .= p * p',)
+        update_func! = (A, u, p, t) -> A .= p * p')
 
     @test !isconstant(L)
 
@@ -126,7 +126,7 @@ end
 
     D = DiagonalOperator(zeros(N);
         update_func = (diag, u, p, t) -> p * t,
-        update_func! = (diag, u, p, t) -> diag .= p * t,)
+        update_func! = (diag, u, p, t) -> diag .= p * t)
 
     @test !isconstant(D)
     @test issquare(D)
@@ -176,7 +176,7 @@ end
 
     D = DiagonalOperator(d;
         update_func = (diag, u, p, t) -> p * t,
-        update_func! = (diag, u, p, t) -> diag .= p * t,)
+        update_func! = (diag, u, p, t) -> diag .= p * t)
 
     @test !isconstant(D)
     @test issquare(D)
@@ -263,7 +263,7 @@ end
 
     L = AffineOperator(A, B, zeros(N, K);
         update_func = (b, u, p, t) -> p * t,
-        update_func! = (b, u, p, t) -> b .= p * t,)
+        update_func! = (b, u, p, t) -> b .= p * t)
 
     @test !isconstant(L)
 

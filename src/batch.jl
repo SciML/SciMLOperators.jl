@@ -18,7 +18,7 @@ struct BatchedDiagonalOperator{T, D, F, F!} <: AbstractSciMLOperator{T}
             eltype(diag),
             typeof(diag),
             typeof(update_func),
-            typeof(update_func!),
+            typeof(update_func!)
         }(diag,
             update_func,
             update_func!)
@@ -63,7 +63,7 @@ function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     DiagonalOperator(conj(L.diag);
         update_func = update_func,
         update_func! = update_func!,
-        accepted_kwargs = NoKwargFilter(),)
+        accepted_kwargs = NoKwargFilter())
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::BatchedDiagonalOperator)

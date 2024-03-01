@@ -15,11 +15,11 @@ n = 256
 L = 2π
 
 dx = L / n
-x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
-u  = @. sin(5x)cos(7x);
+x = range(start = -L / 2, stop = L / 2 - dx, length = n) |> Array
+u = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
-k = rfftfreq(n, 2π*n/L) |> Array
+k = rfftfreq(n, 2π * n / L) |> Array
 m = length(k)
 P = plan_rfft(x)
 
@@ -29,23 +29,19 @@ bwd(u, p, t) = P \ u
 fwd(du, u, p, t) = mul!(du, P, u)
 bwd(du, u, p, t) = ldiv!(du, P, u)
 
-F = FunctionOperator(fwd, x, im*k;
-        T=ComplexF64,
-
-        op_adjoint = bwd,
-        op_inverse = bwd,
-        op_adjoint_inverse = fwd,
-
-        islinear=true,
-        )
+F = FunctionOperator(fwd, x, im * k;
+    T = ComplexF64, op_adjoint = bwd,
+    op_inverse = bwd,
+    op_adjoint_inverse = fwd, islinear = true
+)
 
 ik = im * DiagonalOperator(k)
 Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
-@show ≈(Dx * u, du; atol=1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)
+@show ≈(Dx * u, du; atol = 1e-8)
+@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)
 ```
 
 ## Explanation
@@ -60,14 +56,13 @@ FFT wrapper.
 using SciMLOperators
 using LinearAlgebra, FFTW
 
-L  = 2π
-n  = 256
+L = 2π
+n = 256
 dx = L / n
-x  = range(start=-L/2, stop=L/2-dx, length=n) |> Array
+x = range(start = -L / 2, stop = L / 2 - dx, length = n) |> Array
 
-u  = @. sin(5x)cos(7x);
+u = @. sin(5x)cos(7x);
 du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
-
 ```
 
 Now, we define the Fourier transform. Since our input is purely Real, we use the real
@@ -77,8 +72,8 @@ and `LinearAlgebra.mul!(xhat, transform, x)`.  We also get `k`, the frequency mo
 our finite grid, via the function `rfftfreq`.
 
 ```@example fft_explanation
-k  = rfftfreq(n, 2π*n/L) |> Array
-m  = length(k)
+k = rfftfreq(n, 2π * n / L) |> Array
+m = length(k)
 P = plan_rfft(x)
 ```
 
@@ -93,15 +88,11 @@ bwd(u, p, t) = P \ u
 
 fwd(du, u, p, t) = mul!(du, P, u)
 bwd(du, u, p, t) = ldiv!(du, P, u)
-F = FunctionOperator(fwd, x, im*k;
-        T=ComplexF64,
-
-        op_adjoint = bwd,
-        op_inverse = bwd,
-        op_adjoint_inverse = fwd,
-
-        islinear=true,
-        )
+F = FunctionOperator(fwd, x, im * k;
+    T = ComplexF64, op_adjoint = bwd,
+    op_inverse = bwd,
+    op_adjoint_inverse = fwd, islinear = true
+)
 ```
 
 After wrapping the FFT with `FunctionOperator`, we are ready to compose it with other
@@ -115,6 +106,6 @@ Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
-@show ≈(Dx * u, du; atol=1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol=1e-8)
+@show ≈(Dx * u, du; atol = 1e-8)
+@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)
 ```

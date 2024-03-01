@@ -2,15 +2,15 @@ using SciMLOperators, LinearAlgebra
 using Random
 
 using SciMLOperators: IdentityOperator,
-    NullOperator,
-    ScaledOperator,
-    AddedOperator,
-    ComposedOperator,
-    AdjointOperator,
-    TransposedOperator,
-    InvertedOperator, AbstractAdjointVecOrMat,
-    AbstractTransposedVecOrMat, getops,
-    cache_operator
+                      NullOperator,
+                      ScaledOperator,
+                      AddedOperator,
+                      ComposedOperator,
+                      AdjointOperator,
+                      TransposedOperator,
+                      InvertedOperator, AbstractAdjointVecOrMat,
+                      AbstractTransposedVecOrMat, getops,
+                      cache_operator
 
 Random.seed!(0)
 N = 8

@@ -9,8 +9,7 @@ using LinearAlgebra
 import SparseArrays
 import StaticArraysCore
 import ArrayInterface
-import Tricks: static_hasmethod
-import Lazy: @forward
+import MacroTools: @forward
 import Setfield: @set!
 
 # overload
@@ -78,30 +77,30 @@ include("func.jl")
 include("tensor.jl")
 
 export
-    IdentityOperator,
-    NullOperator,
-    ScalarOperator,
-    MatrixOperator,
-    DiagonalOperator,
-    InvertibleOperator,
-    AffineOperator,
-    AddVector,
-    FunctionOperator,
-    TensorProductOperator
+       IdentityOperator,
+       NullOperator,
+       ScalarOperator,
+       MatrixOperator,
+       DiagonalOperator,
+       InvertibleOperator,
+       AffineOperator,
+       AddVector,
+       FunctionOperator,
+       TensorProductOperator
 
 export update_coefficients!,
-    update_coefficients, isconstant,
-    iscached,
-    cache_operator, issquare,
-    islinear,
-    concretize,
-    isconvertible, has_adjoint,
-    has_expmv,
-    has_expmv!,
-    has_exp,
-    has_mul,
-    has_mul!,
-    has_ldiv,
-    has_ldiv!
+       update_coefficients, isconstant,
+       iscached,
+       cache_operator, issquare,
+       islinear,
+       concretize,
+       isconvertible, has_adjoint,
+       has_expmv,
+       has_expmv!,
+       has_exp,
+       has_mul,
+       has_mul!,
+       has_ldiv,
+       has_ldiv!
 
 end # module

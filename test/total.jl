@@ -29,7 +29,7 @@ K = 12
     ftr = FunctionOperator(fwd, x, im * k;
         T = ComplexF64, op_adjoint = bwd,
         op_inverse = bwd,
-        op_adjoint_inverse = fwd, islinear = true,)
+        op_adjoint_inverse = fwd, islinear = true)
 
     @test size(ftr) == (length(k), length(x))
 
@@ -113,7 +113,8 @@ end
     T2 = ⊗(C, D)
 
     D1 = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t) -> d .= p)
-    D2 = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t; diag) -> d .= p * t * diag,
+    D2 = DiagonalOperator(
+        zeros(N2); update_func! = (d, u, p, t; diag) -> d .= p * t * diag,
         accepted_kwargs = (:diag,))
 
     TT = [T1, T2]

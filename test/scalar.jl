@@ -1,12 +1,12 @@
 #
 using SciMLOperators
 using SciMLOperators: AbstractSciMLScalarOperator,
-    ComposedScalarOperator,
-    AddedScalarOperator,
-    InvertedScalarOperator,
-    IdentityOperator,
-    AddedOperator,
-    ScaledOperator
+                      ComposedScalarOperator,
+                      AddedScalarOperator,
+                      InvertedScalarOperator,
+                      IdentityOperator,
+                      AddedOperator,
+                      ScaledOperator
 
 using LinearAlgebra, Random
 

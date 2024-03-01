@@ -24,16 +24,17 @@ struct TensorProductOperator{T, O, C} <: AbstractSciMLOperator{T}
     ops::O
     cache::C
 
-    function TensorProductOperator(ops::NTuple{
+    function TensorProductOperator(
+            ops::NTuple{
                 2,
-                Union{AbstractMatrix, AbstractSciMLOperator},
+                Union{AbstractMatrix, AbstractSciMLOperator}
             },
             cache::Union{Tuple, Nothing})
         T = promote_type(eltype.(ops)...)
 
         new{T,
             typeof(ops),
-            typeof(cache),
+            typeof(cache)
         }(ops, cache)
     end
 end
