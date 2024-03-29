@@ -11,7 +11,7 @@ to `update_coefficients[!](L, u, p, t)`. Both recursively call the
     update_func(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> newA
 or
 
-    update_func!(A::AbstractMatrix, u ,p , t; <accepted kwargs>) -> [modifies A]
+    update_func!(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> [modifies A]
 
 The set of keyword-arguments accepted by `update_func[!]` must be provided
 to `MatrixOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
