@@ -82,9 +82,7 @@ function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
     kron(convert.(AbstractMatrix, L.ops)...)
 end
 
-function SparseArrays.sparse(L::TensorProductOperator)
-    kron(sparse.(AbstractMatrix, L.ops)...)
-end
+
 
 #LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
 

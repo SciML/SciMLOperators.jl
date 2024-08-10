@@ -223,7 +223,6 @@ Base.:+(L::AbstractSciMLOperator) = L
 function Base.convert(::Type{AbstractMatrix}, L::ScaledOperator)
     convert(Number, L.λ) * convert(AbstractMatrix, L.L)
 end
-SparseArrays.sparse(L::ScaledOperator) = L.λ * sparse(L.L)
 
 # traits
 function Base.show(io::IO, L::ScaledOperator{T}) where {T}
@@ -382,7 +381,6 @@ end
 function Base.convert(::Type{AbstractMatrix}, L::AddedOperator)
     sum(op -> convert(AbstractMatrix, op), L.ops)
 end
-SparseArrays.sparse(L::AddedOperator) = sum(sparse, L.ops)
 
 # traits
 function Base.show(io::IO, L::AddedOperator)
@@ -540,7 +538,6 @@ end
 function Base.convert(::Type{AbstractMatrix}, L::ComposedOperator)
     prod(op -> convert(AbstractMatrix, op), L.ops)
 end
-SparseArrays.sparse(L::ComposedOperator) = prod(sparse, L.ops)
 
 # traits
 function Base.show(io::IO, L::ComposedOperator)
