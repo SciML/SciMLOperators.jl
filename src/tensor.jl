@@ -82,8 +82,6 @@ function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
     kron(convert.(AbstractMatrix, L.ops)...)
 end
 
-
-
 #LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
 
 function Base.show(io::IO, L::TensorProductOperator)

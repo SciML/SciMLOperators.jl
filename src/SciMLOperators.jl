@@ -20,7 +20,6 @@ import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
 
-
 """
 $(TYPEDEF)
 
