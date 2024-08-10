@@ -163,9 +163,6 @@ function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     L.update_func!(L.A, u, p, t; kwargs...)
 end
 
-SparseArrays.sparse(L::MatrixOperator) = sparse(L.A)
-SparseArrays.issparse(L::MatrixOperator) = issparse(L.A)
-
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = convert(
