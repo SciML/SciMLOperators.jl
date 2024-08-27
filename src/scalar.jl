@@ -194,7 +194,7 @@ function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
 end
 
 function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
-    @set! L.val = L.update_func(L.val, u, p, t; kwargs...)
+    @reset L.val = L.update_func(L.val, u, p, t; kwargs...)
 end
 
 """
@@ -262,7 +262,7 @@ function update_coefficients(L::AddedScalarOperator, u, p, t)
         ops = (ops..., update_coefficients(op, u, p, t))
     end
 
-    @set! L.ops = ops
+    @reset L.ops = ops
 end
 
 getops(α::AddedScalarOperator) = α.ops
@@ -336,7 +336,7 @@ function update_coefficients(L::ComposedScalarOperator, u, p, t)
         ops = (ops..., update_coefficients(op, u, p, t))
     end
 
-    @set! L.ops = ops
+    @reset L.ops = ops
 end
 
 getops(α::ComposedScalarOperator) = α.ops
@@ -393,7 +393,7 @@ end
 Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
 
 function update_coefficients(L::InvertedScalarOperator, u, p, t)
-    @set! L.λ = update_coefficients(L.λ, u, p, t)
+    @reset L.λ = update_coefficients(L.λ, u, p, t)
     L
 end
 
