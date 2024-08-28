@@ -9,7 +9,7 @@ using LinearAlgebra
 
 import ArrayInterface
 import MacroTools: @forward
-import Accessors: @set
+import Accessors: @reset
 
 # overload
 import Base: show
