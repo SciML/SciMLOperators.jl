@@ -19,7 +19,7 @@ SciMLOperatorsSparseArraysExt = "SparseArrays"
 SciMLOperatorsStaticArraysCoreExt = "StaticArraysCore"
 
 [compat]
-Accessors = "1"
+Accessors = "0.1"
 ArrayInterface = "7"
 DocStringExtensions = "0.8, 0.9"
 LinearAlgebra = "1.6"
