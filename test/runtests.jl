@@ -1,6 +1,9 @@
 using SafeTestsets
 
 @time begin
+    @time @safetestset "Quality Assurance" begin
+        include("qa.jl")
+    end
     @time @safetestset "Scalar Operators" begin
         include("scalar.jl")
     end

@@ -79,6 +79,11 @@ for op in (:*, :∘)
         @assert size(A, 2) == ii.len
         A
     end
+
+    @eval function Base.$op(ii1::IdentityOperator, ii2::IdentityOperator)
+        @assert ii1.len == ii2.len
+        IdentityOperator(ii1.len)
+    end
 end
 
 function Base.:\(ii::IdentityOperator, A::AbstractSciMLOperator)
@@ -156,6 +161,35 @@ for op in (:*, :∘)
         @assert size(A, 2) == nn.len
         NullOperator(nn.len)
     end
+
+    @eval function Base.$op(nn1::NullOperator, nn2::NullOperator)
+        @assert nn1.len == nn2.len
+        NullOperator(nn1.len)
+    end
+
+    @eval function Base.$op(nn::NullOperator, ii::IdentityOperator)
+        @assert nn.len == ii.len
+        NullOperator(nn.len)
+    end
+
+    @eval function Base.$op(ii::IdentityOperator, nn::NullOperator)
+        @assert nn.len == ii.len
+        NullOperator(nn.len)
+    end
+
+    @eval function Base.$op(nn::NullOperator, ii::IdentityOperator)
+        @assert nn.len == ii.len
+        NullOperator(nn.len)
+    end
+
+    @eval function Base.$op(λ::AbstractSciMLScalarOperator, nn::NullOperator)
+        NullOperator(nn.len)
+    end
+
+    @eval function Base.$op(nn::NullOperator, λ::AbstractSciMLScalarOperator)
+        NullOperator(nn.len)
+    end
+
 end
 
 # operator addition, subtraction with NullOperator returns operator itself
@@ -169,6 +203,12 @@ for op in (:+, :-)
         @assert size(A) == (nn.len, nn.len)
         A
     end
+
+    @eval function Base.$op(nn1::NullOperator, nn2::NullOperator)
+        @assert nn1.len == nn2.len
+        nn1
+    end
+
 end
 
 """
