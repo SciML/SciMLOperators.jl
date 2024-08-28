@@ -240,8 +240,8 @@ Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real = 2) = abs(L.λ) * opnorm(L.L, p)
 
 function update_coefficients(L::ScaledOperator, u, p, t)
-    @set! L.L = update_coefficients(L.L, u, p, t)
-    @set! L.λ = update_coefficients(L.λ, u, p, t)
+    @reset L.L = update_coefficients(L.L, u, p, t)
+    @reset L.λ = update_coefficients(L.λ, u, p, t)
 
     L
 end
@@ -256,8 +256,8 @@ has_ldiv(L::ScaledOperator) = has_ldiv(L.L) & !iszero(L.λ)
 has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 
 function cache_internals(L::ScaledOperator, u::AbstractVecOrMat)
-    @set! L.L = cache_operator(L.L, u)
-    @set! L.λ = cache_operator(L.λ, u)
+    @reset L.L = cache_operator(L.L, u)
+    @reset L.λ = cache_operator(L.λ, u)
     L
 end
 
@@ -411,7 +411,7 @@ function update_coefficients(L::AddedOperator, u, p, t)
         ops = (ops..., update_coefficients(op, u, p, t))
     end
 
-    @set! L.ops = ops
+    @reset L.ops = ops
 end
 
 getops(L::AddedOperator) = L.ops
@@ -421,7 +421,7 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 
 function cache_internals(L::AddedOperator, u::AbstractVecOrMat)
     for i in 1:length(L.ops)
-        @set! L.ops[i] = cache_operator(L.ops[i], u)
+        @reset L.ops[i] = cache_operator(L.ops[i], u)
     end
     L
 end
@@ -576,7 +576,7 @@ function update_coefficients(L::ComposedOperator, u, p, t)
         ops = (ops..., update_coefficients(op, u, p, t))
     end
 
-    @set! L.ops = ops
+    @reset L.ops = ops
 end
 
 getops(L::ComposedOperator) = L.ops
@@ -646,7 +646,7 @@ function cache_self(L::ComposedOperator, u::AbstractVecOrMat)
         cache = (similar(u, T, sz), cache...)
     end
 
-    @set! L.cache = cache
+    @reset L.cache = cache
     L
 end
 
@@ -660,7 +660,7 @@ function cache_internals(L::ComposedOperator, u::AbstractVecOrMat)
         ops = (cache_operator(L.ops[i], L.cache[i]), ops...)
     end
 
-    @set! L.ops = ops
+    @reset L.ops = ops
 end
 
 function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ComposedOperator, u::AbstractVecOrMat)
@@ -757,7 +757,7 @@ function Base.resize!(L::InvertedOperator, n::Integer)
 end
 
 function update_coefficients(L::InvertedOperator, u, p, t)
-    @set! L.L = update_coefficients(L.L, u, p, t)
+    @reset L.L = update_coefficients(L.L, u, p, t)
 
     L
 end
@@ -787,12 +787,12 @@ Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
 function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
     cache = zero(u)
-    @set! L.cache = cache
+    @reset L.cache = cache
     L
 end
 
 function cache_internals(L::InvertedOperator, u::AbstractVecOrMat)
-    @set! L.L = cache_operator(L.L, u)
+    @reset L.L = cache_operator(L.L, u)
     L
 end
 

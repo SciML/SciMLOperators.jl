@@ -7,10 +7,9 @@ using DocStringExtensions
 
 using LinearAlgebra
 
-import StaticArraysCore
 import ArrayInterface
 import MacroTools: @forward
-import Setfield: @set!
+import Accessors: @reset
 
 # overload
 import Base: show

@@ -121,7 +121,7 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
         has_ldiv!)
 
     @eval function cache_internals(L::$LType, u::AbstractVecOrMat)
-        @set! L.L = cache_operator(L.L, reshape(u, size(L, 1)))
+        @reset L.L = cache_operator(L.L, reshape(u, size(L, 1)))
         L
     end
 

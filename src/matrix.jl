@@ -156,7 +156,7 @@ function isconstant(L::MatrixOperator)
 end
 
 function update_coefficients(L::MatrixOperator, u, p, t; kwargs...)
-    @set! L.A = L.update_func(L.A, u, p, t; kwargs...)
+    @reset L.A = L.update_func(L.A, u, p, t; kwargs...)
 end
 
 function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
@@ -181,10 +181,7 @@ function Base.IndexStyle(::Type{<:MatrixOperator{T, AType}}) where {T, AType}
     Base.IndexStyle(AType)
 end
 Base.copyto!(L::MatrixOperator, rhs) = (copyto!(L.A, rhs); L)
-function Base.copyto!(L::MatrixOperator,
-        rhs::Base.Broadcast.Broadcasted{<:StaticArraysCore.StaticArrayStyle})
-    (copyto!(L.A, rhs); L)
-end
+
 Base.Broadcast.broadcastable(L::MatrixOperator) = L
 Base.ndims(::Type{<:MatrixOperator{T, AType}}) where {T, AType} = ndims(AType)
 ArrayInterface.issingular(L::MatrixOperator) = ArrayInterface.issingular(L.A)
@@ -337,8 +334,8 @@ LinearAlgebra.opnorm(L::InvertibleOperator{T}, p = 2) where {T} = one(T) / opnor
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 function update_coefficients(L::InvertibleOperator, u, p, t)
-    @set! L.L = update_coefficients(L.L, u, p, t)
-    @set! L.F = update_coefficients(L.F, u, p, t)
+    @reset L.L = update_coefficients(L.L, u, p, t)
+    @reset L.F = update_coefficients(L.F, u, p, t)
     L
 end
 
@@ -362,8 +359,8 @@ has_ldiv(L::InvertibleOperator) = has_mul(L.F)
 has_ldiv!(L::InvertibleOperator) = has_ldiv!(L.F)
 
 function cache_internals(L::InvertibleOperator, u::AbstractVecOrMat)
-    @set! L.L = cache_operator(L.L, u)
-    @set! L.F = cache_operator(L.F, u)
+    @reset L.L = cache_operator(L.L, u)
+    @reset L.F = cache_operator(L.F, u)
 
     L
 end
@@ -515,9 +512,9 @@ function AddVector(B, b::AbstractVecOrMat;
 end
 
 function update_coefficients(L::AffineOperator, u, p, t; kwargs...)
-    @set! L.A = update_coefficients(L.A, u, p, t; kwargs...)
-    @set! L.B = update_coefficients(L.B, u, p, t; kwargs...)
-    @set! L.b = L.update_func(L.b, u, p, t; kwargs...)
+    @reset L.A = update_coefficients(L.A, u, p, t; kwargs...)
+    @reset L.B = update_coefficients(L.B, u, p, t; kwargs...)
+    @reset L.b = L.update_func(L.b, u, p, t; kwargs...)
 end
 
 function update_coefficients!(L::AffineOperator, u, p, t; kwargs...)
@@ -577,8 +574,8 @@ has_ldiv(L::AffineOperator) = has_ldiv(L.A)
 has_ldiv!(L::AffineOperator) = has_ldiv!(L.A)
 
 function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
-    @set! L.A = cache_operator(L.A, u)
-    @set! L.B = cache_operator(L.B, L.b)
+    @reset L.A = cache_operator(L.A, u)
+    @reset L.B = cache_operator(L.B, L.b)
     L
 end
 
