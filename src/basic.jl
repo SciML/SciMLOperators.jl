@@ -288,7 +288,8 @@ end
 Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
 Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
-@inline function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
+@inline function LinearAlgebra.mul!(
+        v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
     iszero(L.λ) && return lmul!(false, v)
     a = convert(Number, L.λ)
     mul!(v, L.L, u, a, false)
