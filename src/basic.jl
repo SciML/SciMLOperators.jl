@@ -471,7 +471,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AddedOperator, u::AbstractVe
     mul!(v, first(L.ops), u)
     for op in L.ops[2:end]
         iszero(op) && continue
-        mul!(v, op, u)
+        mul!(v, op, u, true, true)
     end
     v
 end
