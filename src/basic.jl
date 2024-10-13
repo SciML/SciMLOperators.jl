@@ -245,6 +245,14 @@ function update_coefficients(L::ScaledOperator, u, p, t)
 
     L
 end
+
+function update_coefficients!(L::ScaledOperator, u, p, t)
+    update_coefficients!(L.L, u, p, t)
+    update_coefficients!(L.λ, u, p, t)
+
+    L
+end
+
 getops(L::ScaledOperator) = (L.λ, L.L)
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 islinear(L::ScaledOperator) = islinear(L.L)
