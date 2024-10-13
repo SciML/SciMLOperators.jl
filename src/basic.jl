@@ -288,13 +288,13 @@ end
 Base.:*(L::ScaledOperator, u::AbstractVecOrMat) = L.λ * (L.L * u)
 Base.:\(L::ScaledOperator, u::AbstractVecOrMat) = L.λ \ (L.L \ u)
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat, L::ScaledOperator, u::AbstractVecOrMat)
     iszero(L.λ) && return lmul!(false, v)
     a = convert(Number, L.λ)
     mul!(v, L.L, u, a, false)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
         L::ScaledOperator,
         u::AbstractVecOrMat,
         α,
@@ -386,6 +386,23 @@ for op in (:+, :-)
     end
 end
 
+for T in SCALINGNUMBERTYPES[2:end]
+    @eval function Base.:*(λ::$T, L::AddedOperator)
+        ops = map(op -> λ * op, L.ops)
+        AddedOperator(ops)
+    end
+
+    @eval function Base.:*(L::AddedOperator, λ::$T)
+        ops = map(op -> λ * op, L.ops)
+        AddedOperator(ops)
+    end
+
+    @eval function Base.:/(L::AddedOperator, λ::$T)
+        ops = map(op -> op / λ, L.ops)
+        AddedOperator(ops)
+    end
+end
+
 function Base.convert(::Type{AbstractMatrix}, L::AddedOperator)
     sum(op -> convert(AbstractMatrix, op), L.ops)
 end
@@ -420,6 +437,14 @@ function update_coefficients(L::AddedOperator, u, p, t)
     end
 
     @reset L.ops = ops
+end
+
+function update_coefficients!(L::AddedOperator, u, p, t)
+    for op in L.ops
+        update_coefficients!(op, u, p, t)
+    end
+
+    L
 end
 
 getops(L::AddedOperator) = L.ops
