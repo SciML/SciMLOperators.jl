@@ -201,7 +201,7 @@ end
 
 for T in SCALINGNUMBERTYPES
     @eval function ScaledOperator(λ::$T, L::ScaledOperator)
-        λ = ScalarOperator(λ) * L.λ
+        λ = λ * L.λ
         ScaledOperator(λ, L.L)
     end
 
