@@ -194,10 +194,10 @@ end
 # operator application
 Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
 Base.:\(L::MatrixOperator, u::AbstractVecOrMat) = L.A \ u
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
     mul!(v, L.A, u)
 end
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
         L::MatrixOperator,
         u::AbstractVecOrMat,
         α,
