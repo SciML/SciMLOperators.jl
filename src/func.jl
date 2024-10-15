@@ -382,7 +382,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
         update_coefficients!(op, u, p, t; filtered_kwargs...)
     end
 
-    L
+    nothing
 end
 
 function iscached(L::FunctionOperator)

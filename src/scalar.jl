@@ -191,10 +191,12 @@ has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
 function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     L.val = L.update_func(L.val, u, p, t; kwargs...)
+    nothing
 end
 
 function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
-    @reset L.val = L.update_func(L.val, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    L
 end
 
 """

@@ -98,11 +98,11 @@ L * u
 """
 update_coefficients!(L, u, p, t; kwargs...) = nothing
 
+# We cannot use @generate because we don't know the type structure of L in advance
 function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
-    for op in getops(L)
-        update_coefficients!(op, u, p, t; kwargs...)
-    end
-    L
+    foreach(op -> update_coefficients!(op, u, p, t; kwargs...), getops(L))
+
+    nothing
 end
 
 ###

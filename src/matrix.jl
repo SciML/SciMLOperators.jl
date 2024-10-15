@@ -161,6 +161,8 @@ end
 
 function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     L.update_func!(L.A, u, p, t; kwargs...)
+
+    nothing
 end
 
 # TODO - add tests for MatrixOperator indexing
