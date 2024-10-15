@@ -1,4 +1,4 @@
-using SciMLOperators, LinearAlgebra
+using SciMLOperators, LinearAlgebra, SparseArrays
 using Random
 
 using SciMLOperators: IdentityOperator,
@@ -183,6 +183,51 @@ end
     @test L isa AddedOperator
     for op in L.ops
         @test !isa(op, AddedOperator)
+    end
+
+    # Allocations Tests
+
+    allocs_tot = @allocations mul!(v, op, u) # warmup
+    allocs_tot = @allocations mul!(v, op, u)
+    @test allocs_tot == 1 # BenchmarkTools.jl returns 0 instead of 1
+    allocs_tot = @allocations mul!(v, op, u, α, β) # warmup
+    allocs_tot = @allocations mul!(v, op, u, α, β)
+    @test allocs_tot == 1 # BenchmarkTools.jl returns 0 instead of 1
+
+    ## Time-Dependent Coefficients
+
+    for T in (Float32, Float64, ComplexF32, ComplexF64)
+        N = 100
+        A1_sparse = MatrixOperator(sprand(T, N, N, 5 / N))
+        A2_sparse = MatrixOperator(sprand(T, N, N, 5 / N))
+        A3_sparse = MatrixOperator(sprand(T, N, N, 5 / N))
+
+        A1_dense = MatrixOperator(rand(T, N, N))
+        A2_dense = MatrixOperator(rand(T, N, N))
+        A3_dense = MatrixOperator(rand(T, N, N))
+
+        coeff1(a, u, p, t) = sin(p.ω * t)
+        coeff2(a, u, p, t) = cos(p.ω * t)
+        coeff3(a, u, p, t) = sin(p.ω * t) * cos(p.ω * t)
+
+        c1 = ScalarOperator(rand(T), coeff1)
+        c2 = ScalarOperator(rand(T), coeff2)
+        c3 = ScalarOperator(rand(T), coeff3)
+
+        H_sparse = c1 * A1_sparse + c2 * A2_sparse + c3 * A3_sparse
+        H_dense = c1 * A1_dense + c2 * A2_dense + c3 * A3_dense
+
+        u = rand(T, N)
+        du = similar(u)
+        p = (ω = 0.1,)
+        t = 0.1
+
+        allocs_sparse = @allocations H_sparse(du, u, p, t) # warmup
+        allocs_sparse = @allocations H_sparse(du, u, p, t)
+        allocs_dense = @allocations H_dense(du, u, p, t) # warmup
+        allocs_dense = @allocations H_dense(du, u, p, t)
+        @test allocs_sparse == 1 # BenchmarkTools.jl returns 0 instead of 1
+        @test allocs_dense == 1 # BenchmarkTools.jl returns 0 instead of 1
     end
 end
 
