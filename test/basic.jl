@@ -143,6 +143,8 @@ function apply_op!(H, du, u, p, t)
     return nothing
 end
 
+test_apply_noalloc(H, du, u, p, t) = @test (@allocations apply_op!(H, du, u, p, t)) == 0
+
 @testset "AddedOperator" begin
     A = rand(N, N) |> MatrixOperator
     B = rand(N, N) |> MatrixOperator
@@ -192,9 +194,8 @@ end
 
     # Allocations Tests
 
-    allocs_tot = @allocations apply_op!(op, v, u, (), 1.0) # warmup
-    allocs_tot = @allocations apply_op!(op, v, u, (), 1.0)
-    @test allocs_tot <= 1 # BenchmarkTools.jl returns 0 instead of 1
+    @allocations apply_op!(op, v, u, (), 1.0) # warmup
+    test_apply_noalloc(op, v, u, (), 1.0)
 
     ## Time-Dependent Coefficients
 
@@ -224,12 +225,10 @@ end
         p = (ω = 0.1,)
         t = 0.1
 
-        allocs_sparse = @allocations apply_op!(H_sparse, du, u, p, t) # warmup
-        allocs_sparse = @allocations apply_op!(H_sparse, du, u, p, t)
-        allocs_dense = @allocations apply_op!(H_dense, du, u, p, t) # warmup
-        allocs_dense = @allocations apply_op!(H_dense, du, u, p, t)
-        @test allocs_sparse <= 1 # BenchmarkTools.jl returns 0 instead of 1
-        @test allocs_dense <= 1 # BenchmarkTools.jl returns 0 instead of 1
+        @allocations apply_op!(H_sparse, du, u, p, t) # warmup
+        @allocations apply_op!(H_dense, du, u, p, t) # warmup
+        test_apply_noalloc(H_sparse, du, u, p, t)
+        test_apply_noalloc(H_dense, du, u, p, t)
     end
 end
 
