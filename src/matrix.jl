@@ -161,6 +161,8 @@ end
 
 function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     L.update_func!(L.A, u, p, t; kwargs...)
+
+    nothing
 end
 
 # TODO - add tests for MatrixOperator indexing
@@ -194,10 +196,11 @@ end
 # operator application
 Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
 Base.:\(L::MatrixOperator, u::AbstractVecOrMat) = L.A \ u
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
+@inline function LinearAlgebra.mul!(
+        v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
     mul!(v, L.A, u)
 end
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
         L::MatrixOperator,
         u::AbstractVecOrMat,
         α,

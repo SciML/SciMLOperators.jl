@@ -191,10 +191,12 @@ has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
 function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     L.val = L.update_func(L.val, u, p, t; kwargs...)
+    nothing
 end
 
 function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
-    @reset L.val = L.update_func(L.val, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    L
 end
 
 """
@@ -310,6 +312,26 @@ for op in (:*, :∘)
         @eval Base.$op(x::$T, α::AbstractSciMLScalarOperator) = ComposedScalarOperator(
             ScalarOperator(x),
             α)
+    end
+end
+
+# Different methods for constant ScalarOperators
+for T in SCALINGNUMBERTYPES[2:end]
+    @eval function Base.:*(α::ScalarOperator, x::$T)
+        if isconstant(α)
+            T2 = promote_type($T, eltype(α))
+            return ScalarOperator(convert(T2, α) * x, α.update_func)
+        else
+            return ComposedScalarOperator(α, ScalarOperator(x))
+        end
+    end
+    @eval function Base.:*(x::$T, α::ScalarOperator)
+        if isconstant(α)
+            T2 = promote_type($T, eltype(α))
+            return ScalarOperator(convert(T2, α) * x, α.update_func)
+        else
+            return ComposedScalarOperator(ScalarOperator(x), α)
+        end
     end
 end
 

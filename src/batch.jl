@@ -88,6 +88,8 @@ end
 
 function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
     L.update_func!(L.diag, u, p, t; kwargs...)
+
+    nothing
 end
 
 getops(L::BatchedDiagonalOperator) = (L.diag,)
