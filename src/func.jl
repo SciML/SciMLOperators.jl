@@ -183,6 +183,7 @@ uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 * `issymmetric` - `true` if the operator is linear and symmetric. Defaults to `false`.
 * `ishermitian` - `true` if the operator is linear and hermitian. Defaults to `false`.
 * `isposdef` - `true` if the operator is linear and positive-definite. Defaults to `false`.
+* `kwargs` - Keyword arguments for cache initialization. If `accepted_kwargs` is provided, the corresponding keyword arguments must be passed.
 """
 function FunctionOperator(op,
         input::AbstractArray,
@@ -190,7 +191,7 @@ function FunctionOperator(op,
         op_inverse = nothing,
         op_adjoint_inverse = nothing, p = nothing,
         t::Union{Number, Nothing} = nothing,
-        accepted_kwargs::NTuple{N, Symbol} = (),
+        accepted_kwargs::Union{Nothing, Val, NTuple{N, Symbol}} = nothing,
 
         # traits
         T::Union{Type{<:Number}, Nothing} = nothing,
@@ -207,7 +208,8 @@ function FunctionOperator(op,
         opnorm = nothing,
         issymmetric::Union{Bool, Val} = Val(false),
         ishermitian::Union{Bool, Val} = Val(false),
-        isposdef::Bool = false) where {N}
+        isposdef::Bool = false,
+        kwargs...) where {N}
 
     # establish types
 
@@ -316,12 +318,21 @@ function FunctionOperator(op,
         _op_adjoint_inverse = op_adjoint_inverse
     end
 
+    if accepted_kwargs === nothing
+        accepted_kwargs = Val(())
+        kwargs = NamedTuple()
+    else
+        length(kwargs) != 0 ||
+            throw(ArgumentError("No keyword arguments provided. When `accepted_kwargs` is provided, the corresponding keyword arguments must be passed for cache initialization."))
+        kwargs = get_filtered_kwargs(kwargs, accepted_kwargs)
+    end
+
     traits = (; islinear, isconvertible, isconstant, opnorm,
         issymmetric = _unwrap_val(issymmetric), ishermitian = _unwrap_val(ishermitian),
         isposdef, isinplace = _unwrap_val(_isinplace),
         outofplace = _unwrap_val(_outofplace), has_mul5 = _unwrap_val(_has_mul5),
         ifcache = _unwrap_val(ifcache), T = _T, batch, size = _size, sizes,
-        accepted_kwargs, kwargs = Dict{Symbol, Any}())
+        accepted_kwargs, kwargs = kwargs)
 
     L = FunctionOperator{_unwrap_val(_isinplace), _unwrap_val(_outofplace),
         _unwrap_val(_has_mul5), _T, typeof(op), typeof(_op_adjoint), typeof(op_inverse),
@@ -355,7 +366,7 @@ function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
     # filter and update kwargs
     filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
 
-    L = set_traits(L, merge(L.traits, (; kwargs = Dict{Symbol, Any}(filtered_kwargs))))
+    L = set_traits(L, merge(L.traits, (; kwargs = filtered_kwargs)))
 
     isconstant(L) && return L
 
@@ -374,7 +385,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
     # filter and update kwargs
     filtered_kwargs = get_filtered_kwargs(kwargs, L.traits.accepted_kwargs)
-    L.traits = (; L.traits..., kwargs = Dict{Symbol, Any}(filtered_kwargs))
+    L.traits = merge(L.traits, (; kwargs = filtered_kwargs))
 
     isconstant(L) && return
 

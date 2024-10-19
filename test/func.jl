@@ -257,6 +257,10 @@ end
     f(u, p, t; scale = 1.0) = Diagonal(p * t * scale) * u
 
     L = FunctionOperator(f, u, u; p = zero(p), t = zero(t), batch = true,
+        accepted_kwargs = (:scale,), scale = 1.0)
+
+    @test_throws ArgumentError FunctionOperator(
+        f, u, u; p = zero(p), t = zero(t), batch = true,
         accepted_kwargs = (:scale,))
 
     @test size(L) == (N, N)
