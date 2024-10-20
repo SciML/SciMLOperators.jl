@@ -49,7 +49,7 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat, ii::IdentityOperator, u::Abstra
     copy!(v, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
         ii::IdentityOperator,
         u::AbstractVecOrMat,
         α,
