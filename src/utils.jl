@@ -42,6 +42,11 @@ function get_filtered_kwargs(kwargs::AbstractDict,
         accepted_kwargs::NTuple{N, Symbol}) where {N}
     (kw => kwargs[kw] for kw in accepted_kwargs if haskey(kwargs, kw))
 end
+function get_filtered_kwargs(kwargs::Union{AbstractDict, NamedTuple},
+        ::Val{accepted_kwargs}) where {accepted_kwargs}
+    kwargs_nt = NamedTuple(kwargs)
+    return NamedTuple{accepted_kwargs}(kwargs_nt)  # This creates a new NamedTuple with keys specified by `accepted_kwargs`
+end
 
 function (f::FilterKwargs)(args...; kwargs...)
     filtered_kwargs = get_filtered_kwargs(kwargs, f.accepted_kwargs)

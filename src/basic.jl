@@ -44,12 +44,13 @@ for op in (:*, :\)
     end
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, ii::IdentityOperator, u::AbstractVecOrMat)
+@inline function LinearAlgebra.mul!(
+        v::AbstractVecOrMat, ii::IdentityOperator, u::AbstractVecOrMat)
     @assert size(u, 1) == ii.len
     copy!(v, u)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
         ii::IdentityOperator,
         u::AbstractVecOrMat,
         α,
