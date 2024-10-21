@@ -567,7 +567,7 @@ function Base.resize!(L::FunctionOperator, n::Integer)
     L
 end
 
-function LinearAlgebra.opnorm(L::FunctionOperator, p)
+function LinearAlgebra.opnorm(L::FunctionOperator, p::Real)
     L.traits.opnorm === nothing && error("""
       M.opnorm is nothing, please define opnorm as a function that takes one
       argument. E.g., `(p::Real) -> p == Inf ? 100 : error("only Inf norm is

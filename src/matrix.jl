@@ -333,7 +333,7 @@ Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.L), trans
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.L', L.F')
 Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.L), conj(L.F))
 Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.L, n); resize!(L.F, n); L)
-LinearAlgebra.opnorm(L::InvertibleOperator{T}, p = 2) where {T} = one(T) / opnorm(L.F)
+LinearAlgebra.opnorm(L::InvertibleOperator{T}, p::Real = 2) where {T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 function update_coefficients(L::InvertibleOperator, u, p, t)
