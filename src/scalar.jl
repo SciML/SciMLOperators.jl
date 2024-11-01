@@ -194,9 +194,8 @@ function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     nothing
 end
 
-function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
-    update_coefficients!(L, u, p, t; kwargs...)
-    L
+function SciMLOperators.update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
+    return ScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
 end
 
 """
