@@ -251,6 +251,7 @@ UniformScaling,
 Factorization, # Base
 Number}) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
+isconstant(L) = false
 
 """
     isconvertible(L) -> Bool
@@ -307,6 +308,7 @@ $SIGNATURES
 Checks if `L` is a linear operator.
 """
 islinear(::AbstractSciMLOperator) = false
+islinear(L) = false
 
 islinear(::Union{# LinearAlgebra
 AbstractMatrix,
