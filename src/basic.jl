@@ -178,6 +178,7 @@ $TYPEDEF
     ScaledOperator
 
     (λ L)*(u) = λ * L(u)
+
 """
 struct ScaledOperator{T,
     λType,
@@ -670,12 +671,25 @@ end
 #Base.:*(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op * acc, reverse(L.ops); init=u)
 #Base.:\(L::ComposedOperator, u::AbstractVecOrMat) = foldl((acc, op) -> op \ acc, L.ops; init=u)
 
-function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
+function (L::ComposedOperator)(u, p, t)
     v = u
-    for op in L.ops
-        v = op \ v
+    for op in reverse(L.ops)
+        update_coefficients!(op, v, p, t)
+        v = op * v
     end
 
+    v
+end
+
+function (L::ComposedOperator)(v, u, p, t)
+    @assert iscached(L) "cache needs to be set up for operator of type $(typeof(L)).
+    set up cache by calling cache_operator(L::AbstractSciMLOperator, u::AbstractArray)"
+
+    vecs = (v, L.cache[1:end-1]..., u)
+    for i in reverse(1:length(L.ops))
+        update_coefficients!(L.ops[i], vecs[i+1], p, t)
+        mul!(vecs[i], L.ops[i], vecs[i+1])
+    end
     v
 end
 
@@ -683,6 +697,15 @@ function Base.:*(L::ComposedOperator, u::AbstractVecOrMat)
     v = u
     for op in reverse(L.ops)
         v = op * v
+    end
+
+    v
+end
+
+function Base.:\(L::ComposedOperator, u::AbstractVecOrMat)
+    v = u
+    for op in L.ops
+        v = op \ v
     end
 
     v
