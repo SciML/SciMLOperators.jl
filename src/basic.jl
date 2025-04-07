@@ -218,6 +218,26 @@ for T in SCALINGNUMBERTYPES
     end
 end
 
+# Special cases for constant scalars. These simplify the structure when applicable
+for T in SCALINGNUMBERTYPES[2:end]
+    @eval function Base.:*(α::$T, L::ScaledOperator)
+        isconstant(L.λ) && return ScaledOperator(α * L.λ, L.L)
+        return ScaledOperator(L.λ, α * L.L) # Try to propagate the rule
+    end
+    @eval function Base.:*(L::ScaledOperator, α::$T)
+        isconstant(L.λ) && return ScaledOperator(α * L.λ, L.L)
+        return ScaledOperator(L.λ, α * L.L) # Try to propagate the rule
+    end
+    @eval function Base.:*(α::$T, L::MatrixOperator)
+        isconstant(L) && return MatrixOperator(α * L.A)
+        return ScaledOperator(α, L) # Going back to the generic case
+    end
+    @eval function Base.:*(L::MatrixOperator, α::$T)
+        isconstant(L) && return MatrixOperator(α * L.A)
+        return ScaledOperator(α, L) # Going back to the generic case
+    end
+end
+
 Base.:-(L::AbstractSciMLOperator) = ScaledOperator(-true, L)
 Base.:+(L::AbstractSciMLOperator) = L
 
