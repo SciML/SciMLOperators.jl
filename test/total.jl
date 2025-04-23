@@ -125,7 +125,7 @@ end
 
     # Update operator
     @test_nowarn update_coefficients!(op, u, p, t; diag, matrix)
-    # Form dense operator manually 
+    # Form dense operator manually
     dense_T1 = kron(A, p * ones(N, N))
     dense_T2 = kron(_C, (p * t) .* matrix)
     dense_DD = Diagonal(vcat(p * ones(N2), p * t * diag))
@@ -140,7 +140,7 @@ end
     w = copy(v)
     @test mul!(v, op, u, α, β) ≈ α * (op * u) + β * w
     # Test consistency with operator application form
-    @test op(u, p, t; diag, matrix) ≈ op * u
+    @test op(u, p, t; diag, matrix) * u ≈ op * u
     v = rand(N2, K)
     @test op(v, u, p, t; diag, matrix) ≈ op * u
 end

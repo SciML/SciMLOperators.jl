@@ -110,7 +110,10 @@ end
 ###
 
 function (L::AbstractSciMLOperator)(u, p, t; kwargs...)
-    update_coefficients(L, u, p, t; kwargs...) * u
+
+    # Update coefficients and return the (possibly) new operator
+    # letting the caller decide which vector to multiply with
+    update_coefficients(L, u, p, t; kwargs...)
 end
 function (L::AbstractSciMLOperator)(du, u, p, t; kwargs...)
     (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
@@ -124,6 +127,10 @@ function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs
     subtypes of `Number`."""
     throw(ArgumentError(msg))
 end
+
+# Deprecated convenience wrapper for old behavior
+_apply_samevec(L::AbstractSciMLOperator, u, p, t; kwargs...) = update_coefficients(L, u, p, t; kwargs...) * u
+
 
 ###
 # operator caching interface

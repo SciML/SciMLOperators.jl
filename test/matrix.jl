@@ -50,8 +50,8 @@ K = 19
     @test A ≈ Matrix(AA) ≈ Matrix(FF)
     @test At ≈ Matrix(AAt) ≈ Matrix(FFt)
 
-    @test A * u ≈ AA(u, p, t)
-    @test At * u ≈ AAt(u, p, t)
+    @test A * u ≈ AA(u, p, t) * u
+    @test At * u ≈ AAt(u, p, t) * u
 
     @test A \ u ≈ AA \ u ≈ FF \ u
     @test At \ u ≈ AAt \ u ≈ FFt \ u
@@ -109,7 +109,7 @@ end
     @test !isconstant(L)
 
     A = p * p'
-    @test L(u, p, t) ≈ A * u
+    @test L(u, p, t) * u ≈ A * u
     v = copy(u)
     @test L(v, u, p, t) ≈ A * u
     v = rand(N, K)
@@ -133,7 +133,7 @@ end
     @test islinear(D)
 
     ans = Diagonal(p * t) * u
-    @test D(u, p, t) ≈ ans
+    @test D(u, p, t) * u ≈ ans
     v = copy(u)
     @test D(v, u, p, t) ≈ ans
     v = rand(N, K)
@@ -183,7 +183,7 @@ end
     @test islinear(D)
 
     ans = (p * t) .* u
-    @test D(u, p, t) ≈ ans
+    @test D(u, p, t) * u ≈ ans
     v = copy(u)
     @test D(v, u, p, t) ≈ ans
 end
@@ -269,7 +269,7 @@ end
 
     b = p * t
     ans = A * u + B * b
-    @test L(u, p, t) ≈ ans
+    @test L(u, p, t) * u ≈ ans
     v = copy(u)
     @test L(v, u, p, t) ≈ ans
     v = rand(N, K)

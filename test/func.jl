@@ -46,7 +46,7 @@ NK = N * K
         L = cache_operator(L, u)
 
         # test with ND-arrays
-        @test _mul(A, u) ≈ L(u, p, t) ≈ L * u ≈ mul!(zero(v), L, u)
+        @test _mul(A, u) ≈ L(u, p, t) * u ≈ L * u ≈ mul!(zero(v), L, u)
         @test α * _mul(A, u) + β * v ≈ mul!(copy(v), L, u, α, β)
 
         if sz_in == sz_out
@@ -54,7 +54,7 @@ NK = N * K
         end
 
         # test with vec(Array)
-        @test vec(_mul(A, u)) ≈ L(vec(u), p, t) ≈ L * vec(u) ≈ mul!(vec(zero(v)), L, vec(u))
+        @test vec(_mul(A, u)) ≈ L(vec(u), p, t) * vec(u) ≈ L * vec(u) ≈ mul!(vec(zero(v)), L, vec(u))
         @test vec(α * _mul(A, u) + β * v) ≈ mul!(vec(copy(v)), L, vec(u), α, β)
 
         if sz_in == sz_out
@@ -145,7 +145,7 @@ end
     v = rand(N, K)
     @test _mul(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
     v = rand(N, K)
-    @test _mul(A, u) ≈ op1(u, p, t) ≈ op2(v, u, p, t)
+    @test _mul(A, u) ≈ op1(u, p, t) * u ≈ op2(v, u, p, t)
     v = rand(N, K)
     w = copy(v)
     @test α * _mul(A, u) + β * w ≈ mul!(v, op2, u, α, β)
@@ -235,7 +235,7 @@ end
     v = rand(N, K)
     @test *(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
     v = rand(N, K)
-    @test *(A, u) ≈ op1(u, p, t) ≈ op2(v, u, p, t)
+    @test *(A, u) ≈ op1(u, p, t) * u ≈ op2(v, u, p, t)
     v = rand(N, K)
     w = copy(v)
     @test α * *(A, u) + β * w ≈ mul!(v, op2, u, α, β)
@@ -267,7 +267,7 @@ end
         @test size(L) == (N, N)
 
         ans = @. u * p * t * scale
-        @test L(u, p, t; scale) ≈ ans
+        @test L(u, p, t; scale) * u ≈ ans
         v = copy(u)
         @test L(v, u, p, t; scale) ≈ ans
 
@@ -320,7 +320,7 @@ end
     @test size(L) == (N, N)
 
     ans = @. u * p * t * scale
-    @test L(u, p, t; scale) ≈ ans
+    @test L(u, p, t; scale) * u ≈ ans
     v = copy(u)
     @test L(v, u, p, t; scale) ≈ ans
 

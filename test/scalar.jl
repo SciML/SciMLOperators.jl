@@ -146,14 +146,14 @@ end
     @test convert(Number, α) ≈ p
     @test convert(Number, β) ≈ t
 
-    @test α(u, p, t) ≈ p * u
+    @test α(u, p, t) * u ≈ p * u
     v = rand(N, K)
     @test α(v, u, p, t) ≈ p * u
     v = rand(N, K)
     w = copy(v)
     @test α(v, u, p, t, a, b) ≈ a * p * u + b * w
 
-    @test β(u, p, t) ≈ t * u
+    @test β(u, p, t) * u ≈ t * u
     v = rand(N, K)
     @test β(v, u, p, t) ≈ t * u
     v = rand(N, K)
@@ -171,11 +171,11 @@ end
         accepted_kwargs = (:dtgamma,))
 
     dtgamma = rand()
-    @test γ(u, p, t; dtgamma) ≈ dtgamma * u
+    @test γ(u, p, t; dtgamma) * u ≈ dtgamma * u
     @test γ(v, u, p, t; dtgamma) ≈ dtgamma * u
 
     γ_added = γ + α
-    @test γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
+    @test γ_added(u, p, t; dtgamma) * u ≈ (dtgamma + p) * u
     @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * u
 end
 #
