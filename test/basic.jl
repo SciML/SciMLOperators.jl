@@ -304,6 +304,60 @@ end
     @test ldiv!(rand(N), op, u) ≈ op \ u
 end
 
+@testset "ComposedOperator nonlinear operator composition test" begin
+    u = rand(N)
+    p = nothing
+    t = 0.0
+
+    square(u) = u .^ 2
+    square(u, p, t) = u .^ 2
+    square(v, u, p, t) = v .= u .* u
+
+    root(u) = u .^ 2
+    root(u, p, t) = u .^ 2
+    root(v, u, p, t) = v .= u .* u
+
+    F = FunctionOperator(square, u; islinear = false, op_inverse = root)
+
+    A = DiagonalOperator(zeros(N); update_func = (d, u, p, t) -> copy!(d, u)) # u .^2
+    B = DiagonalOperator(zeros(N); update_func = (d, u, p, t) -> copy!(d, u))
+    C = DiagonalOperator(zeros(N); update_func = (d, u, p, t) -> copy!(d, u))
+
+    L  = A ∘ B ∘ C
+    F3 = F ∘ F ∘ F
+
+    sq = u |> square |> square |> square
+
+    @test A(B(C(u, p, t), p, t), p, t) ≈ sq
+    @test L(u, p, t) ≈ sq
+    @test F3(u, p, t) ≈ sq
+
+    L = cache_operator(L, u)
+    v = rand(N); @test L(v, u, p, t) ≈ sq
+
+    Fi = inv(F)
+    F3i = inv(F3)
+
+    rt = u |> root |> root |> root
+    @test F3i(u, p, t) ≈ rt
+
+    Ai = inv(A)
+    Bi = inv(B)
+    Ci = inv(C)
+
+    Li = inv(L)
+    Fi = inv(F)
+    for op in (Ai, Bi, Ci, Li)
+        @test op isa SciMLOperators.InvertedOperator
+    end
+
+    rt = Ai(Bi(Ci(u, p, t), p, t), p, t)
+    @test Ai(u, p, t) ≈ ones(N)
+    # TODO - overwrite L(u, p, t) for InvertedOperator
+    @test_broken Li(u, p, t) ≈ ones(N)
+    v = rand(N); @test_broken Li(v, u, p, t) ≈ ones(N)
+end
+
 @testset "Adjoint, Transpose" begin
     for (op,
     LType,
