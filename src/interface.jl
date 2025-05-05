@@ -109,20 +109,201 @@ end
 # operator evaluation interface
 ###
 
-function (L::AbstractSciMLOperator)(u, p, t; kwargs...)
-    update_coefficients(L, u, p, t; kwargs...) * u
+abstract type OperatorMethodTag end
+struct OutOfPlaceTag <: OperatorMethodTag end
+struct InPlaceTag <: OperatorMethodTag end
+struct ScaledInPlaceTag <: OperatorMethodTag end
+
+"""
+$SIGNATURES
+
+Apply the operator L to the vector x, after updating the coefficients of L using u_update.
+
+This method is out-of-place, i.e., it allocates a new vector for the result.
+
+# Arguments
+- `x`: The vector to which the operator is applied
+- `p`: Parameter object
+- `t`: Time parameter
+- `u_update`: Vector used to update the operator coefficients (defaults to `x`)
+- `kwargs...`: Additional keyword arguments for the update function
+
+# Returns
+The result of applying the operator to x
+
+# Example
+```julia
+L = MatrixOperator(zeros(4,4); update_func = some_update_func)
+x = rand(4)
+p = some_params
+t = 1.0
+u_update = rand(4)  # Some reference state for updating coefficients
+
+# Update using u_update, then apply operator to x
+v = L(x, p, t, u_update)
+```
+"""
+function (L::AbstractSciMLOperator{T})(x, p, t, u_update=x; kwargs...) where {T}
+    _check_device_match(x, u_update)
+    _check_size_compatibility(L, u_update, x)
+    update_coefficients(L, u_update, p, t; kwargs...) * x
 end
-function (L::AbstractSciMLOperator)(du, u, p, t; kwargs...)
-    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
+
+"""
+$SIGNATURES
+
+Apply the operator L to the vector u in-place, storing the result in du,
+after updating the coefficients of L using u_update.
+
+# Arguments
+- `du`: The output vector where the result is stored
+- `u`: The vector to which the operator is applied
+- `p`: Parameter object
+- `t`: Time parameter
+- `u_update`: Vector used to update the operator coefficients (defaults to `u`)
+- `kwargs...`: Additional keyword arguments for the update function
+
+# Example
+```julia
+L = MatrixOperator(zeros(4,4); update_func = some_update_func)
+u = rand(4)
+du = similar(u)
+p = some_params
+t = 1.0
+u_update = rand(4)  # Some reference state for updating coefficients
+
+# Update using u_update, then apply operator to u, storing in du
+L(du, u, p, t, u_update)
+```
+"""
+function (L::AbstractSciMLOperator{T})(du::AbstractArray, u::AbstractArray, p, t, u_update=u; kwargs...) where {T}
+    _check_device_match(du, u, u_update)
+    _check_size_compatibility(L, u_update, u, du)
+    update_coefficients!(L, u_update, p, t; kwargs...)
+    mul!(du, L, u)
+    return du  # Explicitly return du
 end
-function (L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...)
-    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
+
+"""
+$SIGNATURES
+
+Apply the operator L to vector u with scaling factors α and β, computing du = α*L*u + β*du,
+after updating the coefficients of L using u_update.
+
+# Arguments
+- `du`: The output vector where the result is accumulated
+- `u`: The vector to which the operator is applied
+- `p`: Parameter object
+- `t`: Time parameter
+- `α`: Scaling factor for L*u
+- `β`: Scaling factor for the existing value in du
+- `u_update`: Vector used to update the operator coefficients (defaults to `u`)
+- `kwargs...`: Additional keyword arguments for the update function
+
+# Example
+```julia
+L = MatrixOperator(zeros(4,4); update_func = some_update_func)
+u = rand(4)
+du = rand(4)
+p = some_params
+t = 1.0
+α = 2.0
+β = 1.0
+u_update = rand(4)  # Some reference state for updating coefficients
+
+# Compute du = α*L*u + β*du
+L(du, u, p, t, α, β, u_update)
+```
+"""
+function (L::AbstractSciMLOperator{T})(du::AbstractArray, u::AbstractArray, p, t, α, β, u_update=u; kwargs...) where {T}
+    _check_device_match(du, u, u_update)
+    _check_size_compatibility(L, u_update, u, du)
+    update_coefficients!(L, u_update, p, t; kwargs...)
+    mul!(du, L, u, α, β)
+    return du  # Explicitly return du
 end
 
 function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs...)
     msg = """Nonallocating L(v, u, p, t) type methods are not available for
     subtypes of `Number`."""
     throw(ArgumentError(msg))
+end
+
+"""
+@private
+
+Check that all vectors are on the same device (CPU/GPU).
+This function is a no-op in the standard implementation but can be
+extended by packages that provide GPU support.
+"""
+function _check_device_match(args...)
+    # Default implementation - no device checking in base package
+    # This would be extended by GPU-supporting packages
+    nothing
+end
+
+"""
+@private
+
+Verify that the sizes of vectors are compatible with the operator and with each other.
+"""
+function _check_size_compatibility(L::AbstractSciMLOperator, u_update, u, du=nothing)
+    # Special case for scalar operators which have size() = ()
+    if L isa AbstractSciMLScalarOperator
+        # Scalar operators can operate on any size inputs
+        # Just check batch dimensions if present
+        if u isa AbstractMatrix && u_update isa AbstractMatrix
+            if size(u, 2) != size(u_update, 2)
+                throw(DimensionMismatch(
+                    "Batch dimension of u ($(size(u, 2))) must match batch dimension of u_update ($(size(u_update, 2)))"))
+            end
+        end
+
+        if du !== nothing && u isa AbstractMatrix && du isa AbstractMatrix
+            if size(u, 2) != size(du, 2)
+                throw(DimensionMismatch(
+                    "Batch dimension of u ($(size(u, 2))) must match batch dimension of du ($(size(du, 2)))"))
+            end
+        end
+
+        return nothing
+    end
+
+    # For regular operators with dimensions
+    # Verify u_update has compatible size for updating operator
+    if size(u_update, 1) != size(L, 2)
+        throw(DimensionMismatch(
+            "Size of u_update ($(size(u_update, 1))) must match the input dimension of operator ($(size(L, 2)))"))
+    end
+
+    # Verify u has compatible size for operator application
+    if size(u, 1) != size(L, 2)
+        throw(DimensionMismatch(
+            "Size of u ($(size(u, 1))) must match the input dimension of operator ($(size(L, 2)))"))
+    end
+
+    # If du is provided, verify it has compatible size for storing the result
+    if du !== nothing && size(du, 1) != size(L, 1)
+        throw(DimensionMismatch(
+            "Size of du ($(size(du, 1))) must match the output dimension of operator ($(size(L, 1)))"))
+    end
+
+    # Verify batch dimensions match if present
+    if u isa AbstractMatrix && u_update isa AbstractMatrix
+        if size(u, 2) != size(u_update, 2)
+            throw(DimensionMismatch(
+                "Batch dimension of u ($(size(u, 2))) must match batch dimension of u_update ($(size(u_update, 2)))"))
+        end
+    end
+
+    if du !== nothing && u isa AbstractMatrix && du isa AbstractMatrix
+        if size(u, 2) != size(du, 2)
+            throw(DimensionMismatch(
+                "Batch dimension of u ($(size(u, 2))) must match batch dimension of du ($(size(du, 2)))"))
+        end
+    end
+
+    nothing
 end
 
 ###

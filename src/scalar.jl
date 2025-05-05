@@ -3,9 +3,38 @@
 # AbstractSciMLScalarOperator interface
 ###
 
-function (L::AbstractSciMLScalarOperator)(u::Number, p, t; kwargs...)
-    L = update_coefficients(L, u, p, t; kwargs...)
+# Main method for out-of-place evaluation (handles arrays and numbers)
+function (L::AbstractSciMLScalarOperator)(u, p, t, u_update=u; kwargs...)
+    L = update_coefficients(L, u_update, p, t; kwargs...)
     convert(Number, L) * u
+end
+
+# In-place method for array inputs
+function (L::AbstractSciMLScalarOperator)(du::AbstractArray, u::AbstractArray, p, t, u_update=u; kwargs...)
+    update_coefficients!(L, u_update, p, t; kwargs...)
+    mul!(du, convert(Number, L), u)
+    return du
+end
+
+# In-place method with scaling for array inputs
+function (L::AbstractSciMLScalarOperator)(du::AbstractArray, u::AbstractArray, p, t, α, β, u_update=u; kwargs...)
+    update_coefficients!(L, u_update, p, t; kwargs...)
+    mul!(du, convert(Number, L), u, α, β)
+    return du
+end
+
+# For scalar-scalar in-place calls (throws error)
+function (L::AbstractSciMLScalarOperator)(du::Number, u::Number, p, t, args...; kwargs...)
+    throw(ArgumentError("Nonallocating L(v, u, p, t) type methods are not available for subtypes of `Number`."))
+end
+
+# For mixed scalar/array calls (throws error)
+function (L::AbstractSciMLScalarOperator)(du::AbstractArray, u::Number, p, t, args...; kwargs...)
+    throw(ArgumentError("Cannot apply scalar operator to mixed types: du is AbstractArray but u is Number"))
+end
+
+function (L::AbstractSciMLScalarOperator)(du::Number, u::AbstractArray, p, t, args...; kwargs...)
+    throw(ArgumentError("Cannot apply scalar operator to mixed types: du is Number but u is AbstractArray"))
 end
 
 SCALINGNUMBERTYPES = (:AbstractSciMLScalarOperator,
@@ -189,13 +218,13 @@ isconstant(α::ScalarOperator) = update_func_isconstant(α.update_func)
 has_ldiv(α::ScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
 
-function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
-    L.val = L.update_func(L.val, u, p, t; kwargs...)
+function update_coefficients!(L::ScalarOperator, u_update, p, t; kwargs...)
+    L.val = L.update_func(L.val, u_update, p, t; kwargs...)
     nothing
 end
 
-function SciMLOperators.update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
-    return ScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
+function SciMLOperators.update_coefficients(L::ScalarOperator, u_update, p, t; kwargs...)
+    return ScalarOperator(L.update_func(L.val, u_update, p, t; kwargs...), L.update_func)
 end
 
 """
@@ -257,13 +286,20 @@ function Base.show(io::IO, α::AddedScalarOperator)
 end
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
-function update_coefficients(L::AddedScalarOperator, u, p, t)
+function update_coefficients(L::AddedScalarOperator, u_update, p, t; kwargs...)
     ops = ()
     for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u_update, p, t; kwargs...))
     end
 
     @reset L.ops = ops
+end
+
+function update_coefficients!(L::AddedScalarOperator, u_update, p, t; kwargs...)
+    for op in L.ops
+        update_coefficients!(op, u_update, p, t; kwargs...)
+    end
+    nothing
 end
 
 getops(α::AddedScalarOperator) = α.ops
@@ -351,13 +387,20 @@ end
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where {T} = (-one(T)) * α
 
-function update_coefficients(L::ComposedScalarOperator, u, p, t)
+function update_coefficients(L::ComposedScalarOperator, u_update, p, t; kwargs...)
     ops = ()
     for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u_update, p, t; kwargs...))
     end
 
     @reset L.ops = ops
+end
+
+function update_coefficients!(L::ComposedScalarOperator, u_update, p, t; kwargs...)
+    for op in L.ops
+        update_coefficients!(op, u_update, p, t; kwargs...)
+    end
+    nothing
 end
 
 getops(α::ComposedScalarOperator) = α.ops
@@ -413,12 +456,37 @@ function Base.show(io::IO, α::InvertedScalarOperator)
 end
 Base.conj(L::InvertedScalarOperator) = InvertedScalarOperator(conj(L.λ))
 
-function update_coefficients(L::InvertedScalarOperator, u, p, t)
-    @reset L.λ = update_coefficients(L.λ, u, p, t)
+function update_coefficients(L::InvertedScalarOperator, u_update, p, t; kwargs...)
+    @reset L.λ = update_coefficients(L.λ, u_update, p, t; kwargs...)
     L
+end
+
+function update_coefficients!(L::InvertedScalarOperator, u_update, p, t; kwargs...)
+    update_coefficients!(L.λ, u_update, p, t; kwargs...)
+    nothing
 end
 
 getops(α::InvertedScalarOperator) = (α.λ,)
 has_ldiv(α::InvertedScalarOperator) = has_mul(α.λ)
 has_ldiv!(α::InvertedScalarOperator) = has_ldiv(α)
+
+###
+# Additional methods for handling scalar-scalar operations
+###
+
+# Handle scalar operator applied to a scalar (Number)
+function LinearAlgebra.mul!(du::AbstractMatrix, L::AbstractSciMLScalarOperator, u::Number)
+    fill!(du, convert(Number, L) * u)
+    return du
+end
+
+# Handle scalar operator applied to a scalar (Number) with scaling factors
+function LinearAlgebra.mul!(du::AbstractMatrix, L::AbstractSciMLScalarOperator, u::Number, α, β)
+    if β == false || iszero(β)
+        fill!(du, α * convert(Number, L) * u)
+    else
+        du .= α * convert(Number, L) * u .+ β .* du
+    end
+    return du
+end
 #

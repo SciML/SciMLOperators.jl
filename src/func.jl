@@ -357,7 +357,7 @@ end
 end
 @inline __and_val(vs...) = mapreduce(_unwrap_val, *, vs)
 
-function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
+function update_coefficients(L::FunctionOperator, u_update, p, t; kwargs...)
 
     # update p, t
     L = set_p(L, p)
@@ -370,14 +370,14 @@ function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
 
     isconstant(L) && return L
 
-    L = set_op(L, update_coefficients(L.op, u, p, t; filtered_kwargs...))
-    L = set_op_adjoint(L, update_coefficients(L.op_adjoint, u, p, t; filtered_kwargs...))
-    L = set_op_inverse(L, update_coefficients(L.op_inverse, u, p, t; filtered_kwargs...))
+    L = set_op(L, update_coefficients(L.op, u_update, p, t; filtered_kwargs...))
+    L = set_op_adjoint(L, update_coefficients(L.op_adjoint, u_update, p, t; filtered_kwargs...))
+    L = set_op_inverse(L, update_coefficients(L.op_inverse, u_update, p, t; filtered_kwargs...))
     L = set_op_adjoint_inverse(L,
-        update_coefficients(L.op_adjoint_inverse, u, p, t; filtered_kwargs...))
+        update_coefficients(L.op_adjoint_inverse, u_update, p, t; filtered_kwargs...))
 end
 
-function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
+function update_coefficients!(L::FunctionOperator, u_update, p, t; kwargs...)
 
     # update p, t
     L.p = p
@@ -390,7 +390,7 @@ function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
     isconstant(L) && return
 
     for op in getops(L)
-        update_coefficients!(op, u, p, t; filtered_kwargs...)
+        update_coefficients!(op, u_update, p, t; filtered_kwargs...)
     end
 
     nothing

@@ -155,12 +155,13 @@ function isconstant(L::MatrixOperator)
     update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)
 end
 
-function update_coefficients(L::MatrixOperator, u, p, t; kwargs...)
-    @reset L.A = L.update_func(L.A, u, p, t; kwargs...)
+function update_coefficients(L::MatrixOperator, u_update, p, t; kwargs...)
+    @reset L.A = L.update_func(L.A, u_update, p, t; kwargs...)
+    L
 end
 
-function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
-    L.update_func!(L.A, u, p, t; kwargs...)
+function update_coefficients!(L::MatrixOperator, u_update, p, t; kwargs...)
+    L.update_func!(L.A, u_update, p, t; kwargs...)
 
     nothing
 end

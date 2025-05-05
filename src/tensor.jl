@@ -104,13 +104,21 @@ function Base.conj(L::TensorProductOperator)
     TensorProductOperator(conj.(L.ops)...; cache = L.cache)
 end
 
-function update_coefficients(L::TensorProductOperator, u, p, t)
+function update_coefficients(L::TensorProductOperator, u_update, p, t; kwargs...)
     ops = ()
     for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u_update, p, t; kwargs...))
     end
 
     @reset L.ops = ops
+    L
+end
+
+function update_coefficients!(L::TensorProductOperator, u_update, p, t; kwargs...)
+    for op in L.ops
+        update_coefficients!(op, u_update, p, t; kwargs...)
+    end
+    nothing
 end
 
 getops(L::TensorProductOperator) = L.ops
