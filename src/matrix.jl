@@ -165,6 +165,25 @@ function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     nothing
 end
 
+# Out-of-place: v is action vector, u is update vector
+function (L::MatrixOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L.A * v
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.A, v)
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.A, v, α, β)
+end
+
+
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
 Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator) = convert(
@@ -341,6 +360,11 @@ function update_coefficients(L::InvertibleOperator, u, p, t)
     @reset L.F = update_coefficients(L.F, u, p, t)
     L
 end
+function update_coefficients!(L::InvertibleOperator, u, p, t; kwargs...)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    update_coefficients!(L.F, u, p, t; kwargs...)
+    nothing
+end
 
 getops(L::InvertibleOperator) = (L.L, L.F)
 islinear(L::InvertibleOperator) = islinear(L.L)
@@ -387,6 +411,24 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
     ldiv!(v, L.F, u)
 end
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
+
+# Out-of-place: v is action vector, u is update vector
+function (L::InvertibleOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L.L * v
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::InvertibleOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.L, v)
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::InvertibleOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.L, v, α, β)
+end
 
 """
 $SIGNATURES
@@ -615,5 +657,30 @@ end
 function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
     mul!(u, L.B, L.b, -1, 1)
     ldiv!(L.A, u)
+end
+# Out-of-place: v is action vector, u is update vector
+function (L::AffineOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    (L.A * v) + (L.B * L.b)
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::AffineOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    # First calculate A * v
+    mul!(w, L.A, v)
+    # Then add B * b
+    mul!(w, L.B, L.b, true, true)
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::AffineOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    # Scale the existing w by β
+    lmul!(β, w)
+    # Add α * (A * v)
+    mul!(w, L.A, v, α, true)
+    # Add α * (B * b)
+    mul!(w, L.B, L.b, α, true)
 end
 #

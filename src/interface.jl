@@ -108,19 +108,21 @@ end
 ###
 # operator evaluation interface
 ###
+# Out-of-place: v is action vector, u is update vector
+function (L::AbstractSciMLOperator)(v, u, p, t; kwargs...)
+    update_coefficients(L, u, p, t; kwargs...) * v
+end
+# In-place: w is destination, v is action vector, u is update vector
+function (L::AbstractSciMLOperator)(w, v, u, p, t; kwargs...)
+    (update_coefficients!(L, u, p, t; kwargs...); mul!(w, L, v))
+end
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::AbstractSciMLOperator)(w, v, u, p, t, α, β; kwargs...)
+    (update_coefficients!(L, u, p, t; kwargs...); mul!(w, L, v, α, β))
+end
 
-function (L::AbstractSciMLOperator)(u, p, t; kwargs...)
-    update_coefficients(L, u, p, t; kwargs...) * u
-end
-function (L::AbstractSciMLOperator)(du, u, p, t; kwargs...)
-    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
-end
-function (L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...)
-    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
-end
-
-function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs...)
-    msg = """Nonallocating L(v, u, p, t) type methods are not available for
+function (L::AbstractSciMLOperator)(w::Number, v::Number, u, p, t, args...; kwargs...)
+    msg = """Nonallocating L(w, v, u, p, t) type methods are not available for
     subtypes of `Number`."""
     throw(ArgumentError(msg))
 end
