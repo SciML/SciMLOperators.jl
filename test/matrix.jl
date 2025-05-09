@@ -94,56 +94,52 @@ end
     @test ldiv!(L, v) ≈ d .\ u
 end
 
-# @testset "MatrixOperator update test" begin
-#     u = rand(N, K)
-#     p = rand(N)
-#     t = rand()
+@testset "MatrixOperator update test" begin
+    u = rand(N, K)
+    p = rand(N)
+    t = rand()
 
-#     α = rand()
-#     β = rand()
+    α = rand()
+    β = rand()
 
-#     L = MatrixOperator(zeros(N, N);
-#         update_func = (A, u, p, t) -> p * p',
-#         update_func! = (A, u, p, t) -> A .= p * p')
+    L = MatrixOperator(zeros(N, N);
+        update_func = (A, u, p, t) -> p * p',
+        update_func! = (A, u, p, t) -> A .= p * p')
 
-#     @test !isconstant(L)
+    @test !isconstant(L)
 
-#     A = p * p'
-#     @test L(u, p, t) ≈ A * u
-#     v = copy(u)
-#     @test L(v, u, p, t) ≈ A * u
-#     v = rand(N, K)
-#     w = copy(v)
-#     @test L(v, u, p, t, α, β) ≈ α * A * u + β * w
-# end
+    A = p * p'
+    @test L(u, p, t) ≈ A * u
+    v = copy(u)
+    @test L(v, u, p, t) ≈ A * u
+    v = rand(N, K)
+    w = copy(v)
+    @test L(v, u, p, t, α, β) ≈ α * A * u + β * w
+end
 
-# @testset "DiagonalOperator update test" begin
-#     u = rand(N, K)
-#     p = rand(N)
-#     t = rand()
-#     α = rand()
-#     β = rand()
+@testset "DiagonalOperator update test" begin
+    u = rand(N, K)
+    p = rand(N)
+    t = rand()
+    α = rand()
+    β = rand()
 
-#     # Use a more robust update function that handles both scalar and array `t` values
-#     # by explicitly converting them to scalar values when needed
-#     D = DiagonalOperator(zeros(N);
-#         update_func = (diag, u, p, t) -> p .* (t isa Number ? t : first(t)),
-#         update_func! = (diag, u, p, t) -> diag .= p .* (t isa Number ? t : first(t)))
+    D = DiagonalOperator(zeros(N);
+        update_func = (diag, u, p, t) -> p * t,
+        update_func! = (diag, u, p, t) -> diag .= p * t)
 
-#     @test !isconstant(D)
-#     @test issquare(D)
-#     @test islinear(D)
+    @test !isconstant(D)
+    @test issquare(D)
+    @test islinear(D)
 
-#     # Use scalar t for the expected result calculation
-#     scalar_t = t isa Number ? t : first(t)
-#     ans = Diagonal(p .* scalar_t) * u
-#     @test D(u, p, t) ≈ ans
-#     v = copy(u)
-#     @test D(v, u, p, t) ≈ ans
-#     v = rand(N, K)
-#     w = copy(v)
-#     @test D(v, u, p, t, α, β) ≈ α * ans + β * w
-# end
+    ans = Diagonal(p * t) * u
+    @test D(u, p, t) ≈ ans
+    v = copy(u)
+    @test D(v, u, p, t) ≈ ans
+    v = rand(N, K)
+    w = copy(v)
+    @test D(v, u, p, t, α, β) ≈ α * ans + β * w
+end
 
 @testset "Batched Diagonal Operator" begin
     u = rand(N, K)
@@ -172,32 +168,25 @@ end
     @test ldiv!(L, u) ≈ d .\ v
 end
 
-# @testset "Batched DiagonalOperator update test" begin
-#     u = rand(N, K)
-#     d = zeros(N, K)
-#     p = rand(N, K)
-#     t = rand()
+@testset "Batched DiagonalOperator update test" begin
+    u = rand(N, K)
+    d = zeros(N, K)
+    p = rand(N, K)
+    t = rand()
 
-#     # Create the diagonal operator with element-wise multiplication
-#     D = DiagonalOperator(d;
-#         update_func = (diag, u, p, t) -> p .* t,
-#         update_func! = (diag, u, p, t) -> diag .= p .* t)
+    D = DiagonalOperator(d;
+        update_func = (diag, u, p, t) -> p * t,
+        update_func! = (diag, u, p, t) -> diag .= p * t)
 
-#     @test !isconstant(D)
-#     @test issquare(D)
-#     @test islinear(D)
+    @test !isconstant(D)
+    @test issquare(D)
+    @test islinear(D)
 
-#     # Calculate expected result directly
-#     expected = (p .* t) .* u
-
-#     # Test out-of-place application - this updates coefficients internally
-#     result = D(u, p, t)
-#     @test result ≈ expected
-
-#     # Test in-place application with pre-allocated output
-#     v = copy(u)
-#     @test D(v, u, p, t) ≈ expected
-# end
+    ans = (p * t) .* u
+    @test D(u, p, t) ≈ ans
+    v = copy(u)
+    @test D(v, u, p, t) ≈ ans
+end
 
 @testset "AffineOperator" begin
     u = rand(N, K)

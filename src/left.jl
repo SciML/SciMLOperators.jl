@@ -157,18 +157,4 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
         u
     end
 end
-
-###
-# Update interfaces for AdjointOperator and TransposedOperator
-###
-
-function update_coefficients(L::Union{AdjointOperator,TransposedOperator}, u_update, p, t; kwargs...)
-    @reset L.L = update_coefficients(L.L, u_update, p, t; kwargs...)
-    L
-end
-
-function update_coefficients!(L::Union{AdjointOperator,TransposedOperator}, u_update, p, t; kwargs...)
-    update_coefficients!(L.L, u_update, p, t; kwargs...)
-    nothing
-end
 #

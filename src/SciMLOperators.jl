@@ -1,7 +1,7 @@
 """
 $(README)
 """
-module SciMLOperators# Temporary fix while we debug method overwriting issues
+module SciMLOperators
 
 using DocStringExtensions
 

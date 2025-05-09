@@ -82,12 +82,12 @@ function LinearAlgebra.ishermitian(L::BatchedDiagonalOperator)
 end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
-function update_coefficients(L::BatchedDiagonalOperator, u_update, p, t; kwargs...)
-    @reset L.diag = L.update_func(L.diag, u_update, p, t; kwargs...)
+function update_coefficients(L::BatchedDiagonalOperator, u, p, t; kwargs...)
+    @reset L.diag = L.update_func(L.diag, u, p, t; kwargs...)
 end
 
-function update_coefficients!(L::BatchedDiagonalOperator, u_update, p, t; kwargs...)
-    L.update_func!(L.diag, u_update, p, t; kwargs...)
+function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
+    L.update_func!(L.diag, u, p, t; kwargs...)
 
     nothing
 end

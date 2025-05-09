@@ -357,7 +357,7 @@ end
 end
 @inline __and_val(vs...) = mapreduce(_unwrap_val, *, vs)
 
-function update_coefficients(L::FunctionOperator, u_update, p, t; kwargs...)
+function update_coefficients(L::FunctionOperator, u, p, t; kwargs...)
 
     # update p, t
     L = set_p(L, p)
@@ -370,14 +370,14 @@ function update_coefficients(L::FunctionOperator, u_update, p, t; kwargs...)
 
     isconstant(L) && return L
 
-    L = set_op(L, update_coefficients(L.op, u_update, p, t; filtered_kwargs...))
-    L = set_op_adjoint(L, update_coefficients(L.op_adjoint, u_update, p, t; filtered_kwargs...))
-    L = set_op_inverse(L, update_coefficients(L.op_inverse, u_update, p, t; filtered_kwargs...))
+    L = set_op(L, update_coefficients(L.op, u, p, t; filtered_kwargs...))
+    L = set_op_adjoint(L, update_coefficients(L.op_adjoint, u, p, t; filtered_kwargs...))
+    L = set_op_inverse(L, update_coefficients(L.op_inverse, u, p, t; filtered_kwargs...))
     L = set_op_adjoint_inverse(L,
-        update_coefficients(L.op_adjoint_inverse, u_update, p, t; filtered_kwargs...))
+        update_coefficients(L.op_adjoint_inverse, u, p, t; filtered_kwargs...))
 end
 
-function update_coefficients!(L::FunctionOperator, u_update, p, t; kwargs...)
+function update_coefficients!(L::FunctionOperator, u, p, t; kwargs...)
 
     # update p, t
     L.p = p
@@ -390,7 +390,7 @@ function update_coefficients!(L::FunctionOperator, u_update, p, t; kwargs...)
     isconstant(L) && return
 
     for op in getops(L)
-        update_coefficients!(op, u_update, p, t; filtered_kwargs...)
+        update_coefficients!(op, u, p, t; filtered_kwargs...)
     end
 
     nothing
@@ -781,5 +781,69 @@ end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{false}, u::AbstractArray)
     @error "LinearAlgebra.ldiv! not defined for out-of-place $L"
+end
+
+# Out-of-place: v is action vector, u is update vector
+function (L::FunctionOperator)(v::AbstractArray, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    _sizecheck(L, v, nothing)
+    V, _, vec_output = _unvec(L, v, nothing)
+    
+    # Apply the operator to action vector v after updating with u
+    if L.traits.outofplace
+        result = L.op(V, L.p, L.t; L.traits.kwargs...)
+        return vec_output ? vec(result) : result
+    else
+        # For operators without out-of-place methods, use their in-place methods with a temporary
+        Co = similar(V)
+        L.op(Co, V, L.p, L.t; L.traits.kwargs...)
+        return vec_output ? vec(Co) : Co
+    end
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::FunctionOperator)(w::AbstractArray, v::AbstractArray, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    
+    # Check dimensions
+    _sizecheck(L, v, w)
+    V, W, _ = _unvec(L, v, w)
+    
+    # Apply the operator in-place to action vector v after updating with u
+    if L.traits.isinplace
+        L.op(W, V, L.p, L.t; L.traits.kwargs...)
+    else
+        # For operators without in-place methods, use their out-of-place methods
+        result = L.op(V, L.p, L.t; L.traits.kwargs...)
+        copyto!(W, result)
+    end
+    
+    return w
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::FunctionOperator)(w::AbstractArray, v::AbstractArray, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    
+    # Check dimensions
+    _sizecheck(L, v, w)
+    V, W, _ = _unvec(L, v, w)
+    
+    # Apply the operator in-place to action vector v with scaling
+    if L.traits.isinplace && L.traits.has_mul5
+        # Direct 5-arg mul! if supported
+        L.op(W, V, L.p, L.t, α, β; L.traits.kwargs...)
+    elseif L.traits.isinplace
+        # Use temporary for regular in-place
+        temp = copy(W)
+        L.op(W, V, L.p, L.t; L.traits.kwargs...)
+        axpby!(β, temp, α, W)
+    else
+        # Out-of-place with scaling
+        result = L.op(V, L.p, L.t; L.traits.kwargs...)
+        axpby!(β, W, α, result)
+    end
+    
+    return w
 end
 #
