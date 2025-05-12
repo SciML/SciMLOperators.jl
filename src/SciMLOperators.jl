@@ -26,6 +26,17 @@ Subtypes of `AbstractSciMLOperator` represent linear, nonlinear,
 time-dependent operators acting on vectors, or matrix column-vectors.
 A lazy operator algebra is also defined for `AbstractSciMLOperator`s.
 
+# Mathematical Notation
+
+An `AbstractSciMLOperator` ``L`` is an operator which is used to represent
+the following type of equation:
+
+```math
+w = L(u,p,t)[v]
+```
+
+where `L[v]` is the operator application of ``L`` on the vector ``v``. 
+
 # Interface
 
 An `AbstractSciMLOperator` can be called  like a function in the following ways:
