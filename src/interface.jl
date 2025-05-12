@@ -82,7 +82,7 @@ $(UPDATE_COEFFS_WARNING)
 # Example
 
 ```
-using SciMLOperator
+using SciMLOperators
 
 _A = rand(4, 4)
 mat_update_func! = (L, u, p, t; scale = 1.0) -> copy!(A, _A)
