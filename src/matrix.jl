@@ -35,28 +35,41 @@ p = rand(4, 4)
 t = rand()
 
 mat_update = (A, u, p, t; scale = 0.0) -> t * p
-M = MatrixOperator(0.0; update_func = mat_update; accepted_kwargs = (:scale,))
+M = MatrixOperator(0.0; update_func = mat_update, accepted_kwargs = (:scale,))
 
 L = M * M + 3I
-L = cache_operator(M, u)
+L = cache_operator(L, u)
 
-# update L and evaluate
-v = L(u, p, t; scale = 1.0)
+# update and evaluate 
+v = L(u, u, p, t; scale = 1.0)
+
+# In-place evaluation
+w = similar(u)
+L(w, u, u, p, t; scale = 1.0)
+
+# In-place with scaling
+β = 0.5
+L(w, u, u, p, t, 2.0, β; scale = 1.0) # w = 2.0*(L*u) + 0.5*w
 ```
 
 In-place update and usage
 ```
-v = zero(4)
+v = zeros(4)
 u = rand(4)
-p = nothing
+p = rand(4) # Must be non-nothing
 t = rand()
 
-mat_update! = (A, u, p, t; scale = 0.0) -> (copy!(A, p); lmul!(t, A))
-M = MatrixOperator(zeros(4, 4); update_func! = val_update!; accepted_kwargs = (:scale,))
+mat_update! = (A, u, p, t; scale = 0.0) -> (A .= t * p * p' * scale)
+M = MatrixOperator(zeros(4, 4); update_func! = mat_update!, accepted_kwargs = (:scale,))
 L = M * M + 3I
+L = cache_operator(L, u) 
 
 # update L in-place and evaluate
-L(v, u, p, t; scale = 1.0)
+update_coefficients!(L, u, p, t; scale = 1.0)
+mul!(v, L, u)
+
+# Or use the new interface that separates update and application
+L(v, u, u, p, t; scale = 1.0)
 ```
 """
 struct MatrixOperator{T, AT <: AbstractMatrix{T}, F, F!} <: AbstractSciMLOperator{T}

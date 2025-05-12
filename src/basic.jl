@@ -69,6 +69,27 @@ function LinearAlgebra.ldiv!(ii::IdentityOperator, u::AbstractVecOrMat)
     u
 end
 
+# Out-of-place: v is action vector, u is update vector
+function (ii::IdentityOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    @assert size(v, 1) == ii.len
+    update_coefficients(ii, u, p, t; kwargs...)
+    copy(v)
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (ii::IdentityOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    @assert size(v, 1) == ii.len
+    update_coefficients!(ii, u, p, t; kwargs...)
+    copy!(w, v)
+end
+
+# In-place with scaling: w = α*(ii*v) + β*w
+function (ii::IdentityOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    @assert size(v, 1) == ii.len
+    update_coefficients!(ii, u, p, t; kwargs...)
+    mul!(w, I, v, α, β)
+end
+
 # operator fusion with identity returns operator itself
 for op in (:*, :∘)
     @eval function Base.$op(ii::IdentityOperator, A::AbstractSciMLOperator)
@@ -144,6 +165,29 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat,
         β)
     @assert size(u, 1) == size(v, 1) == nn.len
     lmul!(β, v)
+end
+
+# Out-of-place: v is action vector, u is update vector
+function (nn::NullOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    @assert size(v, 1) == nn.len
+    update_coefficients(nn, u, p, t; kwargs...)
+    zero(v)
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    @assert size(v, 1) == nn.len
+    update_coefficients!(nn, u, p, t; kwargs...)
+    lmul!(false, w)
+    w
+end
+
+# In-place with scaling: w = α*(nn*v) + β*w
+function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    @assert size(v, 1) == nn.len
+    update_coefficients!(nn, u, p, t; kwargs...)
+    lmul!(β, w)
+    w
 end
 
 # operator fusion, composition
@@ -335,6 +379,43 @@ function LinearAlgebra.ldiv!(L::ScaledOperator, u::AbstractVecOrMat)
     ldiv!(L.λ, u)
     ldiv!(L.L, u)
 end
+
+# Out-of-place: v is action vector, u is update vector
+function (L::ScaledOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    if iszero(L.λ)
+        return zero(v)
+    else
+        return L.λ * (L.L * v)
+    end
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::ScaledOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    if iszero(L.λ)
+        lmul!(false, w)
+        return w
+    else
+        a = convert(Number, L.λ)
+        mul!(w, L.L, v, a, false)
+        return w
+    end
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::ScaledOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    if iszero(L.λ)
+        lmul!(β, w)
+        return w
+    else
+        a = convert(Number, L.λ * α)
+        mul!(w, L.L, v, a, β)
+        return w
+    end
+end
+
 
 """
 Lazy operator addition
@@ -537,6 +618,35 @@ end
         end
         v
     end
+end
+# Out-of-place: v is action vector, u is update vector
+function (L::AddedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    sum(op -> iszero(op) ? zero(v) : op(v, u, p, t; kwargs...), L.ops)
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    L.ops[1](w, v, u, p, t; kwargs...)
+    for i in 2:length(L.ops)
+        if !iszero(L.ops[i])
+            L.ops[i](w, v, u, p, t, 1.0, 1.0; kwargs...)
+        end
+    end
+    w
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    lmul!(β, w)
+    for op in L.ops
+        if !iszero(op)
+            op(w, v, u, p, t, α, 1.0; kwargs...)
+        end
+    end
+    w
 end
 
 """
@@ -792,6 +902,41 @@ function LinearAlgebra.ldiv!(L::ComposedOperator, u::AbstractVecOrMat)
     u
 end
 
+# Out-of-place: v is action vector, u is update vector
+function (L::ComposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    result = v
+    for op in reverse(L.ops)
+        result = op(result, u, p, t; kwargs...)
+    end
+    result
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::ComposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
+    
+    vecs = (w, L.cache[1:(end-1)]..., v)
+    for i in reverse(1:length(L.ops))
+        L.ops[i](vecs[i], vecs[i+1], u, p, t; kwargs...)
+    end
+    w
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::ComposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
+    
+    cache = L.cache[end]
+    copy!(cache, w)
+    
+    L(w, v, u, p, t; kwargs...)
+    lmul!(α, w)
+    axpy!(β, cache, w)
+end
+
 """
     Lazy Operator Inverse
 """
@@ -908,5 +1053,30 @@ function LinearAlgebra.ldiv!(L::InvertedOperator, u::AbstractVecOrMat)
 
     copy!(L.cache, u)
     mul!(u, L.L, L.cache)
+end
+
+# Out-of-place: v is action vector, u is update vector
+function (L::InvertedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L.L \ v
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::InvertedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    ldiv!(w, L.L, v)
+    w
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::InvertedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    @assert iscached(L) "Cache needs to be set up for InvertedOperator. Call cache_operator(L, u) first."
+    
+    copy!(L.cache, w)
+    ldiv!(w, L.L, v)
+    lmul!(α, w)
+    axpy!(β, L.cache, w)
+    w
 end
 #

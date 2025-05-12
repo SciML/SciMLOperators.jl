@@ -13,6 +13,43 @@ TensorProductOperator(A, B, C) = A ⊗ B ⊗ C
 (A ⊗ B)(u) = vec(B * reshape(u, M, N) * transpose(A))
 ```
 where `M = size(B, 2)`, and `N = size(A, 2)`
+
+# Example
+
+```
+using SciMLOperators, LinearAlgebra
+
+# Create basic operators
+A = rand(3, 3)
+B = rand(4, 4)
+A_op = MatrixOperator(A)
+B_op = MatrixOperator(B)
+
+# Create tensor product operator
+T = A_op ⊗ B_op
+
+# Apply to a vector using the new interface
+v = rand(3*4)    # Action vector
+u = rand(3*4)    # Update vector
+p = nothing
+t = 0.0
+
+# Out-of-place application
+result = T(v, u, p, t)
+
+# For in-place operations, need to cache the operator first
+T_cached = cache_operator(T, v)
+
+# In-place application
+w = zeros(size(T, 1))
+T_cached(w, v, u, p, t)
+
+# In-place with scaling
+w_orig = copy(w)
+α = 2.0
+β = 0.5
+T_cached(w, v, u, p, t, α, β) # w = α*(T*v) + β*w_orig
+```
 """
 
 """
@@ -537,5 +574,25 @@ function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
     permutedims!(U, C, PERM)
 
     u
+end
+
+# Out-of-place: v is action vector, u is update vector
+function (L::TensorProductOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L * v
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::TensorProductOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L, v)
+    return w
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::TensorProductOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L, v, α, β)
+    return w
 end
 #

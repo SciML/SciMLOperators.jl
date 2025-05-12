@@ -28,19 +28,16 @@ A lazy operator algebra is also defined for `AbstractSciMLOperator`s.
 
 # Interface
 
-An `AbstractSciMLOperator` can be called like a function. This behaves
-like multiplication by the linear operator represented by the
-`AbstractSciMLOperator`. Possible signatures are
+An `AbstractSciMLOperator` can be called  like a function in the following ways:
 
-- `L(v, u, p, t)` for in-place operator evaluation
-- `v = L(u, p, t)` for out-of-place operator evaluation
+- `L(v, u, p, t)` - Out-of-place application where `v` is the action vector and `u` is the update vector
+- `L(w, v, u, p, t)` - In-place application where `w` is the destination, `v` is the action vector, and `u` is the update vector
+- `L(w, v, u, p, t, α, β)` - In-place application with scaling: `w = α*(L*v) + β*w`
 
-Operator evaluation methods update its coefficients with `(u, p, t)`
-information using the `update_coefficients(!)` method. The methods
-are exported and can be called as follows:
+Operator state can be updated separately from application:
 
-- `update_coefficients!(L, u, p, t)` for out-of-place operator update
-- `L = update_coefficients(L, u, p, t)` for in-place operator update
+- `update_coefficients!(L, u, p, t)` for in-place operator update
+- `L = update_coefficients(L, u, p, t)` for out-of-place operator update
 
 SciMLOperators also overloads `Base.*`, `LinearAlgebra.mul!`,
 `LinearAlgebra.ldiv!` for operator evaluation without updating operator state.

@@ -153,4 +153,25 @@ function LinearAlgebra.ldiv!(L::BatchedDiagonalOperator, u::AbstractVecOrMat)
 
     u
 end
+
+function (L::BatchedDiagonalOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L.diag .* v
+end
+
+function (L::BatchedDiagonalOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    w .= L.diag .* v
+    return w
+end
+
+function (L::BatchedDiagonalOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    if β == 0
+        w .= α .* (L.diag .* v)
+    else
+        w .= α .* (L.diag .* v) .+ β .* w
+    end    
+    return w
+end
 #

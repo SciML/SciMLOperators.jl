@@ -43,7 +43,7 @@ $(UPDATE_COEFFS_WARNING)
 # Example
 
 ```
-using SciMLOperator
+using SciMLOperators
 
 mat_update_func = (A, u, p, t; scale = 1.0) -> p * p' * scale * t
 
@@ -56,8 +56,12 @@ u = rand(4)
 p = rand(4)
 t = 1.0
 
+# Update the operator and apply it to `u`
 L = update_coefficients(L, u, p, t; scale = 2.0)
-L * u
+result = L * u
+
+# Or use the interface which separrates the update from the application
+result = L(u, u, p, t; scale = 2.0)
 ```
 
 """
@@ -108,6 +112,7 @@ end
 ###
 # operator evaluation interface
 ###
+
 # Out-of-place: v is action vector, u is update vector
 function (L::AbstractSciMLOperator)(v, u, p, t; kwargs...)
     update_coefficients(L, u, p, t; kwargs...) * v

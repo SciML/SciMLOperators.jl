@@ -133,20 +133,27 @@ interface supports lazy addition, subtraction, multiplication and division.
 # Example
 
 ```
-v = zero(4)
+v = rand(4)
 u = rand(4)
+w = zeros(4)
 p = nothing
 t = 0.0
 
-val_update = (a, u, p, t; scale = 0.0) -> copy(scale)
-α = ScalarOperator(0.0; update_func = val_update; accepted_kwargs = (:scale,))
+val_update = (a, u, p, t; scale = 0.0) -> scale
+α = ScalarOperator(0.0; update_func = val_update, accepted_kwargs = (:scale,))
 β = 2 * α + 3 / α
 
-# update L out-of-place, and evaluate
-β(u, p, t; scale = 1.0)
+# Update β and evaluate with the new interface
+result = β(v, u, p, t; scale = 1.0)
 
-# update L in-place and evaluate
-β(v, u, p, t; scale = 1.0)
+# In-place application
+β(w, v, u, p, t; scale = 1.0)
+
+# In-place with scaling
+w_orig = copy(w)
+α_val = 2.0
+β_val = 0.5
+β(w, v, u, p, t, α_val, β_val; scale = 1.0) # w = α_val*(β*v) + β_val*w
 ```
 """
 function ScalarOperator(val;
