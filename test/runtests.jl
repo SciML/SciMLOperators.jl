@@ -17,6 +17,6 @@ using SafeTestsets
         include("total.jl")
     end
     @time @safetestset "Zygote.jl" begin
-        # include("zygote.jl")
+        include("zygote.jl")
     end
 end

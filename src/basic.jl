@@ -170,14 +170,12 @@ end
 # Out-of-place: v is action vector, u is update vector
 function (nn::NullOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     @assert size(v, 1) == nn.len
-    update_coefficients(nn, u, p, t; kwargs...)
     zero(v)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     @assert size(v, 1) == nn.len
-    update_coefficients!(nn, u, p, t; kwargs...)
     lmul!(false, w)
     w
 end
@@ -185,7 +183,6 @@ end
 # In-place with scaling: w = α*(nn*v) + β*w
 function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     @assert size(v, 1) == nn.len
-    update_coefficients!(nn, u, p, t; kwargs...)
     lmul!(β, w)
     w
 end
