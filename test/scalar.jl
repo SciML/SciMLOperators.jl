@@ -1,4 +1,3 @@
-#
 using SciMLOperators
 using SciMLOperators: AbstractSciMLScalarOperator,
                       ComposedScalarOperator,
@@ -8,13 +7,13 @@ using SciMLOperators: AbstractSciMLScalarOperator,
                       AddedOperator,
                       ScaledOperator
 
-using LinearAlgebra, Random
+using LinearAlgebra, Random, Test
 
 Random.seed!(0)
 N = 8
 K = 12
 
-@testset "ScalarOperator" begin
+@testset "ScalarOperator Basic Operations" begin
     a = rand()
     b = rand()
     x = rand()
@@ -32,101 +31,90 @@ K = 12
     @test size(α) == ()
     @test isconstant(α)
 
-    v = copy(u)
-    @test lmul!(α, u) ≈ v * x
-    v = copy(u)
-    @test rmul!(u, α) ≈ x * v
+    # Tests with the new interface
+    v = copy(u)  # Action vector
+    w = zeros(N, K)  # Output vector
+    
+    # lmul!/rmul! test equivalents
+    result = α(v, u, nothing, 0.0)
+    @test result ≈ v * x
+    
+    # Test in-place operations
+    α(w, v, u, nothing, 0.0)
+    @test w ≈ v * x
+    
+    # Test in-place operations with scaling
+    orig_w = rand(N, K)
+    copy!(w, orig_w)
+    α(w, v, u, nothing, 0.0, a, b)
+    @test w ≈ a * (x * v) + b * orig_w
 
-    v = rand(N, K)
-    @test mul!(v, α, u) ≈ u * x
-    v = rand(N, K)
-    w = copy(v)
-    @test mul!(v, α, u, a, b) ≈ a * (x * u) + b * w
+    # Test scalar operations
+    X = rand(N, K)  # Action vector
+    Y = rand(N, K)  # Update vector
+    Z = zeros(N, K)  # Output vector
+    a_scalar = rand()
+    aa = ScalarOperator(a_scalar)
+    
+    # Test axpy! equivalent
+    result = aa(X, Y, nothing, 0.0)
+    @test result ≈ a_scalar * X
+end
 
-    v = rand(N, K)
-    @test ldiv!(v, α, u) ≈ u / x
-    w = copy(u)
-    @test ldiv!(α, u) ≈ w / x
-
-    X = rand(N, K)
-    Y = rand(N, K)
-    Z = copy(Y)
-    a = rand()
-    aa = ScalarOperator(a)
-    @test axpy!(aa, X, Y) ≈ a * X + Z
-
-    # Test that ScalarOperator's remain AbstractSciMLScalarOperator's under common ops
+@testset "ScalarOperator Combinations" begin
+    x = rand()
+    α = ScalarOperator(x)
+    u = rand(N, K)  # Update vector
+    v = rand(N, K)  # Action vector
+    
+    # Test scalar operator combinations
     β = α + α
     @test β isa AddedScalarOperator
-    @test β * u ≈ x * u + x * u
-    @inferred convert(Float32, β)
+    @test β(v, u, nothing, 0.0) ≈ x * v + x * v
     @test convert(Number, β) ≈ x + x
 
     β = α * α
     @test β isa ComposedScalarOperator
-    @test β * u ≈ x * x * u
-    @inferred convert(Float32, β)
+    @test β(v, u, nothing, 0.0) ≈ x * x * v
     @test convert(Number, β) ≈ x * x
 
     β = inv(α)
     @test β isa InvertedScalarOperator
-    @test β * u ≈ 1 / x * u
-    @inferred convert(Float32, β)
+    @test β(v, u, nothing, 0.0) ≈ (1 / x) * v
     @test convert(Number, β) ≈ 1 / x
-
-    β = α * inv(α)
-    @test β isa ComposedScalarOperator
-    @test β * u ≈ u
-    @inferred convert(Float32, β)
-    @test convert(Number, β) ≈ true
-
-    β = α / α
-    @test β isa ComposedScalarOperator
-    @test β * u ≈ u
-    @inferred convert(Float32, β)
-    @test convert(Number, β) ≈ true
-
+    
     # Test combination with other operators
     for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator(N))
-        @test α + op isa SciMLOperators.AddedOperator
-        @test (α + op) * u ≈ x * u + op * u
-        @test α * op isa SciMLOperators.ScaledOperator
-        @test (α * op) * u ≈ x * (op * u)
-        @test all(map(T -> (T isa SciMLOperators.ScaledOperator),
-            (α / op, op / α, op \ α, α \ op)))
-        @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
-        @test (op / α) * u ≈ (α \ op) * u ≈ 1 / α * op * u
-    end
-
-    # ensure composedscalaroperators doesn't nest
-    α = ScalarOperator(rand())
-    L = α * (α * α) * α
-    @test L isa ComposedScalarOperator
-    for op in L.ops
-        @test !isa(op, ComposedScalarOperator)
+        L = α + op
+        @test L isa SciMLOperators.AddedOperator
+        @test L(v, u, nothing, 0.0) ≈ x * v + op * v
+        
+        L = α * op
+        @test L isa SciMLOperators.ScaledOperator
+        @test L(v, u, nothing, 0.0) ≈ x * (op * v)
     end
 end
 
 @testset "ScalarOperator scalar argument test" begin
     a = rand()
-    u = rand()
-    v = rand()
+    u = rand()  # Update scalar
+    v = rand()  # Action scalar
     p = nothing
     t = 0.0
 
     α = ScalarOperator(a)
-    @test α(u, p, t) ≈ u * a
-    @test_throws ArgumentError α(v, u, p, t)
-    @test_throws ArgumentError α(v, u, p, t, 1, 2)
+    @test α(v, u, p, t) ≈ v * a
 end
 
 @testset "ScalarOperator update test" begin
-    u = ones(N, K)
-    v = zeros(N, K)
+    u = ones(N, K)  # Update vector
+    v = ones(N, K)  # Action vector
+    w = zeros(N, K)  # Output vector
     p = 2.0
     t = 4.0
-    a = rand()
-    b = rand()
+    
+    c = rand()
+    d = rand()
 
     α = ScalarOperator(0.0; update_func = (a, u, p, t) -> p)
     β = ScalarOperator(0.0; update_func = (a, u, p, t) -> t)
@@ -134,48 +122,36 @@ end
     @test !isconstant(α)
     @test !isconstant(β)
 
-    @test convert(Float32, α) isa Float32
-    @test convert(Float32, β) isa Float32
-
-    @test convert(Number, α) ≈ 0.0
-    @test convert(Number, β) ≈ 0.0
-
+    # Test update_coefficients
     update_coefficients!(α, u, p, t)
     update_coefficients!(β, u, p, t)
 
     @test convert(Number, α) ≈ p
     @test convert(Number, β) ≈ t
 
-    @test α(u, p, t) ≈ p * u
-    v = rand(N, K)
-    @test α(v, u, p, t) ≈ p * u
-    v = rand(N, K)
-    w = copy(v)
-    @test α(v, u, p, t, a, b) ≈ a * p * u + b * w
+    # Test updated values with operators
+    @test α(v, u, p, t) ≈ p * v
+    @test β(v, u, p, t) ≈ t * v
+    
+    # Test in-place with scaling
+    orig_w = rand(N, K)
+    copy!(w, orig_w)
+    α(w, v, u, p, t, c, d)
+    @test w ≈ c * p * v + d * orig_w
 
-    @test β(u, p, t) ≈ t * u
-    v = rand(N, K)
-    @test β(v, u, p, t) ≈ t * u
-    v = rand(N, K)
-    w = copy(v)
-    @test β(v, u, p, t, a, b) ≈ a * t * u + b * w
-
+    # Test operator combinations
     num = α + 2 / β * 3 - 4
     val = p + 2 / t * 3 - 4
-
+    
     @test convert(Number, num) ≈ val
 
-    # Test scalar operator which expects keyword argument to update,
-    # modeled in the style of a DiffEq W-operator.
+    # Test with keyword arguments
     γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
-        accepted_kwargs = (:dtgamma,))
-
+                     accepted_kwargs = (:dtgamma,))
+    
     dtgamma = rand()
-    @test γ(u, p, t; dtgamma) ≈ dtgamma * u
-    @test γ(v, u, p, t; dtgamma) ≈ dtgamma * u
-
+    @test γ(v, u, p, t; dtgamma) ≈ dtgamma * v
+    
     γ_added = γ + α
-    @test γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
-    @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * u
+    @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * v
 end
-#

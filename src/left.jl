@@ -165,73 +165,48 @@ function (L::AdjointOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     # Adjoint operator applied to v means L.L' * v
     # For matrices: (A')v = (v'A)'
     # This means we need to compute L.L(v', u, p, t)' 
-    # Reshape v to match the adjoint operator's expected size
-    adjv = reshape(v', size(L.L, 1), :)
-    result = L.L(adjv, u, p, t; kwargs...)
-    return reshape(result', size(L, 1), :)
+    # Update the operator first, then apply adjoint operator
+    L_updated = update_coefficients(L.L, u, p, t; kwargs...)
+    # (A')v = (v'A)' where v'A is computed by A'*v'
+    return (L_updated' * v')'
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 function (L::AdjointOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
-    # Need temporary storage for adjoint operations
-    temp_v = reshape(v', size(L.L, 1), :)
-    temp_w = similar(temp_v)
-    
-    # Apply the internal operator
-    L.L(temp_w, temp_v, u, p, t; kwargs...)
-    
-    # Copy back to w with adjoint
-    w .= reshape(temp_w', size(L, 1), :)
+    # Update the operator in-place
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    # Use direct in-place multiplicatieon for adjoints
+    mul!(w', v', L.L)
     return w
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
 function (L::AdjointOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
-    # Handle scaling of existing w
-    if β != 1.0
-        lmul!(β, w)
-    end
-    
-    # Need temporary storage for adjoint operations
-    temp_v = reshape(v', size(L.L, 1), :)
-    temp_w = similar(temp_v)
-    
-    # Apply the internal operator
-    L.L(temp_w, temp_v, u, p, t, 1.0, 0.0; kwargs...)
-    
-    # Add α * result' to w
-    w .+= α .* reshape(temp_w', size(L, 1), :)
+    # Update the operator in-place
+    update_coefficients!(L.L, u, p ,t; kwargs...)
+    mul!(w', v', L.L, α, β)
     return w
 end
 
 # For TransposedOperator
+# Out-of-place
 function (L::TransposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    transv = reshape(v', size(L.L, 1), :)
-    result = L.L(transv, u, p, t; kwargs...)
-    return reshape(result', size(L, 1), :)
+   L_updated = update_coefficients(L.L, u, p, t; kwargs...)
+   # (A^T)v = (v'A)' where v'A is computed by A'*v'
+   return (L_updated' * v')'
 end
 
+# In-place
 function (L::TransposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
-    temp_v = reshape(v', size(L.L, 1), :)
-    temp_w = similar(temp_v)
-    
-    L.L(temp_w, temp_v, u, p, t; kwargs...)
-    
-    w .= reshape(temp_w', size(L, 1), :)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    mul!(w', v', L.L)
     return w
 end
 
+# In-place with scaling
 function (L::TransposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
-    if β != 1.0
-        lmul!(β, w)
-    end
-    
-    temp_v = reshape(v', size(L.L, 1), :)
-    temp_w = similar(temp_v)
-    
-    L.L(temp_w, temp_v, u, p, t, 1.0, 0.0; kwargs...)
-    
-    w .+= α .* reshape(temp_w', size(L, 1), :)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    mul!(w', v', L.L, α, β)
     return w
 end
 #
