@@ -268,7 +268,7 @@ function LinearAlgebra.mul!(w::AbstractVecOrMat,
     # V .= U * B' <===> V' .= B * C'
     outer_mul!(w, L, v)
 
-    v
+    w
 end
 
 function LinearAlgebra.mul!(w::AbstractVecOrMat,
@@ -416,9 +416,9 @@ function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVe
     k = size(v, 2)
 
     if k == 1
-        V = reshape(w, (mi, mo))
+        W = reshape(w, (mi, mo))
         C1 = reshape(C1, (mi, no))
-        mul!(transpose(V), outer, transpose(C1))
+        mul!(transpose(W), outer, transpose(C1))
         return w
     end
 
@@ -429,13 +429,13 @@ function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVe
     C2 = reshape(C2, (no, mi * k))
     mul!(C3, outer, C2)
     C3 = reshape(C3, (mo, mi, k))
-    V = reshape(w, (mi, mo, k))
-    permutedims!(V, C3, PERM)
+    W = reshape(w, (mi, mo, k))
+    permutedims!(W, C3, PERM)
 
     w
 end
 
-function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator,
+function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator,
         v::AbstractVecOrMat, α, β)
     outer, inner = L.ops
 
@@ -456,23 +456,23 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator,
     mo, no = size(outer)
 
     if k == 1
-        V = reshape(w, (mi, mo))
+        W = reshape(w, (mi, mo))
         C = reshape(v, (mi, no))
-        mul!(transpose(V), outer, transpose(C), α, β)
+        mul!(transpose(W), outer, transpose(C), α, β)
         return w
     end
 
     C2, C3, c4 = L.cache[2:4]
 
-    C = reshape(c, (mi, no, k))
+    C = reshape(v, (mi, no, k))
     permutedims!(C2, C, PERM)
     C2 = reshape(C2, (no, mi * k))
     mul!(C3, outer, C2)
     C3 = reshape(C3, (mo, mi, k))
-    V = reshape(v, (mi, mo, k))
-    copy!(c4, v)
-    permutedims!(V, C3, PERM)
-    axpby!(β, c4, α, v)
+    W = reshape(w, (mi, mo, k))
+    copy!(c4, w)
+    permutedims!(W, C3, PERM)
+    axpby!(β, c4, α, w)
 
     w
 end

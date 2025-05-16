@@ -228,23 +228,23 @@ function Base.copy(L::MatrixOperator)
 end
 
 # operator application
-Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
-Base.:\(L::MatrixOperator, u::AbstractVecOrMat) = L.A \ u
+Base.:*(L::MatrixOperator, v::AbstractVecOrMat) = L.A * v
+Base.:\(L::MatrixOperator, v::AbstractVecOrMat) = L.A \ v
 @inline function LinearAlgebra.mul!(
-        v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
-    mul!(v, L.A, u)
+        w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
+    mul!(w, L.A, v)
 end
-@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::MatrixOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
-    mul!(v, L.A, u, α, β)
+    mul!(w, L.A, v, α, β)
 end
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
-    ldiv!(v, L.A, u)
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
+    ldiv!(w, L.A, v)
 end
-LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
+LinearAlgebra.ldiv!(L::MatrixOperator, v::AbstractVecOrMat) = ldiv!(L.A, v)
 
 """
 $SIGNATURES
@@ -400,9 +400,9 @@ isconvertible(L::InvertibleOperator) = isconvertible(L.L)
 has_ldiv(L::InvertibleOperator) = has_mul(L.F)
 has_ldiv!(L::InvertibleOperator) = has_ldiv!(L.F)
 
-function cache_internals(L::InvertibleOperator, u::AbstractVecOrMat)
-    @reset L.L = cache_operator(L.L, u)
-    @reset L.F = cache_operator(L.F, u)
+function cache_internals(L::InvertibleOperator, v::AbstractVecOrMat)
+    @reset L.L = cache_operator(L.L, v)
+    @reset L.F = cache_operator(L.F, v)
 
     L
 end
@@ -410,20 +410,20 @@ end
 # operator application
 Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.L * x
 Base.:\(L::InvertibleOperator, x::AbstractVecOrMat) = L.F \ x
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat)
-    mul!(v, L.L, u)
+function LinearAlgebra.mul!(w::AbstractVecOrMat, L::InvertibleOperator, v::AbstractVecOrMat)
+    mul!(w, L.L, v)
 end
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::InvertibleOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
-    mul!(v, L.L, u, α, β)
+    mul!(w, L.L, v, α, β)
 end
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat,
         L::InvertibleOperator,
-        u::AbstractVecOrMat)
-    ldiv!(v, L.F, u)
+        v::AbstractVecOrMat)
+    ldiv!(w, L.F, v)
 end
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
@@ -641,38 +641,38 @@ function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
 end
 
 # operator application
-function Base.:*(L::AffineOperator, u::AbstractVecOrMat)
-    @assert size(L.b, 2) == size(u, 2)
-    (L.A * u) + (L.B * L.b)
+function Base.:*(L::AffineOperator, v::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(v, 2)
+    (L.A * v) + (L.B * L.b)
 end
 
-function Base.:\(L::AffineOperator, u::AbstractVecOrMat)
-    @assert size(L.b, 2) == size(u, 2)
-    L.A \ (u - (L.B * L.b))
+function Base.:\(L::AffineOperator, v::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(v, 2)
+    L.A \ (v - (L.B * L.b))
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
-    mul!(v, L.B, L.b)
-    mul!(v, L.A, u, true, true)
+function LinearAlgebra.mul!(w::AbstractVecOrMat, L::AffineOperator, v::AbstractVecOrMat)
+    mul!(w, L.B, L.b)
+    mul!(w, L.A, v, true, true)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::AffineOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
-    mul!(v, L.B, L.b, α, β)
-    mul!(v, L.A, u, α, true)
+    mul!(w, L.B, L.b, α, β)
+    mul!(w, L.A, v, α, true)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
-    copy!(v, u)
-    ldiv!(L, v)
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::AffineOperator, v::AbstractVecOrMat)
+    copy!(w, v)
+    ldiv!(L, w)
 end
 
-function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
-    mul!(u, L.B, L.b, -1, 1)
-    ldiv!(L.A, u)
+function LinearAlgebra.ldiv!(L::AffineOperator, v::AbstractVecOrMat)
+    mul!(v, L.B, L.b, -1, 1)
+    ldiv!(L.A, v)
 end
 # Out-of-place: v is action vector, u is update vector
 function (L::AffineOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
