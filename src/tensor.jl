@@ -163,88 +163,88 @@ has_ldiv!(L::TensorProductOperator) = reduce(&, has_ldiv!.(L.ops))
 factorize(L::TensorProductOperator) = TensorProductOperator(factorize.(L.ops)...)
 
 # operator application
-function Base.:*(L::TensorProductOperator, u::AbstractVecOrMat)
+function Base.:*(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
 
     _, ni = size(inner)
     _, no = size(outer)
     m, n = size(L)
-    k = size(u, 2)
+    k = size(v, 2)
 
-    U = reshape(u, (ni, no * k))
+    U = reshape(v, (ni, no * k))
     C = inner * U
 
-    V = outer_mul(L, u, C)
+    V = outer_mul(L, v, C)
 
-    u isa AbstractMatrix ? reshape(V, (m, k)) : reshape(V, (m,))
+    v isa AbstractMatrix ? reshape(V, (m, k)) : reshape(V, (m,))
 end
 
-function Base.:\(L::TensorProductOperator, u::AbstractVecOrMat)
+function Base.:\(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
 
     mi, _ = size(inner)
     mo, _ = size(outer)
     m, n = size(L)
-    k = size(u, 2)
+    k = size(v, 2)
 
-    U = reshape(u, (mi, mo * k))
+    U = reshape(v, (mi, mo * k))
     C = inner \ U
 
-    V = outer_div(L, u, C)
+    V = outer_div(L, v, C)
 
-    u isa AbstractMatrix ? reshape(V, (n, k)) : reshape(V, (n,))
+    v isa AbstractMatrix ? reshape(V, (n, k)) : reshape(V, (n,))
 end
 
-function cache_self(L::TensorProductOperator, u::AbstractVecOrMat)
+function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
 
     mi, ni = size(inner)
     mo, no = size(outer)
-    k = size(u, 2)
+    k = size(v, 2)
 
     # 3 arg mul!
-    c1 = lmul!(false, similar(u, (mi, no * k))) # c1 = inner * u
-    c2 = lmul!(false, similar(u, (no, mi, k))) # permut (2, 1, 3)
-    c3 = lmul!(false, similar(u, (mo, mi * k))) # c3 = outer * c2
+    c1 = lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
+    c2 = lmul!(false, similar(v, (no, mi, k))) # permut (2, 1, 3)
+    c3 = lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
 
     # 5 arg mul!
-    c4 = lmul!(false, similar(u, (mo * mi, k))) # cache v in 5 arg mul!
+    c4 = lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
 
     # 3 arg ldiv!
     if reduce(&, issquare.(L.ops))
         c5, c6, c7 = c1, c2, c3
     else
-        c5 = lmul!(false, similar(u, (ni, mo * k))) # c5 = inner \ u
-        c6 = lmul!(false, similar(u, (mo, ni, k))) # permut (2, 1, 3)
-        c7 = lmul!(false, similar(u, (no, ni * k))) # c7 = outer \ c6
+        c5 = lmul!(false, similar(v, (ni, mo * k))) # c5 = inner \ v
+        c6 = lmul!(false, similar(v, (mo, ni, k))) # permut (2, 1, 3)
+        c7 = lmul!(false, similar(v, (no, ni * k))) # c7 = outer \ c6
     end
 
     @reset L.cache = (c1, c2, c3, c4, c5, c6, c7)
     L
 end
 
-function cache_internals(L::TensorProductOperator, u::AbstractVecOrMat)
+function cache_internals(L::TensorProductOperator, v::AbstractVecOrMat)
     if !iscached(L)
-        L = cache_self(L, u)
+        L = cache_self(L, v)
     end
 
     outer, inner = L.ops
 
     mi, ni = size(inner)
     _, no = size(outer)
-    k = size(u, 2)
+    k = size(v, 2)
 
-    uinner = reshape(u, (ni, no * k))
-    uouter = reshape(L.cache[2], (no, mi * k))
+    vinner = reshape(v, (ni, no * k))
+    vouter = reshape(L.cache[2], (no, mi * k))
 
-    @reset L.ops[2] = cache_operator(inner, uinner)
-    @reset L.ops[1] = cache_operator(outer, uouter)
+    @reset L.ops[2] = cache_operator(inner, vinner)
+    @reset L.ops[1] = cache_operator(outer, vouter)
     L
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::TensorProductOperator,
-        u::AbstractVecOrMat)
+        v::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
     $L. Set up cache by calling `cache_operator(L, u)`"""
 
@@ -252,28 +252,28 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat,
 
     _, ni = size(inner)
     _, no = size(outer)
-    k = size(u, 2)
+    k = size(v, 2)
 
     C1, C2, C3 = L.cache[1:3]
-    U = reshape(u, (ni, no * k))
+    U = reshape(v, (ni, no * k))
 
-    """
-        v .= kron(B, A) * u
+    #=
+        v .= kron(B, A) * v
         V .= A * U * B'
-    """
+    =#
 
     # C .= A * U
     mul!(C1, inner, U)
 
     # V .= U * B' <===> V' .= B * C'
-    outer_mul!(v, L, u)
+    outer_mul!(w, L, v)
 
     v
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::TensorProductOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
     @assert iscached(L) """cache needs to be set up for operator of type
@@ -283,10 +283,10 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat,
 
     mi, ni = size(inner)
     mo, no = size(outer)
-    k = size(u, 2)
+    k = size(v, 2)
 
     C1 = first(L.cache)
-    U = reshape(u, (ni, no * k))
+    U = reshape(v, (ni, no * k))
 
     """
         v .= α * kron(B, A) * u + β * v
@@ -298,14 +298,14 @@ function LinearAlgebra.mul!(v::AbstractVecOrMat,
 
     # V = α(C * B') + β(V)
     c = reshape(C1, (mi * no, k))
-    outer_mul!(v, L, c, α, β)
+    outer_mul!(w, L, c, α, β)
 
-    v
+    w
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat,
         L::TensorProductOperator,
-        u::AbstractVecOrMat)
+        v::AbstractVecOrMat)
     @assert iscached(L) """cache needs to be set up for operator of type
     $L. Set up cache by calling `cache_operator(L, u)`"""
 
@@ -313,13 +313,13 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
 
     mi, ni = size(inner)
     mo, no = size(outer)
-    k = size(u, 2)
+    k = size(v, 2)
 
     C5 = L.cache[5]
-    U = reshape(u, (mi, mo * k))
+    U = reshape(v, (mi, mo * k))
 
     """
-        v .= kron(B, A) ldiv u
+        v .= kron(B, A) ldiv v
         V .= (A ldiv U) / B'
     """
 
@@ -328,12 +328,12 @@ function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
 
     # V .= C / B' <==> V' .= B \ C'
     c = reshape(C5, (ni * mo, k))
-    outer_div!(v, L, c)
+    outer_div!(w, L, c)
 
-    v
+    w
 end
 
-function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
+function LinearAlgebra.ldiv!(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
 
     msg = "Two-argument ldiv! is only available for square operators"
@@ -342,13 +342,13 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     @assert issquare(outer) msg
 
     @assert iscached(L) """cache needs to be set up for operator of type
-    $L. Set up cache by calling `cache_operator(L, u)`"""
+    $L. Set up cache by calling `cache_operator(L, v)`"""
 
     mi = size(inner, 1)
     mo = size(outer, 1)
-    k = size(u, 2)
+    k = size(v, 2)
 
-    U = reshape(u, (mi, mo * k))
+    U = reshape(v, (mi, mo * k))
 
     """
         u .= kron(B, A) ldiv u
@@ -359,24 +359,24 @@ function LinearAlgebra.ldiv!(L::TensorProductOperator, u::AbstractVecOrMat)
     ldiv!(inner, U)
 
     # U .= U / B' <==> U' .= B \ U'
-    outer_div!(L, u)
+    outer_div!(L, v)
 
-    u
+    v
 end
 
 # helper functions
 const PERM = (2, 1, 3)
 
-function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
+function outer_mul(L::TensorProductOperator, v::AbstractVecOrMat, C::AbstractVecOrMat)
     outer, inner = L.ops
 
     if outer isa IdentityOperator
         return C
     elseif outer isa ScaledOperator
-        return outer.λ * outer_mul(outer.L, u, C)
+        return outer.λ * outer_mul(outer.L, v, C)
     end
 
-    k = size(u, 2)
+    k = size(v, 2)
     if k == 1
         return transpose(outer * transpose(C))
     end
@@ -396,30 +396,30 @@ function outer_mul(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVec
     V
 end
 
-function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVecOrMat)
+function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
 
     C1 = first(L.cache)
 
     if outer isa IdentityOperator
-        copyto!(v, C1)
-        return v
+        copyto!(w, C1)
+        return w
     elseif outer isa ScaledOperator
-        outer_mul!(v, outer.L, u)
-        lmul!(outer.λ, v)
-        return v
+        outer_mul!(w, outer.L, v)
+        lmul!(outer.λ, w)
+        return w
     end
 
     mi, _ = size(inner)
     mo, no = size(outer)
     #   m , n  = size(L)
-    k = size(u, 2)
+    k = size(v, 2)
 
     if k == 1
-        V = reshape(v, (mi, mo))
+        V = reshape(w, (mi, mo))
         C1 = reshape(C1, (mi, no))
         mul!(transpose(V), outer, transpose(C1))
-        return v
+        return w
     end
 
     C2, C3 = L.cache[2:3]
@@ -429,37 +429,37 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator, u::AbstractVe
     C2 = reshape(C2, (no, mi * k))
     mul!(C3, outer, C2)
     C3 = reshape(C3, (mo, mi, k))
-    V = reshape(v, (mi, mo, k))
+    V = reshape(w, (mi, mo, k))
     permutedims!(V, C3, PERM)
 
-    v
+    w
 end
 
 function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator,
-        c::AbstractVecOrMat, α, β)
+        v::AbstractVecOrMat, α, β)
     outer, inner = L.ops
 
     m, _ = size(L)
-    k = size(c, 2)
+    k = size(v, 2)
 
     if outer isa IdentityOperator
-        c = reshape(c, (m, k))
-        axpby!(α, c, β, v)
-        return v
+        v = reshape(v, (m, k))
+        axpby!(α, v, β, w)
+        return w
     elseif outer isa ScaledOperator
         a = convert(Number, α * outer.λ)
-        outer_mul!(v, outer.L, c, a, β)
-        return v
+        outer_mul!(w, outer.L, v, a, β)
+        return w
     end
 
     mi, _ = size(inner)
     mo, no = size(outer)
 
     if k == 1
-        V = reshape(v, (mi, mo))
-        C = reshape(c, (mi, no))
+        V = reshape(w, (mi, mo))
+        C = reshape(v, (mi, no))
         mul!(transpose(V), outer, transpose(C), α, β)
-        return v
+        return w
     end
 
     C2, C3, c4 = L.cache[2:4]
@@ -474,19 +474,19 @@ function outer_mul!(v::AbstractVecOrMat, L::TensorProductOperator,
     permutedims!(V, C3, PERM)
     axpby!(β, c4, α, v)
 
-    v
+    w
 end
 
-function outer_div(L::TensorProductOperator, u::AbstractVecOrMat, C::AbstractVecOrMat)
+function outer_div(L::TensorProductOperator, v::AbstractVecOrMat, C::AbstractVecOrMat)
     outer, inner = L.ops
 
     if outer isa IdentityOperator
         return C
     elseif outer isa ScaledOperator
-        return outer.λ \ outer_div(outer.L, u, C)
+        return outer.λ \ outer_div(outer.L, v, C)
     end
 
-    k = size(u, 2)
+    k = size(v, 2)
     if k == 1
         return transpose(outer \ transpose(C))
     end
@@ -541,26 +541,26 @@ function outer_div!(v::AbstractVecOrMat, L::TensorProductOperator, c::AbstractVe
     v
 end
 
-function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
+function outer_div!(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
 
     if outer isa IdentityOperator
-        return u
+        return v
     elseif outer isa ScaledOperator
-        outer_div!(outer.L, u)
-        ldiv!(outer.λ, u)
+        outer_div!(outer.L, v)
+        ldiv!(outer.λ, v)
         return u
     end
 
     _, ni = size(inner)
     _, no = size(outer)
-    k = size(u, 2)
+    k = size(v, 2)
 
-    U = reshape(u, (ni, no * k))
+    U = reshape(v, (ni, no * k))
 
     if k == 1
         ldiv!(outer, transpose(U))
-        return u
+        return v
     end
 
     C = first(L.cache)
@@ -573,7 +573,7 @@ function outer_div!(L::TensorProductOperator, u::AbstractVecOrMat)
     C = reshape(C, (no, ni, k))
     permutedims!(U, C, PERM)
 
-    u
+    v
 end
 
 # Out-of-place: v is action vector, u is update vector
