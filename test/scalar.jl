@@ -223,7 +223,7 @@ end
     
     dtgamma = rand()
     # Original tests
-    @test_broken γ(u, p, t; dtgamma) ≈ dtgamma * u
+    @test_throws ArgumentError γ(u, p, t; dtgamma) ≈ dtgamma * u
     
     # New interface tests
     @test γ(v, u, p, t; dtgamma) ≈ dtgamma * v
