@@ -46,7 +46,7 @@ NK = N * K
         L = cache_operator(L, u)
 
         # test with ND-arrays and new interface
-        @test _mul(A, u) ≈ L(u, u, p, t) ≈ L * u ≈ mul!(zero(v), L, u)
+        @test _mul(A, v) ≈ L(v, u, p, t) ≈ L * v ≈ mul!(zero(v), L, v)
         @test α * _mul(A, u) + β * v ≈ mul!(copy(v), L, u, α, β)
         
         # Test with different update and action vectors
