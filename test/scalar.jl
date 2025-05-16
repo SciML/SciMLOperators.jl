@@ -156,7 +156,7 @@ end
     t = 0.0
 
     α = ScalarOperator(a)
-    @test_broken α(u, p, t) ≈ u * a  # Original style
+    @test_throws ArgumentError α(u, p, t) ≈ u * a  # Original style
     @test α(v, u, p, t) ≈ v * a  # New interface
     @test_throws ArgumentError α(v, u, p, t, 1, 2)  # Keep error test
 end
