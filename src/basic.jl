@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Operator representing the identity function `id(u) = u`
+Operator representing the identity function `id(v) = v`
 """
 struct IdentityOperator <: AbstractSciMLOperator{Bool}
     len::Int
@@ -116,7 +116,7 @@ end
 """
 $(TYPEDEF)
 
-Operator representing the null function `n(u) = 0 * u`
+Operator representing the null function `n(v) = 0 * v`
 """
 struct NullOperator <: AbstractSciMLOperator{Bool}
     len::Int
@@ -218,7 +218,7 @@ $TYPEDEF
 
     ScaledOperator
 
-    (λ L)*(u) = λ * L(u)
+    (λ L)*(v) = λ * L(v)
 """
 struct ScaledOperator{T,
     λType,
@@ -417,7 +417,7 @@ end
 """
 Lazy operator addition
 
-    (A1 + A2 + A3...)u = A1*u + A2*u + A3*u ....
+    (A1 + A2 + A3...)v = A1*v + A2*v + A3*v ....
 """
 struct AddedOperator{T,
     O <: Tuple{Vararg{AbstractSciMLOperator}}
@@ -649,10 +649,10 @@ end
 """
     Lazy operator composition
 
-    ∘(A, B, C)(u) = A(B(C(u)))
+    ∘(A, B, C)(v) = A(B(C(v)))
 
     ops = (A, B, C)
-    cache = (B*C*u , C*u)
+    cache = (B*C*v , C*v)
 """
 struct ComposedOperator{T, O, C} <: AbstractSciMLOperator{T}
     """ Tuple of N operators to be applied in reverse"""

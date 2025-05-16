@@ -6,7 +6,7 @@ $(FIELDS)
 """
 mutable struct FunctionOperator{iip, oop, mul5, T <: Number, F, Fa, Fi, Fai, Tr, P, Tt,
     C, iType, oType} <: AbstractSciMLOperator{T}
-    """ Function with signature op(u, p, t) and (if isinplace) op(v, u, p, t) """
+    """ Function with signature op(v, u, p, t) and (if isinplace) op(w, v, u, p, t) """
     op::F
     """ Adjoint operator"""
     op_adjoint::Fa
@@ -134,17 +134,17 @@ $(SIGNATURES)
 Wrap callable object `op` within an `AbstractSciMLOperator`. `op`
 is assumed to have signature
 
-    op(u, p, t; <accepted_kwargs>) -> v
+    op(v, u, p, t; <accepted_kwargs>) -> w
 
 or
 
-    op(v, u, p, t; <accepted_kwargs>) -> [modifies v]
+    op(w, v, u, p, t; <accepted_kwargs>) -> [modifies w]
 
 and optionally
 
-    op(v, u, p, t, α, β; <accepted_kwargs>) -> [modifies v]
+    op(w, v, u, p, t, α, β; <accepted_kwargs>) -> [modifies w]
 
-where `u`, `v` are `AbstractArray`s, `p` is a parameter object, and
+where `u`, `v`, `w` are `AbstractArray`s, `p` is a parameter object, and
 `t`, `α`, `β` are scalars. The first signature corresponds to applying
 the operator with `Base.*`, and the latter two correspond to the
 three-argument, and the five-argument `mul!` respectively.

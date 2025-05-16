@@ -4,7 +4,7 @@ $SIGNATURES
 
 Represents a linear operator given by an `AbstractMatrix` that may be
 applied to an `AbstractVecOrMat`. Its state is updated by the user-provided
-`update_func` during operator evaluation (`L([v,], u, p, t)`), or by calls
+`update_func` during operator evaluation (`L([w,], v, u, p, t)`), or by calls
 to `update_coefficients[!](L, u, p, t)`. Both recursively call the
 `update_function`, `update_func` which is assumed to have the signature
 
@@ -30,6 +30,7 @@ adjoints, transposes.
 
 Out-of-place update and usage
 ```
+v = rand(4)
 u = rand(4)
 p = rand(4, 4)
 t = rand()
@@ -38,38 +39,39 @@ mat_update = (A, u, p, t; scale = 0.0) -> t * p
 M = MatrixOperator(0.0; update_func = mat_update, accepted_kwargs = (:scale,))
 
 L = M * M + 3I
-L = cache_operator(L, u)
+L = cache_operator(L, v)
 
 # update and evaluate 
-v = L(u, u, p, t; scale = 1.0)
+w = L(v, u, p, t; scale = 1.0)
 
 # In-place evaluation
-w = similar(u)
-L(w, u, u, p, t; scale = 1.0)
+w = similar(v)
+L(w, v, u, p, t; scale = 1.0)
 
 # In-place with scaling
 β = 0.5
-L(w, u, u, p, t, 2.0, β; scale = 1.0) # w = 2.0*(L*u) + 0.5*w
+L(w, v, u, p, t, 2.0, β; scale = 1.0) # w = 2.0*(L*v) + 0.5*w
 ```
 
 In-place update and usage
 ```
+w = zeros(4)
 v = zeros(4)
 u = rand(4)
 p = rand(4) # Must be non-nothing
 t = rand()
 
-mat_update! = (A, u, p, t; scale = 0.0) -> (A .= t * p * p' * scale)
+mat_update! = (A, u, p, t; scale = 0.0) -> (A .= t * p * u' * scale)
 M = MatrixOperator(zeros(4, 4); update_func! = mat_update!, accepted_kwargs = (:scale,))
 L = M * M + 3I
-L = cache_operator(L, u) 
+L = cache_operator(L, v) 
 
 # update L in-place and evaluate
 update_coefficients!(L, u, p, t; scale = 1.0)
-mul!(v, L, u)
+mul!(w, L, v)
 
 # Or use the new interface that separates update and application
-L(v, u, u, p, t; scale = 1.0)
+L(w, v, u, p, t; scale = 1.0)
 ```
 """
 struct MatrixOperator{T, AT <: AbstractMatrix{T}, F, F!} <: AbstractSciMLOperator{T}
@@ -250,16 +252,16 @@ $SIGNATURES
 Represents an elementwise scaling (diagonal-scaling) operation that may
 be applied to an `AbstractVecOrMat`. When `diag` is an `AbstractVector`
 of length N, `L = DiagonalOperator(diag, ...)` can be applied to
-`AbstractArray`s with `size(u, 1) == N`. Each column of the `u` will be
-scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
+`AbstractArray`s with `size(u, 1) == N`. Each column of the `v` will be
+scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * v`.
 
 When `diag` is a multidimensional array, `L = DiagonalOperator(diag, ...)` forms
 an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of `diag`.
-`L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
+`L` then is the elementwise-scaling operation on arrays of `length(v) = length(diag)`
 with leading length `size(u, 1) = N`.
 
 Its state is updated by the user-provided `update_func` during operator
-evaluation (`L([v,], u, p, t)`), or by calls to
+evaluation (`L([w,], v, u, p, t)`), or by calls to
 `update_coefficients[!](L, u, p, t)`. Both recursively call the
 `update_function`, `update_func` which is assumed to have the signature
 
@@ -446,10 +448,10 @@ end
 """
 $SIGNATURES
 
-Represents a generalized affine operation (`v = A * u + B * b`) that may
+Represents a generalized affine operation (`w = A * v + B * b`) that may
 be applied to an `AbstractVecOrMat`. The user-provided update functions,
 `update_func[!]` update the `AbstractVecOrMat` `b`, and are called
-during operator evaluation (`L([v,], u, p, t)`), or by calls
+during operator evaluation (`L([w,], v, u, p, t)`), or by calls
 to `update_coefficients[!](L, u, p, t)`. The update functions are
 assumed to have the syntax
 
@@ -459,8 +461,8 @@ or
     update_func!(b::AbstractVecOrMat, u ,p , t; <accepted kwargs>) -> [modifies b]
 
 and `B`, `b` are expected to have an appropriate size so that
-`A * u + B * b` makes sense. Specifically, `size(A, 1) == size(B, 1)`, and
-`size(u, 2) == size(b, 2)`.
+`A * v + B * b` makes sense. Specifically, `size(A, 1) == size(B, 1)`, and
+`size(v, 2) == size(b, 2)`.
 
 The set of keyword-arguments accepted by `update_func[!]` must be provided
 to `AffineOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
@@ -470,6 +472,7 @@ are not provided.
 # Example
 
 ```
+v = rand(4)
 u = rand(4)
 p = rand(4)
 t = rand()
@@ -477,12 +480,12 @@ t = rand()
 A = MatrixOperator(rand(4, 4))
 B = MatrixOperator(rand(4, 4))
 
-vec_update_func = (b, u, p, t) -> p * t
+vec_update_func = (b, u, p, t) -> p .* u * t
 L = AffineOperator(A, B, zero(4); update_func = vec_update_func)
-L = cache_operator(M, u)
+L = cache_operator(M, v)
 
 # update L and evaluate
-v = L(u, p, t) # == A * u + B * (p * t)
+w = L(v, u, p, t) # == A * v + B * (p .* u * t)
 ```
 
 """
@@ -532,7 +535,7 @@ end
 """
 $SIGNATURES
 
-Represents the affine operation `v = I * u + I * b`. The update functions,
+Represents the affine operation `w = I * v + I * b`. The update functions,
 `update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
 documentation of `AffineOperator` for more details.
 """
@@ -552,7 +555,7 @@ end
 """
 $SIGNATURES
 
-Represents the affine operation `v = I * u + B * b`. The update functions,
+Represents the affine operation `w = I * v + B * b`. The update functions,
 `update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
 documentation of `AffineOperator` for more details.
 """

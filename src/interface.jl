@@ -56,12 +56,12 @@ u = rand(4)
 p = rand(4)
 t = 1.0
 
-# Update the operator and apply it to `u`
+# Update the operator to `(u,p,t)` and apply it to `v`
 L = update_coefficients(L, u, p, t; scale = 2.0)
-result = L * u
+result = L * v
 
 # Or use the interface which separrates the update from the application
-result = L(u, u, p, t; scale = 2.0)
+result = L(v, u, p, t; scale = 2.0)
 ```
 
 """
@@ -96,7 +96,7 @@ p = rand(4)
 t = 1.0
 
 update_coefficients!(L, u, p, t)
-L * u
+L * v
 ```
 
 """
@@ -200,14 +200,14 @@ has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
 $SIGNATURES
 
-Check if `expmv!(v, L, u, t)`, equivalent to `mul!(v, exp(t * A), u)`, is
-defined for `Number` `t`, and `AbstractArray`s `u, v` of appropriate sizes.
+Check if `expmv!(w, L, v, t)`, equivalent to `mul!(w, exp(t * A), v)`, is
+defined for `Number` `t`, and `AbstractArray`s `w, v` of appropriate sizes.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
 $SIGNATURES
 
-Check if `expmv(L, u, t)`, equivalent to `exp(t * A) * u`, is defined for
+Check if `expmv(L, v, t)`, equivalent to `exp(t * A) * v`, is defined for
 `Number` `t`, and `AbstractArray` `u` of appropriate size.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
@@ -220,26 +220,26 @@ has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
 $SIGNATURES
 
-Check if `L * u` is defined for `AbstractArray` `u` of appropriate size.
+Check if `L * v` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
 $SIGNATURES
 
-Check if `mul!(v, L, u)` is defined for `AbstractArray`s `u, v` of
+Check if `mul!(w, L, v)` is defined for `AbstractArray`s `w, v` of
 appropriate sizes.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
 $SIGNATURES
 
-Check if `L \\ u` is defined for `AbstractArray` `u` of appropriate size.
+Check if `L \\ v` is defined for `AbstractArray` `v` of appropriate size.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
 $SIGNATURES
 
-Check if `ldiv!(v, L, u)` is defined for `AbstractArray`s `u, v` of
+Check if `ldiv!(w, L, v)` is defined for `AbstractArray`s `w, v` of
 appropriate sizes.
 """
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
