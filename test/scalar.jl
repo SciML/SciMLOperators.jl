@@ -191,8 +191,8 @@ end
     @test convert(Number, β) ≈ t
 
     # Original style tests
-    @test_broken α(u, p, t) ≈ p * u
-    @test_broken β(u, p, t) ≈ t * u
+    @test_throws ArgumentError α(u, p, t) ≈ p * u
+    @test_throws ArgumentError β(u, p, t) ≈ t * u
 
     # Tests with new interface
     @test α(v, u, p, t) ≈ p * v
