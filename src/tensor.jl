@@ -10,7 +10,7 @@ product operator.
 TensorProductOperator(A, B) = A ⊗ B
 TensorProductOperator(A, B, C) = A ⊗ B ⊗ C
 
-(A ⊗ B)(u) = vec(B * reshape(u, M, N) * transpose(A))
+(A ⊗ B)(v) = vec(B * reshape(v, M, N) * transpose(A))
 ```
 where `M = size(B, 2)`, and `N = size(A, 2)`
 
