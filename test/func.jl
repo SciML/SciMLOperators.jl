@@ -57,7 +57,7 @@ NK = N * K
             @test _div(A, v) ≈ L \ v ≈ ldiv!(zero(u), L, v) ≈ ldiv!(L, copy(v))
         end
         
-        # test with vec(Array) - important test that was removed
+        # test with vec(Array)
         @test vec(_mul(A, u)) ≈ L(vec(u), u, p, t) ≈ L * vec(u) ≈ mul!(vec(zero(v)), L, vec(u))
         @test vec(α * _mul(A, u) + β * v) ≈ mul!(vec(copy(v)), L, vec(u), α, β)
 
