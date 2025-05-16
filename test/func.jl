@@ -167,7 +167,7 @@ end
     v = rand(N, K)
     @test _mul(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
     v = rand(N, K)
-    @test_broken _mul(A, u) ≈ op1(u, p, t) ≈ op2(v, u, p, t)
+    @test _mul(A, v) ≈ op1(v, u, p, t) ≈ op2(v, u, p, t)
     v = rand(N, K)
     w = copy(v)
     @test α * _mul(A, u) + β * w ≈ mul!(v, op2, u, α, β)
