@@ -235,7 +235,7 @@ end
     
     γ_added = γ + α
     # Original tests
-    @test_broken γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
+    @test_throws ArgumentError γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
     
     # New interface tests
     @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * v
