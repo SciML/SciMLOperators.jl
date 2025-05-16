@@ -131,8 +131,20 @@ end
 """
 $(SIGNATURES)
 
-Wrap callable object `op` within an `AbstractSciMLOperator`. `op`
-is assumed to have signature
+Wrap callable object `op` within an `AbstractSciMLOperator`. 
+
+## Mathematical Description
+
+```julia
+L = FunctionOperator(op, v, w; kwargs...)
+```
+
+where ``w = L(u,p,t)*v`` is done matrix-free given the function
+definition ``w = op(v,u,p,t)``.
+
+## Arguments
+
+`op` is assumed to have signature
 
     op(v, u, p, t; <accepted_kwargs>) -> w
 
@@ -154,7 +166,7 @@ determining operator traits such as `eltype`, `size`, and for
 preallocating cache. If `output` array is not provided, the output
 is assumed to be of the same type and share as the input.
 
-# Keyword Arguments
+## Keyword Arguments
 
 Keyword arguments are used to pass in the adjoint evaluation function,
 `op_adjoint`, the inverse function, `op_inverse`, and the adjoint-inverse

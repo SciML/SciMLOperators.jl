@@ -510,9 +510,11 @@ end
         @test AB * v2 ≈ opAB(v2, u2, p, t)
         @test ABC * v3 ≈ opABC(v3, u3, p, t)
 
-        @test_broken AB \ v2 ≈ opAB \ v2 ≈ opAB_F \ v2
-        @test_broken ABC \ v3 ≈ opABC \ v3 ≈ opABC_F \ v3
-
+        @test AB \ v2 ≈ opAB \ v2 
+        @test AB \ v2 ≈ opAB_F \ v2
+        @test ABC \ v3 ≈ opABC \ v3 
+        @test ABC \ v3 ≈ opABC_F \ v3
+        
         @test !iscached(opAB)
         @test !iscached(opABC)
 

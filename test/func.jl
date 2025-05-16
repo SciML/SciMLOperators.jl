@@ -24,29 +24,30 @@ NK = N * K
         M = prod(sz_out)
 
         A = rand(M, N)
-        u = rand(sz_in...)  # Update and action vector
-        v = rand(sz_out...) # Output vector for in-place tests
+        u = rand(sz_in...)  # Update vector
+        v = rand(sz_in...) # action vector 
+        w = rand(sz_out...) # output vector for in-place tests
 
-        _mul(A, x) = reshape(A * vec(x), sz_out)
-        f(x, p, t) = _mul(A, x)
-        f(y, x, p, t) = (mul!(vec(y), A, vec(x)); y)
+        _mul(A, v) = reshape(A * vec(v), sz_out)
+        f(v, u, p, t) = _mul(A, v)
+        f(w, v, u, p, t) = (mul!(vec(w), A, vec(v)); y)
 
         kw = (;) # FunctionOp kwargs
 
         if sz_in == sz_out
             F = lu(A)
             _div(A, v) = reshape(A \ vec(v), sz_in)
-            fi(x, p, t) = _div(A, x)
-            fi(y, x, p, t) = (ldiv!(vec(y), F, vec(x)); y)
+            fi(v, u, p, t) = _div(A, x)
+            fi(w, v, u, p, t) = (ldiv!(vec(w), F, vec(v)); y)
 
             kw = (; op_inverse = fi)
         end
 
-        L = FunctionOperator(f, u, v; kw...)
-        L = cache_operator(L, u)
+        L = FunctionOperator(f, v, w; kw...)
+        L = cache_operator(L, v)
 
         # test with ND-arrays and new interface
-        @test _mul(A, v) ≈ L(v, u, p, t) ≈ L * v ≈ mul!(zero(v), L, v)
+        @test _mul(A, v) ≈ L(v, u, p, t) ≈ L * v ≈ mul!(zero(w), L, v)
         @test α * _mul(A, u) + β * v ≈ mul!(copy(v), L, u, α, β)
         
         # Test with different update and action vectors
@@ -58,7 +59,7 @@ NK = N * K
         end
         
         # test with vec(Array)
-        @test vec(_mul(A, u)) ≈ L(vec(u), u, p, t) ≈ L * vec(u) ≈ mul!(vec(zero(v)), L, vec(u))
+        @test vec(_mul(A, u)) ≈ L(vec(u), u, p, t) ≈ L * vec(u) ≈ mul!(vec(zero(w)), L, vec(u))
         @test vec(α * _mul(A, u) + β * v) ≈ mul!(vec(copy(v)), L, vec(u), α, β)
 
         if sz_in == sz_out

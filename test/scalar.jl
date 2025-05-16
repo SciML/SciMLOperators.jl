@@ -156,7 +156,7 @@ end
     t = 0.0
 
     α = ScalarOperator(a)
-    @test_throws ArgumentError α(u, p, t) ≈ u * a  # Original style
+    @test_throws MethodError α(u, p, t) ≈ u * a  # Original style
     @test α(v, u, p, t) ≈ v * a  # New interface
     @test_throws ArgumentError α(v, u, p, t, 1, 2)  # Keep error test
 end
@@ -191,8 +191,8 @@ end
     @test convert(Number, β) ≈ t
 
     # Original style tests
-    @test_throws ArgumentError α(u, p, t) ≈ p * u
-    @test_throws ArgumentError β(u, p, t) ≈ t * u
+    @test_throws MethodError α(u, p, t) ≈ p * u
+    @test_throws MethodError β(u, p, t) ≈ t * u
 
     # Tests with new interface
     @test α(v, u, p, t) ≈ p * v
@@ -223,7 +223,7 @@ end
     
     dtgamma = rand()
     # Original tests
-    @test_throws ArgumentError γ(u, p, t; dtgamma) ≈ dtgamma * u
+    @test_throws MethodError γ(u, p, t; dtgamma) ≈ dtgamma * u
     
     # New interface tests
     @test γ(v, u, p, t; dtgamma) ≈ dtgamma * v
@@ -235,7 +235,7 @@ end
     
     γ_added = γ + α
     # Original tests
-    @test_throws ArgumentError γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
+    @test_throws MethodError γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
     
     # New interface tests
     @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * v
