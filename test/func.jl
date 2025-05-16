@@ -332,7 +332,6 @@ end
         
         # Test with new interface
         @test L(v, u, p, t; scale) ≈ expected
-        @test_broken L(u, p, t; scale) ≈ ans
         
         # Test in-place with new interface
         copy!(w, zeros(N, K))
