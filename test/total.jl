@@ -145,13 +145,13 @@ end
     @test mul!(v, op, u, α, β) ≈ α * (op * u) + β * w
     
    # Create a fresh operator for each test
-op_fresh = TT' * DD * TT
-op_fresh = cache_operator(op_fresh, u)
-# Use in-place update directly in test
-result1 = similar(u)
-mul!(result1, op_fresh, u)
-update_coefficients!(op_fresh, u, p, t; diag, matrix)
-@test result1 ≈ dense_op * u
+    op_fresh = TT' * DD * TT
+    op_fresh = cache_operator(op_fresh, u)
+    # Use in-place update directly in test
+    result1 = similar(u)
+    mul!(result1, op_fresh, u)
+    update_coefficients!(op_fresh, u, p, t; diag, matrix)
+    @test result1 ≈ dense_op * u
    
 
    
