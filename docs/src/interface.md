@@ -1,4 +1,4 @@
-# The `AbstractSciMLOperator` Interface
+# [The `AbstractSciMLOperator` Interface](@id operator_interface)
 
 ```@docs
 SciMLOperators.AbstractSciMLOperator

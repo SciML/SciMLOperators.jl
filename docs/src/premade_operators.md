@@ -1,4 +1,4 @@
-# Premade SciMLOperators
+# [Premade SciMLOperators](@id premade_operators)
 
 ## Direct Operator Definitions
 

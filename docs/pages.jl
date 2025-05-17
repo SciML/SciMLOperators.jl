@@ -1,12 +1,11 @@
 pages = [
     "Home" => "index.md",
-    "sciml.md",
+    "tutorials/getting_started.md",
+    "Tutorials" => Any[
+        "operator_algebras.md",
+        "FFT Tutorial" => "tutorials/fftw.md"
+    ],
     "interface.md",
     "Premade Operators" => "premade_operators.md",
-    "Tutorials" => Any["FFT Tutorial" => "tutorials/fftw.md"
-    # "tutorials/linear.md",
-    # "tutorials/nonlin.md",
-    # "tutorials/ode.md",
-    # "tutorials/lux.md",
-    ]
+
 ]
