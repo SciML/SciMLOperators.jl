@@ -24,11 +24,7 @@ op = AddedOperator(A, B)
     return nothing
 end
 
-if VERSION >= v"1.11"
-    apply_op!(op, w, v, u, p, t)
-else
-    @test_throws AllocCheckFailure apply_op!(op, w, v, u, p, t)
-end
+@test_throws AllocCheckFailure apply_op!(op, w, v, u, p, t)
 
 for T in (Float32, Float64, ComplexF32, ComplexF64)
     N = 100
@@ -57,12 +53,6 @@ for T in (Float32, Float64, ComplexF32, ComplexF64)
     p = (ω = 0.1,)
     t = 0.1
 
-    # Test allocations with original interface
-    if VERSION >= v"1.11"
-        apply_op!(H_sparse, w, v, u, p, t)
-        apply_op!(H_dense, w, v, u, p, t)
-    else
-        @test_throws AllocCheckFailure apply_op!(H_sparse, w, v, u, p, t)
-        @test_throws AllocCheckFailure apply_op!(H_dense, w, v, u, p, t)
-    end
+    @test_throws AllocCheckFailure apply_op!(H_sparse, w, v, u, p, t)
+    @test_throws AllocCheckFailure apply_op!(H_dense, w, v, u, p, t)
 end
