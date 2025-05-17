@@ -24,7 +24,11 @@ op = AddedOperator(A, B)
     return nothing
 end
 
-@test_throws AllocCheckFailure apply_op!(op, w, v, u, p, t)
+if VERSION >= v"1.12"
+    apply_op!(op, w, v, u, p, t)
+else
+    @test_throws AllocCheckFailure apply_op!(op, w, v, u, p, t)
+end
 
 for T in (Float32, Float64, ComplexF32, ComplexF64)
     N = 100
