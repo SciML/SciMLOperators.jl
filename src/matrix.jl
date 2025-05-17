@@ -4,7 +4,7 @@ $SIGNATURES
 
 Represents a linear operator given by an `AbstractMatrix` that may be
 applied to an `AbstractVecOrMat`. Its state is updated by the user-provided
-`update_func` during operator evaluation (`L([v,], u, p, t)`), or by calls
+`update_func` during operator evaluation (`L([w,], v, u, p, t)`), or by calls
 to `update_coefficients[!](L, u, p, t)`. Both recursively call the
 `update_function`, `update_func` which is assumed to have the signature
 
@@ -30,33 +30,48 @@ adjoints, transposes.
 
 Out-of-place update and usage
 ```
+v = rand(4)
 u = rand(4)
 p = rand(4, 4)
 t = rand()
 
 mat_update = (A, u, p, t; scale = 0.0) -> t * p
-M = MatrixOperator(0.0; update_func = mat_update; accepted_kwargs = (:scale,))
+M = MatrixOperator(0.0; update_func = mat_update, accepted_kwargs = (:scale,))
 
 L = M * M + 3I
-L = cache_operator(M, u)
+L = cache_operator(L, v)
 
-# update L and evaluate
-v = L(u, p, t; scale = 1.0)
+# update and evaluate 
+w = L(v, u, p, t; scale = 1.0)
+
+# In-place evaluation
+w = similar(v)
+L(w, v, u, p, t; scale = 1.0)
+
+# In-place with scaling
+β = 0.5
+L(w, v, u, p, t, 2.0, β; scale = 1.0) # w = 2.0*(L*v) + 0.5*w
 ```
 
 In-place update and usage
 ```
-v = zero(4)
+w = zeros(4)
+v = zeros(4)
 u = rand(4)
-p = nothing
+p = rand(4) # Must be non-nothing
 t = rand()
 
-mat_update! = (A, u, p, t; scale = 0.0) -> (copy!(A, p); lmul!(t, A))
-M = MatrixOperator(zeros(4, 4); update_func! = val_update!; accepted_kwargs = (:scale,))
+mat_update! = (A, u, p, t; scale = 0.0) -> (A .= t * p * u' * scale)
+M = MatrixOperator(zeros(4, 4); update_func! = mat_update!, accepted_kwargs = (:scale,))
 L = M * M + 3I
+L = cache_operator(L, v) 
 
 # update L in-place and evaluate
-L(v, u, p, t; scale = 1.0)
+update_coefficients!(L, u, p, t; scale = 1.0)
+mul!(w, L, v)
+
+# Or use the new interface that separates update and application
+L(w, v, u, p, t; scale = 1.0)
 ```
 """
 struct MatrixOperator{T, AT <: AbstractMatrix{T}, F, F!} <: AbstractSciMLOperator{T}
@@ -149,7 +164,7 @@ function Base.conj(L::MatrixOperator)
         accepted_kwargs = NoKwargFilter())
 end
 
-has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
+has_adjoint(L::MatrixOperator) = has_adjoint(L.A)
 getops(L::MatrixOperator) = (L.A,)
 function isconstant(L::MatrixOperator)
     update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)
@@ -164,6 +179,25 @@ function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
 
     nothing
 end
+
+# Out-of-place: v is action vector, u is update vector
+function (L::MatrixOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L.A * v
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.A, v)
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.A, v, α, β)
+end
+
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
@@ -194,23 +228,23 @@ function Base.copy(L::MatrixOperator)
 end
 
 # operator application
-Base.:*(L::MatrixOperator, u::AbstractVecOrMat) = L.A * u
-Base.:\(L::MatrixOperator, u::AbstractVecOrMat) = L.A \ u
+Base.:*(L::MatrixOperator, v::AbstractVecOrMat) = L.A * v
+Base.:\(L::MatrixOperator, v::AbstractVecOrMat) = L.A \ v
 @inline function LinearAlgebra.mul!(
-        v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
-    mul!(v, L.A, u)
+        w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
+    mul!(w, L.A, v)
 end
-@inline function LinearAlgebra.mul!(v::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::MatrixOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
-    mul!(v, L.A, u, α, β)
+    mul!(w, L.A, v, α, β)
 end
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::MatrixOperator, u::AbstractVecOrMat)
-    ldiv!(v, L.A, u)
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
+    ldiv!(w, L.A, v)
 end
-LinearAlgebra.ldiv!(L::MatrixOperator, u::AbstractVecOrMat) = ldiv!(L.A, u)
+LinearAlgebra.ldiv!(L::MatrixOperator, v::AbstractVecOrMat) = ldiv!(L.A, v)
 
 """
 $SIGNATURES
@@ -218,16 +252,16 @@ $SIGNATURES
 Represents an elementwise scaling (diagonal-scaling) operation that may
 be applied to an `AbstractVecOrMat`. When `diag` is an `AbstractVector`
 of length N, `L = DiagonalOperator(diag, ...)` can be applied to
-`AbstractArray`s with `size(u, 1) == N`. Each column of the `u` will be
-scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * u`.
+`AbstractArray`s with `size(u, 1) == N`. Each column of the `v` will be
+scaled by `diag`, as in `LinearAlgebra.Diagonal(diag) * v`.
 
 When `diag` is a multidimensional array, `L = DiagonalOperator(diag, ...)` forms
 an operator of size `(N, N)` where `N = size(diag, 1)` is the leading length of `diag`.
-`L` then is the elementwise-scaling operation on arrays of `length(u) = length(diag)`
+`L` then is the elementwise-scaling operation on arrays of `length(v) = length(diag)`
 with leading length `size(u, 1) = N`.
 
 Its state is updated by the user-provided `update_func` during operator
-evaluation (`L([v,], u, p, t)`), or by calls to
+evaluation (`L([w,], v, u, p, t)`), or by calls to
 `update_coefficients[!](L, u, p, t)`. Both recursively call the
 `update_function`, `update_func` which is assumed to have the signature
 
@@ -341,6 +375,11 @@ function update_coefficients(L::InvertibleOperator, u, p, t)
     @reset L.F = update_coefficients(L.F, u, p, t)
     L
 end
+function update_coefficients!(L::InvertibleOperator, u, p, t; kwargs...)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    update_coefficients!(L.F, u, p, t; kwargs...)
+    nothing
+end
 
 getops(L::InvertibleOperator) = (L.L, L.F)
 islinear(L::InvertibleOperator) = islinear(L.L)
@@ -361,40 +400,58 @@ isconvertible(L::InvertibleOperator) = isconvertible(L.L)
 has_ldiv(L::InvertibleOperator) = has_mul(L.F)
 has_ldiv!(L::InvertibleOperator) = has_ldiv!(L.F)
 
-function cache_internals(L::InvertibleOperator, u::AbstractVecOrMat)
-    @reset L.L = cache_operator(L.L, u)
-    @reset L.F = cache_operator(L.F, u)
+function cache_internals(L::InvertibleOperator, v::AbstractVecOrMat)
+    @reset L.L = cache_operator(L.L, v)
+    @reset L.F = cache_operator(L.F, v)
 
     L
 end
 
 # operator application
-Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.L * x
-Base.:\(L::InvertibleOperator, x::AbstractVecOrMat) = L.F \ x
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::InvertibleOperator, u::AbstractVecOrMat)
-    mul!(v, L.L, u)
+Base.:*(L::InvertibleOperator, v::AbstractVecOrMat) = L.L * v
+Base.:\(L::InvertibleOperator, v::AbstractVecOrMat) = L.F \ v
+function LinearAlgebra.mul!(w::AbstractVecOrMat, L::InvertibleOperator, v::AbstractVecOrMat)
+    mul!(w, L.L, v)
 end
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::InvertibleOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
-    mul!(v, L.L, u, α, β)
+    mul!(w, L.L, v, α, β)
 end
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat,
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat,
         L::InvertibleOperator,
-        u::AbstractVecOrMat)
-    ldiv!(v, L.F, u)
+        v::AbstractVecOrMat)
+    ldiv!(w, L.F, v)
 end
 LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
+
+# Out-of-place: v is action vector, u is update vector
+function (L::InvertibleOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L.L * v
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::InvertibleOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.L, v)
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::InvertibleOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    mul!(w, L.L, v, α, β)
+end
 
 """
 $SIGNATURES
 
-Represents a generalized affine operation (`v = A * u + B * b`) that may
+Represents a generalized affine operation (`w = A * v + B * b`) that may
 be applied to an `AbstractVecOrMat`. The user-provided update functions,
 `update_func[!]` update the `AbstractVecOrMat` `b`, and are called
-during operator evaluation (`L([v,], u, p, t)`), or by calls
+during operator evaluation (`L([w,], v, u, p, t)`), or by calls
 to `update_coefficients[!](L, u, p, t)`. The update functions are
 assumed to have the syntax
 
@@ -404,8 +461,8 @@ or
     update_func!(b::AbstractVecOrMat, u ,p , t; <accepted kwargs>) -> [modifies b]
 
 and `B`, `b` are expected to have an appropriate size so that
-`A * u + B * b` makes sense. Specifically, `size(A, 1) == size(B, 1)`, and
-`size(u, 2) == size(b, 2)`.
+`A * v + B * b` makes sense. Specifically, `size(A, 1) == size(B, 1)`, and
+`size(v, 2) == size(b, 2)`.
 
 The set of keyword-arguments accepted by `update_func[!]` must be provided
 to `AffineOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
@@ -415,6 +472,7 @@ are not provided.
 # Example
 
 ```
+v = rand(4)
 u = rand(4)
 p = rand(4)
 t = rand()
@@ -422,12 +480,12 @@ t = rand()
 A = MatrixOperator(rand(4, 4))
 B = MatrixOperator(rand(4, 4))
 
-vec_update_func = (b, u, p, t) -> p * t
+vec_update_func = (b, u, p, t) -> p .* u * t
 L = AffineOperator(A, B, zero(4); update_func = vec_update_func)
-L = cache_operator(M, u)
+L = cache_operator(M, v)
 
 # update L and evaluate
-v = L(u, p, t) # == A * u + B * (p * t)
+w = L(v, u, p, t) # == A * v + B * (p .* u * t)
 ```
 
 """
@@ -477,7 +535,7 @@ end
 """
 $SIGNATURES
 
-Represents the affine operation `v = I * u + I * b`. The update functions,
+Represents the affine operation `w = I * v + I * b`. The update functions,
 `update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
 documentation of `AffineOperator` for more details.
 """
@@ -497,7 +555,7 @@ end
 """
 $SIGNATURES
 
-Represents the affine operation `v = I * u + B * b`. The update functions,
+Represents the affine operation `w = I * v + B * b`. The update functions,
 `update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
 documentation of `AffineOperator` for more details.
 """
@@ -583,37 +641,62 @@ function cache_internals(L::AffineOperator, u::AbstractVecOrMat)
 end
 
 # operator application
-function Base.:*(L::AffineOperator, u::AbstractVecOrMat)
-    @assert size(L.b, 2) == size(u, 2)
-    (L.A * u) + (L.B * L.b)
+function Base.:*(L::AffineOperator, v::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(v, 2)
+    (L.A * v) + (L.B * L.b)
 end
 
-function Base.:\(L::AffineOperator, u::AbstractVecOrMat)
-    @assert size(L.b, 2) == size(u, 2)
-    L.A \ (u - (L.B * L.b))
+function Base.:\(L::AffineOperator, v::AbstractVecOrMat)
+    @assert size(L.b, 2) == size(v, 2)
+    L.A \ (v - (L.B * L.b))
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
-    mul!(v, L.B, L.b)
-    mul!(v, L.A, u, true, true)
+function LinearAlgebra.mul!(w::AbstractVecOrMat, L::AffineOperator, v::AbstractVecOrMat)
+    mul!(w, L.B, L.b)
+    mul!(w, L.A, v, true, true)
 end
 
-function LinearAlgebra.mul!(v::AbstractVecOrMat,
+function LinearAlgebra.mul!(w::AbstractVecOrMat,
         L::AffineOperator,
-        u::AbstractVecOrMat,
+        v::AbstractVecOrMat,
         α,
         β)
-    mul!(v, L.B, L.b, α, β)
-    mul!(v, L.A, u, α, true)
+    mul!(w, L.B, L.b, α, β)
+    mul!(w, L.A, v, α, true)
 end
 
-function LinearAlgebra.ldiv!(v::AbstractVecOrMat, L::AffineOperator, u::AbstractVecOrMat)
-    copy!(v, u)
-    ldiv!(L, v)
+function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::AffineOperator, v::AbstractVecOrMat)
+    copy!(w, v)
+    ldiv!(L, w)
 end
 
-function LinearAlgebra.ldiv!(L::AffineOperator, u::AbstractVecOrMat)
-    mul!(u, L.B, L.b, -1, 1)
-    ldiv!(L.A, u)
+function LinearAlgebra.ldiv!(L::AffineOperator, v::AbstractVecOrMat)
+    mul!(v, L.B, L.b, -1, 1)
+    ldiv!(L.A, v)
+end
+# Out-of-place: v is action vector, u is update vector
+function (L::AffineOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    (L.A * v) + (L.B * L.b)
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::AffineOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    # First calculate A * v
+    mul!(w, L.A, v)
+    # Then add B * b
+    mul!(w, L.B, L.b, true, true)
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::AffineOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    # Scale the existing w by β
+    lmul!(β, w)
+    # Add α * (A * v)
+    mul!(w, L.A, v, α, true)
+    # Add α * (B * b)
+    mul!(w, L.B, L.b, α, true)
 end
 #

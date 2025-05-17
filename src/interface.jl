@@ -43,7 +43,7 @@ $(UPDATE_COEFFS_WARNING)
 # Example
 
 ```
-using SciMLOperator
+using SciMLOperators
 
 mat_update_func = (A, u, p, t; scale = 1.0) -> p * p' * scale * t
 
@@ -56,8 +56,12 @@ u = rand(4)
 p = rand(4)
 t = 1.0
 
+# Update the operator to `(u,p,t)` and apply it to `v`
 L = update_coefficients(L, u, p, t; scale = 2.0)
-L * u
+result = L * v
+
+# Or use the interface which separrates the update from the application
+result = L(v, u, p, t; scale = 2.0)
 ```
 
 """
@@ -78,7 +82,7 @@ $(UPDATE_COEFFS_WARNING)
 # Example
 
 ```
-using SciMLOperator
+using SciMLOperators
 
 _A = rand(4, 4)
 mat_update_func! = (L, u, p, t; scale = 1.0) -> copy!(A, _A)
@@ -92,7 +96,7 @@ p = rand(4)
 t = 1.0
 
 update_coefficients!(L, u, p, t)
-L * u
+L * v
 ```
 
 """
@@ -109,18 +113,21 @@ end
 # operator evaluation interface
 ###
 
-function (L::AbstractSciMLOperator)(u, p, t; kwargs...)
-    update_coefficients(L, u, p, t; kwargs...) * u
+# Out-of-place: v is action vector, u is update vector
+function (L::AbstractSciMLOperator)(v, u, p, t; kwargs...)
+    update_coefficients(L, u, p, t; kwargs...) * v
 end
-function (L::AbstractSciMLOperator)(du, u, p, t; kwargs...)
-    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u))
+# In-place: w is destination, v is action vector, u is update vector
+function (L::AbstractSciMLOperator)(w, v, u, p, t; kwargs...)
+    (update_coefficients!(L, u, p, t; kwargs...); mul!(w, L, v))
 end
-function (L::AbstractSciMLOperator)(du, u, p, t, α, β; kwargs...)
-    (update_coefficients!(L, u, p, t; kwargs...); mul!(du, L, u, α, β))
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::AbstractSciMLOperator)(w, v, u, p, t, α, β; kwargs...)
+    (update_coefficients!(L, u, p, t; kwargs...); mul!(w, L, v, α, β))
 end
 
-function (L::AbstractSciMLOperator)(du::Number, u::Number, p, t, args...; kwargs...)
-    msg = """Nonallocating L(v, u, p, t) type methods are not available for
+function (L::AbstractSciMLOperator)(w::Number, v::Number, u, p, t, args...; kwargs...)
+    msg = """Nonallocating L(w, v, u, p, t) type methods are not available for
     subtypes of `Number`."""
     throw(ArgumentError(msg))
 end
@@ -193,14 +200,14 @@ has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
 $SIGNATURES
 
-Check if `expmv!(v, L, u, t)`, equivalent to `mul!(v, exp(t * A), u)`, is
-defined for `Number` `t`, and `AbstractArray`s `u, v` of appropriate sizes.
+Check if `expmv!(w, L, v, t)`, equivalent to `mul!(w, exp(t * A), v)`, is
+defined for `Number` `t`, and `AbstractArray`s `w, v` of appropriate sizes.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
 $SIGNATURES
 
-Check if `expmv(L, u, t)`, equivalent to `exp(t * A) * u`, is defined for
+Check if `expmv(L, v, t)`, equivalent to `exp(t * A) * v`, is defined for
 `Number` `t`, and `AbstractArray` `u` of appropriate size.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
@@ -213,26 +220,26 @@ has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
 $SIGNATURES
 
-Check if `L * u` is defined for `AbstractArray` `u` of appropriate size.
+Check if `L * v` is defined for `AbstractArray` `u` of appropriate size.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
 $SIGNATURES
 
-Check if `mul!(v, L, u)` is defined for `AbstractArray`s `u, v` of
+Check if `mul!(w, L, v)` is defined for `AbstractArray`s `w, v` of
 appropriate sizes.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
 $SIGNATURES
 
-Check if `L \\ u` is defined for `AbstractArray` `u` of appropriate size.
+Check if `L \\ v` is defined for `AbstractArray` `v` of appropriate size.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
 $SIGNATURES
 
-Check if `ldiv!(v, L, u)` is defined for `AbstractArray`s `u, v` of
+Check if `ldiv!(w, L, v)` is defined for `AbstractArray`s `w, v` of
 appropriate sizes.
 """
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)

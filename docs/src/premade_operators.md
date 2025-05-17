@@ -3,7 +3,7 @@
 ## Direct Operator Definitions
 
 ```@docs
-ScalarOperator.IdentityOperator
+SciMLOperators.IdentityOperator
 SciMLOperators.NullOperator
 ScalarOperator
 MatrixOperator

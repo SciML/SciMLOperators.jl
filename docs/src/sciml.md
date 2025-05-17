@@ -19,11 +19,20 @@ Munthe-Kaas methods require defining operators of the form ``u' = A(u) u``.
 Thus, the operators need some form of time and state dependence, which the
 solvers can update and query when they are non-constant
 (`update_coefficients!`). Additionally, the operators need the ability to
-act like “normal” functions for equation solvers. For example, if `A(u,p,t)`
-has the same operation as `update_coefficients(A, u, p, t); A * u`, then `A`
+act like “normal” functions for equation solvers. For example, if `A(v,u,p,t)`
+has the same operation as `update_coefficients(A, u, p, t); A * v`, then `A`
 can be used in any place where a differential equation definition
-`f(u, p, t)` is used without requiring the user or solver to do any extra
-work. Thus while previous good efforts for matrix-free operators have existed
+`(u,p,t) -> A(u, u, p, t)` is used without requiring the user or solver to do any extra
+work. 
+
+Another example is state-dependent mass matrices. `M(u,p,t)*u' = f(u,p,t)`.
+When solving such an equation, the solver must understand how to "update M"
+during operations, and thus the ability to update the state of `M` is a required
+function in the interface. This is also required for the definition of Jacobians
+`J(u,p,t)` in order to be properly used with Krylov methods inside of ODE solves
+without reconstructing the matrix-free operator at each step.
+
+Thus while previous good efforts for matrix-free operators have existed
 in the Julia ecosystem, such as
 [LinearMaps.jl](https://github.com/JuliaLinearAlgebra/LinearMaps.jl), those
 operator interfaces lack these aspects to actually be fully seamless
@@ -31,10 +40,11 @@ with downstream equation solvers. This necessitates the definition and use of
 an extended operator interface with all of these properties, hence the
 `AbstractSciMLOperator` interface.
 
-Some packages providing similar functionality are
+!!! warn
 
-  - [LinearMaps.jl](https://github.com/JuliaLinearAlgebra/LinearMaps.jl)
-  - [`DiffEqOperators.jl`](https://github.com/SciML/DiffEqOperators.jl/tree/master) (deprecated)
+    This means that LinearMaps.jl is fundamentally lacking and is incompatible
+    with many of the tools in the SciML ecosystem, except for the specific cases
+    where the matrix-free operator is a constant!
 
 ## Interoperability and extended Julia ecosystem
 

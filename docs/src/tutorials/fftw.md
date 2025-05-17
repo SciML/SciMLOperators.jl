@@ -16,18 +16,18 @@ L = 2π
 
 dx = L / n
 x = range(start = -L / 2, stop = L / 2 - dx, length = n) |> Array
-u = @. sin(5x)cos(7x);
-du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+v = @. sin(5x)cos(7x);
+w = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
 k = rfftfreq(n, 2π * n / L) |> Array
 m = length(k)
 P = plan_rfft(x)
 
-fwd(u, p, t) = P * u
-bwd(u, p, t) = P \ u
+fwd(v, u, p, t) = P * v
+bwd(v, u, p, t) = P \ v
 
-fwd(du, u, p, t) = mul!(du, P, u)
-bwd(du, u, p, t) = ldiv!(du, P, u)
+fwd(w, v, u, p, t) = mul!(w, P, v)
+bwd(w, v, u, p, t) = ldiv!(w, P, v)
 
 F = FunctionOperator(fwd, x, im * k;
     T = ComplexF64, op_adjoint = bwd,
@@ -38,10 +38,10 @@ F = FunctionOperator(fwd, x, im * k;
 ik = im * DiagonalOperator(k)
 Dx = F \ ik * F
 
-Dx = cache_operator(Dx, x)
+Dx = cache_operator(Dx, v)
 
-@show ≈(Dx * u, du; atol = 1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)
+@show ≈(Dx * v, w; atol = 1e-8)
+@show ≈(mul!(copy(w), Dx, v), w; atol = 1e-8)
 ```
 
 ## Explanation
@@ -61,8 +61,8 @@ n = 256
 dx = L / n
 x = range(start = -L / 2, stop = L / 2 - dx, length = n) |> Array
 
-u = @. sin(5x)cos(7x);
-du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+v = @. sin(5x)cos(7x);
+w = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 ```
 
 Now, we define the Fourier transform. Since our input is purely Real, we use the real
@@ -79,15 +79,15 @@ P = plan_rfft(x)
 
 Now we are ready to define our wrapper for the FFT object. To `FunctionOperator`, we
 pass the in-place forward application of the transform,
-`(du,u,p,t) -> mul!(du, transform, u)`, its inverse application,
-`(du,u,p,t) -> ldiv!(du, transform, u)`, as well as input and output prototype vectors.
+`(w,v,u,p,t) -> mul!(w, transform, v)`, its inverse application,
+`(w,v,u,p,t) -> ldiv!(w, transform, v)`, as well as input and output prototype vectors.
 
 ```@example fft_explanation
-fwd(u, p, t) = P * u
-bwd(u, p, t) = P \ u
+fwd(v, u, p, t) = P * v
+bwd(v, u, p, t) = P \ v
 
-fwd(du, u, p, t) = mul!(du, P, u)
-bwd(du, u, p, t) = ldiv!(du, P, u)
+fwd(w, v, u, p, t) = mul!(w, P, v)
+bwd(w, v, u, p, t) = ldiv!(w, P, v)
 F = FunctionOperator(fwd, x, im * k;
     T = ComplexF64, op_adjoint = bwd,
     op_inverse = bwd,
@@ -106,6 +106,6 @@ Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
-@show ≈(Dx * u, du; atol = 1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)
+@show ≈(Dx * v, w; atol = 1e-8)
+@show ≈(mul!(copy(w), Dx, v), w; atol = 1e-8)
 ```

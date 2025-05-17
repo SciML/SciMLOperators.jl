@@ -157,4 +157,56 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
         u
     end
 end
+
+
+# For AdjointOperator
+# Out-of-place: v is action vector, u is update vector
+function (L::AdjointOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    # Adjoint operator applied to v means L.L' * v
+    # For matrices: (A')v = (v'A)'
+    # This means we need to compute L.L(v', u, p, t)' 
+    # Update the operator first, then apply adjoint operator
+    L_updated = update_coefficients(L.L, u, p, t; kwargs...)
+    # (A')v = (v'A)' where v'A is computed by A'*v'
+    return (L_updated' * v')'
+end
+
+# In-place: w is destination, v is action vector, u is update vector
+function (L::AdjointOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    # Update the operator in-place
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    # Use direct in-place multiplicatieon for adjoints
+    mul!(w', v', L.L)
+    return w
+end
+
+# In-place with scaling: w = α*(L*v) + β*w
+function (L::AdjointOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    # Update the operator in-place
+    update_coefficients!(L.L, u, p ,t; kwargs...)
+    mul!(w', v', L.L, α, β)
+    return w
+end
+
+# For TransposedOperator
+# Out-of-place
+function (L::TransposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+   L_updated = update_coefficients(L.L, u, p, t; kwargs...)
+   # (A^T)v = (v'A)' where v'A is computed by A'*v'
+   return (L_updated' * v')'
+end
+
+# In-place
+function (L::TransposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    mul!(w', v', L.L)
+    return w
+end
+
+# In-place with scaling
+function (L::TransposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    mul!(w', v', L.L, α, β)
+    return w
+end
 #
