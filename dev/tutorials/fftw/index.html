@@ -7,18 +7,18 @@ L = 2π
 
 dx = L / n
 x = range(start = -L / 2, stop = L / 2 - dx, length = n) |&gt; Array
-u = @. sin(5x)cos(7x);
-du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
+v = @. sin(5x)cos(7x);
+w = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);
 
 k = rfftfreq(n, 2π * n / L) |&gt; Array
 m = length(k)
 P = plan_rfft(x)
 
-fwd(u, p, t) = P * u
-bwd(u, p, t) = P \ u
+fwd(v, u, p, t) = P * v
+bwd(v, u, p, t) = P \ v
 
-fwd(du, u, p, t) = mul!(du, P, u)
-bwd(du, u, p, t) = ldiv!(du, P, u)
+fwd(w, v, u, p, t) = mul!(w, P, v)
+bwd(w, v, u, p, t) = ldiv!(w, P, v)
 
 F = FunctionOperator(fwd, x, im * k;
     T = ComplexF64, op_adjoint = bwd,
@@ -29,10 +29,10 @@ F = FunctionOperator(fwd, x, im * k;
 ik = im * DiagonalOperator(k)
 Dx = F \ ik * F
 
-Dx = cache_operator(Dx, x)
+Dx = cache_operator(Dx, v)
 
-@show ≈(Dx * u, du; atol = 1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><h2 id="Explanation"><a class="docs-heading-anchor" href="#Explanation">Explanation</a><a id="Explanation-1"></a><a class="docs-heading-anchor-permalink" href="#Explanation" title="Permalink"></a></h2><p>We load <code>SciMLOperators</code>, <code>LinearAlgebra</code>, and <code>FFTW</code> (short for Fastest Fourier Transform in the West), a common Fourier transform library. Next, we define an equispaced grid from -π to π, and write the function <code>u</code> that we intend to differentiate. Since this is a trivial example, we already know the derivative, <code>du</code>, and write it down to later test our FFT wrapper.</p><pre><code class="language-julia hljs">using SciMLOperators
+@show ≈(Dx * v, w; atol = 1e-8)
+@show ≈(mul!(copy(w), Dx, v), w; atol = 1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><h2 id="Explanation"><a class="docs-heading-anchor" href="#Explanation">Explanation</a><a id="Explanation-1"></a><a class="docs-heading-anchor-permalink" href="#Explanation" title="Permalink"></a></h2><p>We load <code>SciMLOperators</code>, <code>LinearAlgebra</code>, and <code>FFTW</code> (short for Fastest Fourier Transform in the West), a common Fourier transform library. Next, we define an equispaced grid from -π to π, and write the function <code>u</code> that we intend to differentiate. Since this is a trivial example, we already know the derivative, <code>du</code>, and write it down to later test our FFT wrapper.</p><pre><code class="language-julia hljs">using SciMLOperators
 using LinearAlgebra, FFTW
 
 L = 2π
@@ -40,8 +40,8 @@ n = 256
 dx = L / n
 x = range(start = -L / 2, stop = L / 2 - dx, length = n) |&gt; Array
 
-u = @. sin(5x)cos(7x);
-du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">256-element Vector{Float64}:
+v = @. sin(5x)cos(7x);
+w = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">256-element Vector{Float64}:
   5.0
   4.742846558188079
   3.993632947143082
@@ -75,11 +75,11 @@ P = plan_rfft(x)</code></pre><pre class="documenter-example-output"><code class=
         (dft-vrank&gt;=1-x2/1
           (dft-direct-4-x2 &quot;n1fv_4_avx2_128&quot;))))
     (rdft2-r2hc01-direct-32 &quot;r2cfII_32&quot;))
-  (dft-direct-8-x16 &quot;n2fv_8_avx2_128&quot;))</code></pre><p>Now we are ready to define our wrapper for the FFT object. To <code>FunctionOperator</code>, we pass the in-place forward application of the transform, <code>(du,u,p,t) -&gt; mul!(du, transform, u)</code>, its inverse application, <code>(du,u,p,t) -&gt; ldiv!(du, transform, u)</code>, as well as input and output prototype vectors.</p><pre><code class="language-julia hljs">fwd(u, p, t) = P * u
-bwd(u, p, t) = P \ u
+  (dft-direct-8-x16 &quot;n2fv_8_avx2_128&quot;))</code></pre><p>Now we are ready to define our wrapper for the FFT object. To <code>FunctionOperator</code>, we pass the in-place forward application of the transform, <code>(w,v,u,p,t) -&gt; mul!(w, transform, v)</code>, its inverse application, <code>(w,v,u,p,t) -&gt; ldiv!(w, transform, v)</code>, as well as input and output prototype vectors.</p><pre><code class="language-julia hljs">fwd(v, u, p, t) = P * v
+bwd(v, u, p, t) = P \ v
 
-fwd(du, u, p, t) = mul!(du, P, u)
-bwd(du, u, p, t) = ldiv!(du, P, u)
+fwd(w, v, u, p, t) = mul!(w, P, v)
+bwd(w, v, u, p, t) = ldiv!(w, P, v)
 F = FunctionOperator(fwd, x, im * k;
     T = ComplexF64, op_adjoint = bwd,
     op_inverse = bwd,
@@ -89,5 +89,5 @@ Dx = F \ ik * F
 
 Dx = cache_operator(Dx, x)
 
-@show ≈(Dx * u, du; atol = 1e-8)
-@show ≈(mul!(copy(u), Dx, u), du; atol = 1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade Operators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.2 on <span class="colophon-date" title="Saturday 3 May 2025 06:09">Saturday 3 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@show ≈(Dx * v, w; atol = 1e-8)
+@show ≈(mul!(copy(w), Dx, v), w; atol = 1e-8)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../premade_operators/">« Premade Operators</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Saturday 17 May 2025 03:58">Saturday 17 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

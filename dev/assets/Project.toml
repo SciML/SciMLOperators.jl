@@ -6,4 +6,4 @@ SciMLOperators = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 [compat]
 Documenter = "0.27, 1"
 FFTW = "1.7"
-SciMLOperators = "0.2, 0.3"
+SciMLOperators = "1.0"
