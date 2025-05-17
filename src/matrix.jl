@@ -164,7 +164,7 @@ function Base.conj(L::MatrixOperator)
         accepted_kwargs = NoKwargFilter())
 end
 
-has_adjoint(A::MatrixOperator) = has_adjoint(A.A)
+has_adjoint(L::MatrixOperator) = has_adjoint(L.A)
 getops(L::MatrixOperator) = (L.A,)
 function isconstant(L::MatrixOperator)
     update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)

@@ -625,10 +625,9 @@ end
 # In-place: w is destination, v is action vector, u is update vector
 function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
-    L.ops[1](w, v, u, p, t; kwargs...)
-    for i in 2:length(L.ops)
-        if !iszero(L.ops[i])
-            L.ops[i](w, v, u, p, t, 1.0, 1.0; kwargs...)
+    for op in L.ops
+        if !iszero(op)
+            op(w, v, u, p, t, 1.0, 1.0; kwargs...)
         end
     end
     w

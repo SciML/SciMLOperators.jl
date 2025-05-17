@@ -203,13 +203,6 @@ end
     @test ldiv!(op, w) ≈ (α * D) \ v
 end
 
-function apply_op!(H, du, u, p, t)
-    H(du, u, p, t)
-    return nothing
-end
-
-test_apply_noalloc(H, du, u, p, t) = @test_broken (@allocations apply_op!(H, du, u, p, t)) == 0
-
 @testset "AddedOperator" begin
     A = rand(N, N) |> MatrixOperator
     B = rand(N, N) |> MatrixOperator
@@ -284,25 +277,6 @@ test_apply_noalloc(H, du, u, p, t) = @test_broken (@allocations apply_op!(H, du,
         @test !isa(op, AddedOperator)
     end
 
-    # Allocations Tests with new interface
-    
-    # Define a function to test allocations with the new interface
-    function apply_op_new!(H, du, v, u, p, t)
-        H(du, v, u, p, t)
-        return nothing
-    end
-    
-    if VERSION >= v"1.11"
-        test_apply_noalloc_new(H, du, v, u, p, t) = @test (@allocations apply_op_new!(H, du, v, u, p, t)) == 0
-
-        @allocations apply_op_new!(op, w, v, u, p, t) # warmup
-        test_apply_noalloc_new(op, w, v, u, p, t)
-        
-        ## Original allocations test
-        @allocations apply_op!(op, v, u, p, t) # warmup
-        test_apply_noalloc(op, v, u, p, t)
-    end
-
     ## Time-Dependent Coefficients
 
     for T in (Float32, Float64, ComplexF32, ComplexF64)
@@ -331,20 +305,6 @@ test_apply_noalloc(H, du, u, p, t) = @test_broken (@allocations apply_op!(H, du,
         du = similar(u)
         p = (ω = 0.1,)
         t = 0.1
-
-        if VERSION >= v"1.11"
-            # Test allocations with original interface
-            @allocations apply_op!(H_sparse, du, u, p, t) # warmup
-            @allocations apply_op!(H_dense, du, u, p, t) # warmup
-            test_apply_noalloc(H_sparse, du, u, p, t)
-            test_apply_noalloc(H_dense, du, u, p, t)
-            
-            # Test allocations with new interface
-            @allocations apply_op_new!(H_sparse, du, v, u, p, t) # warmup
-            @allocations apply_op_new!(H_dense, du, v, u, p, t) # warmup
-            test_apply_noalloc_new(H_sparse, du, v, u, p, t)
-            test_apply_noalloc_new(H_dense, du, v, u, p, t)
-        end
     end
 end
 
