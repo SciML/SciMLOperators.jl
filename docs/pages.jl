@@ -2,7 +2,7 @@ pages = [
     "Home" => "index.md",
     "tutorials/getting_started.md",
     "Tutorials" => Any[
-        "operator_algebras.md",
+        "tutorials/operator_algebras.md",
         "FFT Tutorial" => "tutorials/fftw.md"
     ],
     "interface.md",
