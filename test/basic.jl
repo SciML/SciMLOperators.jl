@@ -162,8 +162,8 @@ end
     @test issquare(op)
     @test islinear(op)
 
-    @test α * A * u ≈ op * u
-    @test (β * op) * u ≈ β * α * A * u
+    @test α * A * v ≈ op * v
+    @test (β * op) * v ≈ β * α * A * v
 
     # Test with new interface - same vector for update and action
     @test op(u, u, p, t) ≈ α * A * u
@@ -190,17 +190,17 @@ end
 
     @test α * A ≈ convert(AbstractMatrix, op) ≈ convert(AbstractMatrix, opF)
 
-    v = rand(N, K)
-    @test mul!(v, op, u) ≈ α * A * u
-    v = rand(N, K)
-    w_orig = copy(v)
-    @test mul!(v, op, u, a, b) ≈ a * (α * A * u) + b * w_orig
+    w = rand(N, K)
+    @test mul!(w, op, v) ≈ α * A * v
+    w = rand(N, K)
+    w_orig = copy(w)
+    @test mul!(w, op, v, a, b) ≈ a * (α * A * v) + b * w_orig
 
     op = ScaledOperator(α, MatrixOperator(D))
-    v = rand(N, K)
-    @test ldiv!(v, op, u) ≈ (α * D) \ u
-    v = copy(u)
-    @test ldiv!(op, u) ≈ (α * D) \ v
+    w = rand(N, K)
+    @test ldiv!(v, op, w) ≈ (α * D) \ w
+    w = copy(v)
+    @test ldiv!(op, w) ≈ (α * D) \ v
 end
 
 function apply_op!(H, du, u, p, t)

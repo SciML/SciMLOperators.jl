@@ -408,8 +408,8 @@ function cache_internals(L::InvertibleOperator, v::AbstractVecOrMat)
 end
 
 # operator application
-Base.:*(L::InvertibleOperator, x::AbstractVecOrMat) = L.L * x
-Base.:\(L::InvertibleOperator, x::AbstractVecOrMat) = L.F \ x
+Base.:*(L::InvertibleOperator, v::AbstractVecOrMat) = L.L * v
+Base.:\(L::InvertibleOperator, v::AbstractVecOrMat) = L.F \ v
 function LinearAlgebra.mul!(w::AbstractVecOrMat, L::InvertibleOperator, v::AbstractVecOrMat)
     mul!(w, L.L, v)
 end

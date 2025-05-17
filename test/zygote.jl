@@ -38,8 +38,8 @@ L_mi = MatrixOperator(zeros(N, N); update_func = inv_update_func)
 L_aff = AffineOperator(L_mat, L_mat, zeros(N, K); update_func = vec_update_func)
 L_sca = α * L_mat
 L_inv = InvertibleOperator(L_mat, L_mi)
-L_fun = FunctionOperator((u, p, t) -> Diagonal(p) * u, u0, u0; batch = true,
-    op_inverse = (u, p, t) -> inv(Diagonal(p)) * u)
+L_fun = FunctionOperator((v, u, p, t) -> Diagonal(p) * v, u0, u0; batch = true,
+    op_inverse = (v, u, p, t) -> inv(Diagonal(p)) * v)
 
 Ti = MatrixOperator(zeros(n, n); update_func = tsr_update_func)
 To = deepcopy(Ti)

@@ -13,6 +13,7 @@ NK = N * K
     N1, N2, N3 = 3, 4, 5
     M1, M2, M3 = 4, 5, 6
 
+    u = nothing
     p = nothing
     t = 0.0
     α = rand()
@@ -24,21 +25,21 @@ NK = N * K
         M = prod(sz_out)
 
         A = rand(M, N)
-        u = rand(sz_in...)  # Update vector
+        u = nothing
         v = rand(sz_in...) # action vector 
         w = rand(sz_out...) # output vector for in-place tests
 
         _mul(A, v) = reshape(A * vec(v), sz_out)
         f(v, u, p, t) = _mul(A, v)
-        f(w, v, u, p, t) = (mul!(vec(w), A, vec(v)); y)
+        f(w, v, u, p, t) = (mul!(vec(w), A, vec(v)); w)
 
         kw = (;) # FunctionOp kwargs
 
         if sz_in == sz_out
             F = lu(A)
             _div(A, v) = reshape(A \ vec(v), sz_in)
-            fi(v, u, p, t) = _div(A, x)
-            fi(w, v, u, p, t) = (ldiv!(vec(w), F, vec(v)); y)
+            fi(v, u, p, t) = _div(A, v)
+            fi(w, v, u, p, t) = (ldiv!(vec(w), F, vec(v)); w)
 
             kw = (; op_inverse = fi)
         end
@@ -48,23 +49,23 @@ NK = N * K
 
         # test with ND-arrays and new interface
         @test _mul(A, v) ≈ L(v, u, p, t) ≈ L * v ≈ mul!(zero(w), L, v)
-        @test α * _mul(A, u) + β * v ≈ mul!(copy(v), L, u, α, β)
+        @test α * _mul(A, v) + β * w ≈ mul!(copy(w), L, v, α, β)
         
         # Test with different update and action vectors
         action_vec = rand(sz_in...)
         @test _mul(A, action_vec) ≈ L(action_vec, u, p, t)
         
         if sz_in == sz_out
-            @test _div(A, v) ≈ L \ v ≈ ldiv!(zero(u), L, v) ≈ ldiv!(L, copy(v))
+            @test _div(A, w) ≈ L \ w ≈ ldiv!(zero(v), L, w) ≈ ldiv!(L, copy(w))
         end
         
         # test with vec(Array)
-        @test vec(_mul(A, u)) ≈ L(vec(u), u, p, t) ≈ L * vec(u) ≈ mul!(vec(zero(w)), L, vec(u))
-        @test vec(α * _mul(A, u) + β * v) ≈ mul!(vec(copy(v)), L, vec(u), α, β)
+        @test vec(_mul(A, v)) ≈ L(vec(v), u, p, t) ≈ L * vec(v) ≈ mul!(vec(zero(w)), L, vec(v))
+        @test vec(α * _mul(A, v) + β * w) ≈ mul!(vec(copy(w)), L, vec(v), α, β)
 
         if sz_in == sz_out
-            @test vec(_div(A, v)) ≈ L \ vec(v) ≈ ldiv!(vec(zero(u)), L, vec(v)) ≈
-                  ldiv!(L, vec(copy(v)))
+            @test vec(_div(A, w)) ≈ L \ vec(w) ≈ ldiv!(vec(zero(v)), L, vec(w)) ≈
+                  ldiv!(L, vec(copy(w)))
         end
 
         # Test in-place with different update and action vectors
@@ -78,43 +79,44 @@ NK = N * K
         L(output_vec, action_vec, u, p, t, α, β)
         @test output_vec ≈ α * _mul(A, action_vec) + β * orig_output
 
-        @test_throws DimensionMismatch mul!(vec(v), L, u)
-        @test_throws DimensionMismatch mul!(v, L, vec(u))
+        @test_throws DimensionMismatch mul!(vec(w), L, v)
+        @test_throws DimensionMismatch mul!(w, L, vec(v))
     end
 end
 
 @testset "(Unbatched) FunctionOperator" begin
-    u = rand(N, K)  # Update and action vector
-    v = zeros(N, K) # Output vector
+    v = rand(N, K) # action vector
+    w = zeros(N, K) # Output vector
+    u = nothing
     p = nothing
     t = 0.0
     α = rand()
     β = rand()
 
-    _mul(A, u) = reshape(A * vec(u), N, K)
-    _div(A, u) = reshape(A \ vec(u), N, K)
+    _mul(A, v) = reshape(A * vec(v), N, K)
+    _div(A, v) = reshape(A \ vec(v), N, K)
 
     A = rand(NK, NK) |> Symmetric
     F = lu(A)
     Ai = inv(A)
 
-    f1(u, p, t) = _mul(A, u)
-    f1i(u, p, t) = _div(A, u)
+    f1(v, u, p, t) = _mul(A, v)
+    f1i(v, u, p, t) = _div(A, v)
 
-    f2(du, u, p, t) = (mul!(vec(du), A, vec(u)); du)
-    f2(du, u, p, t, α, β) = (mul!(vec(du), A, vec(u), α, β); du)
-    f2i(du, u, p, t) = (ldiv!(vec(du), F, vec(u)); du)
-    f2i(du, u, p, t, α, β) = (mul!(vec(du), Ai, vec(u), α, β); du)
+    f2(w, v, u, p, t) = (mul!(vec(w), A, vec(v)); w)
+    f2(w, v, u, p, t, α, β) = (mul!(vec(w), A, vec(v), α, β); w)
+    f2i(w, v, u, p, t) = (ldiv!(vec(w), F, vec(v)); w)
+    f2i(w, v, u, p, t, α, β) = (mul!(vec(w), Ai, vec(v), α, β); w)
 
     # out of place
-    op1 = FunctionOperator(f1, u; op_inverse = f1i, ifcache = false, islinear = true,
+    op1 = FunctionOperator(f1, v; op_inverse = f1i, ifcache = false, islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
         isposdef = true)
 
     # in place
-    op2 = FunctionOperator(f2, u; op_inverse = f2i, ifcache = false, islinear = true,
+    op2 = FunctionOperator(f2, v, w; op_inverse = f2i, ifcache = false, islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
@@ -150,45 +152,44 @@ end
     # 5-arg mul! (w/o cache)
     v = rand(N, K)
     w = copy(v)
-    @test α * _mul(A, u) + β * w ≈ mul!(v, op2, u, α, β)
+    @test α * _mul(A, v) + β * w ≈ mul!(w, op2, v, α, β)
 
     # Create test vectors for new interface
     action_vec = rand(N, K)  # Action vector
-    update_vec = rand(N, K)  # Update vector 
     result_vec = zeros(N, K) # Result vector
 
     # Cache operators
-    op1 = cache_operator(op1, u)
-    op2 = cache_operator(op2, u)
+    op1 = cache_operator(op1, v)
+    op2 = cache_operator(op2, v)
 
     @test iscached(op1)
     @test iscached(op2)
 
     # Test standard operator operations (from original test)
-    v = rand(N, K)
-    @test _mul(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
-    v = rand(N, K)
+    w = rand(N, K)
+    @test _mul(A, v) ≈ op1 * v ≈ mul!(w, op2, v)
+    w = rand(N, K)
     @test _mul(A, v) ≈ op1(v, u, p, t) ≈ op2(v, u, p, t)
     v = rand(N, K)
     w = copy(v)
-    @test α * _mul(A, u) + β * w ≈ mul!(v, op2, u, α, β)
+    @test α * _mul(A, v) + β * w ≈ mul!(w, op2, v, α, β)
 
-    v = rand(N, K)
-    @test _div(A, u) ≈ op1 \ u ≈ ldiv!(v, op2, u)
-    v = copy(u)
-    @test _div(A, v) ≈ ldiv!(op2, u)
+    w = rand(N, K)
+    @test _div(A, w) ≈ op1 \ w ≈ ldiv!(v, op2, w)
+    w = copy(v)
+    @test _div(A, w) ≈ ldiv!(op2, w)
 
     # Test with new interface - out of place
-    @test _mul(A, action_vec) ≈ op1(action_vec, update_vec, p, t)
+    @test _mul(A, action_vec) ≈ op1(action_vec, u, p, t)
     
     # Test with new interface - in place
-    op2(result_vec, action_vec, update_vec, p, t)
+    op2(result_vec, action_vec, u, p, t)
     @test result_vec ≈ _mul(A, action_vec)
     
     # Test in-place with scaling
     result_vec = rand(N, K)
     orig_result = copy(result_vec)
-    op2(result_vec, action_vec, update_vec, p, t, α, β)
+    op2(result_vec, action_vec, u, p, t, α, β)
     @test result_vec ≈ α * _mul(A, action_vec) + β * orig_result
 
     # Test inverse operations with new interface
@@ -199,7 +200,8 @@ end
 end
 
 @testset "Batched FunctionOperator" begin
-    u = rand(N, K)
+    v = rand(N, K)
+    u = nothing
     p = nothing
     t = 0.0
     α = rand()
@@ -209,16 +211,16 @@ end
     F = lu(A)
     Ai = inv(A)
 
-    f1(u, p, t) = A * u
-    f1i(u, p, t) = A \ u
+    f1(v, u, p, t) = A * v
+    f1i(v, u, p, t) = A \ v
 
-    f2(du, u, p, t) = mul!(du, A, u)
-    f2(du, u, p, t, α, β) = mul!(du, A, u, α, β)
-    f2i(du, u, p, t) = ldiv!(du, F, u)
-    f2i(du, u, p, t, α, β) = mul!(du, Ai, u, α, β)
+    f2(w, v, u, p, t) = mul!(w, A, v)
+    f2(w, v, u, p, t, α, β) = mul!(w, A, v, α, β)
+    f2i(w, v, u, p, t) = ldiv!(w, F, v)
+    f2i(w, v, u, p, t, α, β) = mul!(w, Ai, v, α, β)
 
     # out of place
-    op1 = FunctionOperator(f1, u, A * u; op_inverse = f1i, ifcache = false,
+    op1 = FunctionOperator(f1, v, A * v; op_inverse = f1i, ifcache = false,
         batch = true,
         islinear = true,
         opnorm = true,
@@ -227,7 +229,7 @@ end
         isposdef = true)
 
     # in place
-    op2 = FunctionOperator(f2, u, A * u; op_inverse = f2i, ifcache = false,
+    op2 = FunctionOperator(f2, v, A * v; op_inverse = f2i, ifcache = false,
         batch = true,
         islinear = true,
         opnorm = true,
@@ -266,40 +268,40 @@ end
     # 5-arg mul! (w/o cache)
     v = rand(N, K)
     w = copy(v)
-    @test α * *(A, u) + β * w ≈ mul!(v, op2, u, α, β)
+    @test α * *(A, v) + β * w ≈ mul!(w, op2, v, α, β)
 
-    op1 = cache_operator(op1, u)
-    op2 = cache_operator(op2, u)
+    op1 = cache_operator(op1, v)
+    op2 = cache_operator(op2, v)
 
     @test iscached(op1)
     @test iscached(op2)
 
     v = rand(N, K)
-    @test *(A, u) ≈ op1 * u ≈ mul!(v, op2, u)
+    @test *(A, v) ≈ op1 * v ≈ mul!(w, op2, v)
     
     # Test with new interface
     v = rand(N, K)
-    @test *(A, u) ≈ op1(u, u, p, t) ≈ op2(v, u, u, p, t)
+    @test *(A, v) ≈ op1(w, v, u, p, t) ≈ op2(w, v, u, p, t)
     
     v = rand(N, K)
     w = copy(v)
-    @test α * *(A, u) + β * w ≈ mul!(v, op2, u, α, β)
+    @test α * *(A, v) + β * w ≈ mul!(w, op2, v, α, β)
 
     # Test old style calls
-    v = rand(N, K)
-    @test \(A, u) ≈ op1 \ u ≈ ldiv!(v, op2, u)
-    v = copy(u)
-    @test \(A, v) ≈ ldiv!(op2, u)
+    w = rand(N, K)
+    @test \(A, w) ≈ op1 \ w ≈ ldiv!(v, op2, w)
+    w = copy(v)
+    @test \(A, w) ≈ ldiv!(op2, w)
     
     # Test new interface ldiv
-    v = rand(N, K)
+    w = rand(N, K)
     ldiv_result = zeros(N, K)
-    ldiv!(ldiv_result, op2, v)
-    @test ldiv_result ≈ A \ v
+    ldiv!(ldiv_result, op2, w)
+    @test ldiv_result ≈ A \ w
 end
 
 @testset "FunctionOperator update test" begin
-    u = rand(N, K)  # Update vector
+    u = rand(N, N)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K) # Result vector
     p = rand(N)
@@ -307,13 +309,14 @@ end
     scale = rand()
 
     # Accept a kwarg "scale" in operator action
-    f(du, x, p, t; scale = 1.0) = mul!(du, Diagonal(p * t * scale), x)
-    f(x, p, t; scale = 1.0) = Diagonal(p * t * scale) * x
+    f(w, v, u, p, t; scale = 1.0) = mul!(w, Diagonal(u * p * t * scale), v)
+    f(v, u, p, t; scale = 1.0) = Diagonal(u * p * t * scale) * v
 
     # Test with both tuple and Val forms of accepted_kwargs
     for acc_kw in ((:scale,), Val((:scale,)))
         # Function operator with keyword arguments
-        L = FunctionOperator(f, u, u; 
+        L = FunctionOperator(f, v, w;
+                            u = u,
                             p = zero(p), 
                             t = zero(t), 
                             batch = true,
@@ -321,15 +324,15 @@ end
                             scale = 1.0)
 
         @test_throws ArgumentError FunctionOperator(
-            f, u, u; p = zero(p), t = zero(t), batch = true,
+            f, v, w; u = u, p = zero(p), t = zero(t), batch = true,
             accepted_kwargs = acc_kw)
 
         @test size(L) == (N, N)
 
         # Expected result with scaling
-        A = Diagonal(p * t * scale)
+        A = Diagonal(u * p * t * scale)
         expected = A * v
-        ans = @. u * p * t * scale
+        ans = u * p .* t .* scale
         
         # Test with new interface
         @test L(v, u, p, t; scale) ≈ expected
@@ -348,10 +351,10 @@ end
         @test w ≈ α_val * expected + β_val * orig_w
         
         # Test that outputs aren't accidentally mutated
-        u1 = rand(N, K)
-        u2 = rand(N, K)
         v1 = rand(N, K)
         v2 = rand(N, K)
+        w1 = rand(N, K)
+        w2 = rand(N, K)
 
         # Expected results with different vectors
         result1 = A * v1
@@ -361,30 +364,30 @@ end
         w1 = zeros(N, K)
         w2 = zeros(N, K)
         
-        L(w1, v1, u1, p, t; scale)
-        L(w2, v2, u2, p, t; scale)
+        L(w1, v1, u, p, t; scale)
+        L(w2, v2, u, p, t; scale)
         
         @test w1 ≈ result1
         @test w2 ≈ result2
         
         # Test matrix-vector multiplication
-        v1 = L * u1
-        @test v1 ≈ A * u1
-        v2 = L * u2
-        @test v2 ≈ A * u2
-        @test v1 ≈ A * u1  # Check v1 hasn't changed
-        @test v1 + v2 ≈ A * (u1 + u2)
+        w1 = L * v1
+        @test w1 ≈ A * v1
+        w2 = L * v2
+        @test w2 ≈ A * v2
+        @test w1 ≈ A * v1  # Check v1 hasn't changed
+        @test w1 + w2 ≈ A * (v1 + v2)
 
         # Test in-place matrix-vector multiplication
         v1 .= 0.0
         v2 .= 0.0
         
-        mul!(v1, L, u1)
-        @test v1 ≈ A * u1
-        mul!(v2, L, u2)
-        @test v2 ≈ A * u2
-        @test v1 ≈ A * u1
-        @test v1 + v2 ≈ A * (u1 + u2)
+        mul!(w1, L, v1)
+        @test w1 ≈ A * v1
+        mul!(w2, L, v2)
+        @test w2 ≈ A * v2
+        @test w1 ≈ A * v1
+        @test w1 + w2 ≈ A * (v1 + v2)
         
         # Test scaling
         v1 = rand(N, K)
@@ -393,11 +396,13 @@ end
         w2 = copy(v2)
         a1, a2, b1, b2 = rand(4)
         
-        mul!(v1, L, u1, a1, b1)
-        @test v1 ≈ a1 * A * u1 + b1 * w1
-        mul!(v2, L, u2, a2, b2)
-        @test v2 ≈ a2 * A * u2 + b2 * w2
-        @test v1 ≈ a1 * A * u1 + b1 * w1
-        @test v1 + v2 ≈ (a1 * A * u1 + b1 * w1) + (a2 * A * u2 + b2 * w2)
+        res = copy(w1)
+        mul!(res, L, v1, a1, b1)
+        @test res ≈ a1 * A * v1 + b1 * w1
+        res2 = copy(w2)
+        mul!(res2, L, v2, a2, b2)
+        @test res2 ≈ a2 * A * v2 + b2 * w2
+        @test res ≈ a1 * A * v1 + b1 * w1
+        @test res + res2 ≈ (a1 * A * v1 + b1 * w1) + (a2 * A * v2 + b2 * w2)
     end
 end

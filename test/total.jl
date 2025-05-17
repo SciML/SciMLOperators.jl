@@ -20,11 +20,11 @@ K = 12
     m = length(k)
     P = plan_rfft(x)
 
-    fwd(u, p, t) = P * u
-    bwd(u, p, t) = P \ u
+    fwd(v, u, p, t) = P * v
+    bwd(v, u, p, t) = P \ v
 
-    fwd(du, u, p, t) = mul!(du, P, u)
-    bwd(du, u, p, t) = ldiv!(du, P, u)
+    fwd(w, v, u, p, t) = mul!(w, P, v)
+    bwd(w, v, u, p, t) = ldiv!(w, P, v)
 
     ftr = FunctionOperator(fwd, x, im * k;
         T = ComplexF64, op_adjoint = bwd,
@@ -39,18 +39,18 @@ K = 12
     Dx = cache_operator(Dx, x)
     D2x = cache_operator(Dx * Dx, x)
 
-    u = @. sin(5x)cos(7x)
-    du = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x)
-    d2u = @. 5(-5sin(5x)cos(7x) - 7cos(5x)sin(7x)) +
+    v = @. sin(5x)cos(7x)
+    w = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x)
+    w2x = @. 5(-5sin(5x)cos(7x) - 7cos(5x)sin(7x)) +
              -7(5cos(5x)sin(7x) + 7sin(5x)cos(7x))
 
-    @test ≈(Dx * u, du; atol = 1e-8)
-    @test ≈(D2x * u, d2u; atol = 1e-8)
+    @test ≈(Dx * v, w; atol = 1e-8)
+    @test ≈(D2x * v, w2x; atol = 1e-8)
 
-    v = copy(u)
-    @test ≈(mul!(v, D2x, u), d2u; atol = 1e-8)
-    v = copy(u)
-    @test ≈(mul!(v, Dx, u), du; atol = 1e-8)
+    w2 = zero(w)
+    @test ≈(mul!(w2, D2x, v), w2x; atol = 1e-8)
+    w2 = zero(w)
+    @test ≈(mul!(w2, Dx, v), w; atol = 1e-8)
 
     itr = inv(ftr)
     ftt = ftr'
@@ -84,7 +84,8 @@ end
 @testset "Operator Algebra" begin
     N2 = N * N
 
-    u = rand(N2, K)
+    v = rand(N2, K)
+    u = rand()
     p = rand()
     t = rand()
 
@@ -95,9 +96,9 @@ end
 
     # FunctionOp
     _C = rand(N, N) |> Symmetric
-    f(u, p, t) = _C * u
-    f(v, u, p, t) = mul!(v, _C, u)
-    C = FunctionOperator(f, zeros(N); batch = true, issymmetric = true, p = p)
+    f(v, u, p, t) = _C * v
+    f(w, v, u, p, t) = mul!(w, _C, v)
+    C = FunctionOperator(f, zeros(N); batch = true, issymmetric = true, p = p, u = u)
 
     # Introduce update function for D dependent on kwarg "matrix"
     D = MatrixOperator(zeros(N, N);
@@ -121,7 +122,7 @@ end
     DD = Diagonal([D1, D2])
 
     op = TT' * DD * TT
-    op = cache_operator(op, u)
+    op = cache_operator(op, v)
 
     # Update operator
     @test_nowarn update_coefficients!(op, u, p, t; diag, matrix)
@@ -133,31 +134,25 @@ end
     dense_op = hcat(dense_T1', dense_T2') * dense_DD * vcat(dense_T1, dense_T2)
     
     # Test correctness of op
-    @test op * u ≈ dense_op * u
+    @test op * v ≈ dense_op * v
     
     # Test consistency with three-arg mul!
-    v = rand(N2, K)
-    @test mul!(v, op, u) ≈ op * u
+    w = rand(N2, K)
+    @test mul!(w, op, v) ≈ op * v
     
     # Test consistency with in-place five-arg mul!
-    v = rand(N2, K)
-    w = copy(v)
-    @test mul!(v, op, u, α, β) ≈ α * (op * u) + β * w
+    w = rand(N2, K)
+    w2 = copy(w)
+    @test mul!(w, op, v, α, β) ≈ α * (op * v) + β * w2
     
    # Create a fresh operator for each test
     op_fresh = TT' * DD * TT
-    op_fresh = cache_operator(op_fresh, u)
+    op_fresh = cache_operator(op_fresh, v)
     # Use in-place update directly in test
-    result1 = similar(u)
-    mul!(result1, op_fresh, u)
+    result1 = similar(v)
+    mul!(result1, op_fresh, v)
     update_coefficients!(op_fresh, u, p, t; diag, matrix)
-    @test result1 ≈ dense_op * u
-   
-
-   
-    # @test op(u, u, p, t) ≈ op * u
-
-    # @test op(v, u, p, t) ≈ op * u
+    @test result1 ≈ dense_op * v
 end
 
 
@@ -165,55 +160,55 @@ end
     M1 = 4
     M2 = 12
 
-    u = rand(N)
-    u1 = rand(M1)
-    u2 = rand(M2)
+    v = rand(N)
+    v1 = rand(M1)
+    v2 = rand(M2)
 
-    f(u, p, t) = 2 * u
-    f(v, u, p, t) = (copy!(v, u); lmul!(2, v))
+    f(v, u, p, t) = 2 * v
+    f(w, v, u, p, t) = (copy!(w, v); lmul!(2, w))
 
-    fi(u, p, t) = 0.5 * u
-    fi(v, u, p, t) = (copy!(v, u); lmul!(0.5, v))
+    fi(v, u, p, t) = 0.5 * v
+    fi(w, v, u, p, t) = (copy!(w, v); lmul!(0.5, w))
 
-    F = FunctionOperator(f, u, u; islinear = true, op_inverse = fi, issymmetric = true)
+    F = FunctionOperator(f, v, v; islinear = true, op_inverse = fi, issymmetric = true)
 
-    multest(L, u) = @test mul!(zero(u), L, u) ≈ L * u
+    multest(L, v) = @test mul!(zero(v), L, v) ≈ L * v
 
-    function multest(L::SciMLOperators.AdjointOperator, u)
-        @test mul!(adjoint(zero(u)), adjoint(u), L) ≈ adjoint(u) * L
+    function multest(L::SciMLOperators.AdjointOperator, v)
+        @test mul!(adjoint(zero(v)), adjoint(v), L) ≈ adjoint(v) * L
     end
 
-    function multest(L::SciMLOperators.TransposedOperator, u)
-        @test mul!(transpose(zero(u)), transpose(u), L) ≈ transpose(u) * L
+    function multest(L::SciMLOperators.TransposedOperator, v)
+        @test mul!(transpose(zero(v)), transpose(v), L) ≈ transpose(v) * L
     end
 
-    function multest(L::SciMLOperators.InvertedOperator, u)
-        @test ldiv!(zero(u), L, u) ≈ L \ u
+    function multest(L::SciMLOperators.InvertedOperator, v)
+        @test ldiv!(zero(v), L, v) ≈ L \ v
     end
 
     for (L, LT) in ((F, FunctionOperator),
         (F + F, SciMLOperators.AddedOperator),
         (F * 2, SciMLOperators.ScaledOperator),
         (F ∘ F, SciMLOperators.ComposedOperator),
-        (AffineOperator(F, F, u), AffineOperator),
+        (AffineOperator(F, F, v), AffineOperator),
         (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
         (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
         (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
         (SciMLOperators.InvertibleOperator(F, F), SciMLOperators.InvertibleOperator))
         L = deepcopy(L)
-        L = cache_operator(L, u)
+        L = cache_operator(L, v)
 
         @test L isa LT
         @test size(L) == (N, N)
-        multest(L, u)
+        multest(L, v)
 
         resize!(L, M1)
         @test size(L) == (M1, M1)
-        multest(L, u1)
+        multest(L, v1)
 
         resize!(L, M2)
         @test size(L) == (M2, M2)
-        multest(L, u2)
+        multest(L, v2)
     end
 
     # InvertedOperator
