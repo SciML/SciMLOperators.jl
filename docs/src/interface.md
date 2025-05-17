@@ -74,6 +74,6 @@ update_coefficients!(γ, nothing, nothing, nothing; my_special_scaling = 7.0)
 @show γ * [2.0]
 
 # Use operator application form
-@show γ([2.0], nothing, nothing; my_special_scaling = 5.0)
+@show γ([2.0], nothing, nothing, nothing; my_special_scaling = 5.0)
 nothing # hide
 ```
