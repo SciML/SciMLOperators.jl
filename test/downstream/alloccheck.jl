@@ -24,7 +24,7 @@ op = AddedOperator(A, B)
     return nothing
 end
 
-if VERSION >= v"1.12"
+if VERSION >= v"1.12-beta"
     apply_op!(op, w, v, u, p, t)
 else
     @test_throws AllocCheckFailure apply_op!(op, w, v, u, p, t)
