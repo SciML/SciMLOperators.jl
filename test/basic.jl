@@ -292,14 +292,16 @@ test_apply_noalloc(H, du, u, p, t) = @test_broken (@allocations apply_op!(H, du,
         return nothing
     end
     
-    test_apply_noalloc_new(H, du, v, u, p, t) = @test_broken (@allocations apply_op_new!(H, du, v, u, p, t)) == 0
+    if VERSION >= v"1.11"
+        test_apply_noalloc_new(H, du, v, u, p, t) = @test (@allocations apply_op_new!(H, du, v, u, p, t)) == 0
 
-    @allocations apply_op_new!(op, w, v, u, p, t) # warmup
-    test_apply_noalloc_new(op, w, v, u, p, t)
-    
-    ## Original allocations test
-    @allocations apply_op!(op, v, u, p, t) # warmup
-    test_apply_noalloc(op, v, u, p, t)
+        @allocations apply_op_new!(op, w, v, u, p, t) # warmup
+        test_apply_noalloc_new(op, w, v, u, p, t)
+        
+        ## Original allocations test
+        @allocations apply_op!(op, v, u, p, t) # warmup
+        test_apply_noalloc(op, v, u, p, t)
+    end
 
     ## Time-Dependent Coefficients
 
