@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Getting Started with Matrix-Free Operators in Julia · SciMLOperators.jl</title><meta name="title" content="Getting Started with Matrix-Free Operators in Julia · SciMLOperators.jl"/><meta property="og:title" content="Getting Started with Matrix-Free Operators in Julia · SciMLOperators.jl"/><meta property="twitter:title" content="Getting Started with Matrix-Free Operators in Julia · SciMLOperators.jl"/><meta name="description" content="Documentation for SciMLOperators.jl."/><meta property="og:description" content="Documentation for SciMLOperators.jl."/><meta property="twitter:description" content="Documentation for SciMLOperators.jl."/><meta property="og:url" content="https://docs.sciml.ai/SciMLOperators/stable/tutorials/getting_started/"/><meta property="twitter:url" content="https://docs.sciml.ai/SciMLOperators/stable/tutorials/getting_started/"/><link rel="canonical" href="https://docs.sciml.ai/SciMLOperators/stable/tutorials/getting_started/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="SciMLOperators.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">SciMLOperators.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li class="is-active"><a class="tocitem" href>Getting Started with Matrix-Free Operators in Julia</a><ul class="internal"><li><a class="tocitem" href="#Simplest-Operator:-MatrixOperator"><span>Simplest Operator: MatrixOperator</span></a></li><li><a class="tocitem" href="#State,-Parameter,-and-Time-Dependent-Operators"><span>State, Parameter, and Time-Dependent Operators</span></a></li><li><a class="tocitem" href="#Matrix-Free-Operators-via-FunctionOperator"><span>Matrix-Free Operators via FunctionOperator</span></a></li><li><a class="tocitem" href="#Operator-Algebras"><span>Operator Algebras</span></a></li><li><a class="tocitem" href="#Where-to-go-next?"><span>Where to go next?</span></a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../operator_algebras/">-</a></li><li><a class="tocitem" href="../fftw/">FFT Tutorial</a></li></ul></li><li><a class="tocitem" href="../../interface/">The <code>AbstractSciMLOperator</code> Interface</a></li><li><a class="tocitem" href="../../premade_operators/">Premade Operators</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Getting Started with Matrix-Free Operators in Julia</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Getting Started with Matrix-Free Operators in Julia</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/SciMLOperators.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/SciMLOperators.jl/blob/master/docs/src/tutorials/getting_started.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Getting-Started-with-Matrix-Free-Operators-in-Julia"><a class="docs-heading-anchor" href="#Getting-Started-with-Matrix-Free-Operators-in-Julia">Getting Started with Matrix-Free Operators in Julia</a><a id="Getting-Started-with-Matrix-Free-Operators-in-Julia-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-Started-with-Matrix-Free-Operators-in-Julia" title="Permalink"></a></h1><p>SciMLOperators.jl is a package for defining operators for use in solvers. One of the major use cases is to define matrix-free operators in cases where using a matrix would be too memory expensive. In this tutorial we will walk through the main features of SciMLOperators and get you going with matrix-free and updating operators.</p><h2 id="Simplest-Operator:-MatrixOperator"><a class="docs-heading-anchor" href="#Simplest-Operator:-MatrixOperator">Simplest Operator: MatrixOperator</a><a id="Simplest-Operator:-MatrixOperator-1"></a><a class="docs-heading-anchor-permalink" href="#Simplest-Operator:-MatrixOperator" title="Permalink"></a></h2><p>Before we get into the deeper operators, let&#39;s show the simplest SciMLOperator: <code>MatrixOperator</code>. <code>MatrixOperator</code> just turns a matrix into an <code>AbstractSciMLOperator</code>, so it&#39;s not really a matrix-free operator but it&#39;s a starting point that is good for understanding the interface and testing. To create a <code>MatrixOperator</code>, simply call the  constructor on a matrix:</p><pre><code class="language-julia hljs">using SciMLOperators, LinearAlgebra
+A = [-2.0  1  0  0  0
+      1 -2  1  0  0
+      0  1 -2  1  0
+      0  0  1 -2  1
+      0  0  0  1 -2]
+
+opA = MatrixOperator(A)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">MatrixOperator(5 × 5)</code></pre><p>The operators can do <a href="../../interface/#operator_interface">operations as defined in the operator interface</a>, for example, matrix multiplication as the core action:</p><pre><code class="language-julia hljs">v = [3.0,2.0,1.0,2.0,3.0]
+opA*v</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -4.0
+  0.0
+  2.0
+  0.0
+ -4.0</code></pre><pre><code class="language-julia hljs">opA(v, nothing, nothing, nothing) # Call = opA*v</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -4.0
+  0.0
+  2.0
+  0.0
+ -4.0</code></pre><pre><code class="language-julia hljs">w = zeros(5)
+mul!(w, opA, v)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -4.0
+  0.0
+  2.0
+  0.0
+ -4.0</code></pre><pre><code class="language-julia hljs">α = 1.0; β = 1.0
+mul!(w, opA, v, α, β) # α*opA*v + β*w</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -8.0
+  0.0
+  4.0
+  0.0
+ -8.0</code></pre><p>and the inverse operation:</p><pre><code class="language-julia hljs">opA \ v</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -5.5
+ -7.999999999999999
+ -8.499999999999998
+ -8.0
+ -5.5</code></pre><pre><code class="language-julia hljs">ldiv!(w, lu(opA), v)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ -5.5
+ -7.999999999999999
+ -8.499999999999998
+ -8.0
+ -5.5</code></pre><h2 id="State,-Parameter,-and-Time-Dependent-Operators"><a class="docs-heading-anchor" href="#State,-Parameter,-and-Time-Dependent-Operators">State, Parameter, and Time-Dependent Operators</a><a id="State,-Parameter,-and-Time-Dependent-Operators-1"></a><a class="docs-heading-anchor-permalink" href="#State,-Parameter,-and-Time-Dependent-Operators" title="Permalink"></a></h2><p>Now let&#39;s define a <code>MatrixOperator</code> the is dependent on state, parameters, and time. For example, let&#39;s make the operator <code>A .* u + dt*I</code> where <code>dt</code> is a parameter and <code>u</code> is a state vector:</p><pre><code class="language-julia hljs">A = [-2.0  1  0  0  0
+      1 -2  1  0  0
+      0  1 -2  1  0
+      0  0  1 -2  1
+      0  0  0  1 -2]
+
+function update_function!(B, u, p, t)
+    dt = p
+    B .= A .* u + dt*I
+end
+
+u = Array(1:1.0:5); p = 0.1; t = 0.0
+opB = MatrixOperator(copy(A); update_func! = update_function!)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">MatrixOperator(5 × 5)</code></pre><p>To update the operator, you would use <code>update_coefficients!(opB, u, p, t)</code>:</p><pre><code class="language-julia hljs">update_coefficients!(opB, u, p, t)</code></pre><p>We can use the interface to see what the current matrix is by converting to a standard matrix:</p><pre><code class="language-julia hljs">convert(AbstractMatrix, opB)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5×5 Matrix{Float64}:
+ -1.9   1.0   0.0   0.0   0.0
+  2.0  -3.9   2.0   0.0   0.0
+  0.0   3.0  -5.9   3.0   0.0
+  0.0   0.0   4.0  -7.9   4.0
+  0.0   0.0   0.0   5.0  -9.9</code></pre><p>And now applying the operator applies the updated one:</p><pre><code class="language-julia hljs">opB*v</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+  -3.6999999999999993
+   0.20000000000000018
+   6.1
+   0.1999999999999993
+ -19.700000000000003</code></pre><p>Or if you use the operator application, it will update and apply in one step:</p><pre><code class="language-julia hljs">opB(v, Array(2:1.0:6), 0.5, nothing) # opB(u,p,t)*v</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+  -6.5
+   1.0
+   8.5
+   1.0
+ -22.5</code></pre><p>This is how for example, when an ODE solver asks for an operator <code>L(u,p,t)*u</code>, this is how such an operator can be defined. Notice that the interface can be queried to understand the traits of the operator, such as for example whether an operator is constant (does not change w.r.t. <code>(u,p,t)</code>):</p><pre><code class="language-julia hljs">isconstant(opA)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">true</code></pre><pre><code class="language-julia hljs">isconstant(opB)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">false</code></pre><h2 id="Matrix-Free-Operators-via-FunctionOperator"><a class="docs-heading-anchor" href="#Matrix-Free-Operators-via-FunctionOperator">Matrix-Free Operators via FunctionOperator</a><a id="Matrix-Free-Operators-via-FunctionOperator-1"></a><a class="docs-heading-anchor-permalink" href="#Matrix-Free-Operators-via-FunctionOperator" title="Permalink"></a></h2><p>Now let&#39;s define the operators from above in a matrix-free way using <code>FunctionOperator</code>. With <code>FunctionOperator</code>, we directly define the operator application function <code>opA(w,v,u,p,t)</code> which means <code>w = opA(u,p,t)*v</code>. For exmaple we can do the following:</p><pre><code class="language-julia hljs">function Afunc!(w,v,u,p,t)
+    w[1] = -2v[1] + v[2]
+    for i in 2:4
+        w[i] = v[i-1] - 2v[i] + v[i+1]
+    end
+    w[5] = v[4] - 2v[5]
+    nothing
+end
+
+function Afunc!(v,u,p,t)
+    w = zeros(5)
+    Afunc!(w,v,u,p,t)
+    w
+end
+
+mfopA = FunctionOperator(Afunc!, zeros(5), zeros(5))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FunctionOperator(5 × 5)</code></pre><p>Now <code>mfopA</code> acts just like <code>A*v</code> and thus <code>opA</code>:</p><pre><code class="language-julia hljs">mfopA*v - opA*v</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+ 0.0</code></pre><pre><code class="language-julia hljs">mfopA(v,u,p,t) - opA(v,u,p,t)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+ 0.0</code></pre><p>We can also create the state-dependent operator as well:</p><pre><code class="language-julia hljs">function Bfunc!(w,v,u,p,t)
+    dt = p
+    w[1] = -(2*u[1]-dt)*v[1] + v[2]*u[1]
+    for i in 2:4
+        w[i] = v[i-1]*u[i] - (2*u[i]-dt)*v[i] + v[i+1]*u[i]
+    end
+    w[5] = v[4]*u[5] - (2*u[5]-dt)*v[5]
+    nothing
+end
+
+function Bfunc!(v,u,p,t)
+    w = zeros(5)
+    Bfunc!(w,v,u,p,t)
+    w
+end
+
+mfopB = FunctionOperator(Bfunc!, zeros(5), zeros(5); u, p, t, isconstant=false)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FunctionOperator(5 × 5)</code></pre><pre><code class="language-julia hljs">opB(v, Array(2:1.0:6), 0.5, nothing) - mfopB(v, Array(2:1.0:6), 0.5, nothing)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+ 0.0</code></pre><h2 id="Operator-Algebras"><a class="docs-heading-anchor" href="#Operator-Algebras">Operator Algebras</a><a id="Operator-Algebras-1"></a><a class="docs-heading-anchor-permalink" href="#Operator-Algebras" title="Permalink"></a></h2><p>While the operators are lazy operations and thus are not full matrices, you can still do algebra on operators. This will construct a new lazy operator that will be able to compute the same action as the composed function. For example, let&#39;s create <code>mfopB</code> using <code>mfopA</code>. Recall that we defined this via <code>A .* u + dt*I</code>. Let&#39;s first create an operator for <code>A .* u</code> (since right now there is not a built in operator for vector scaling, but that would be a fantastic thing to add!):</p><pre><code class="language-julia hljs">function Cfunc!(w,v,u,p,t)
+    w[1] = -2v[1] + v[2]
+    for i in 2:4
+        w[i] = v[i-1] - 2v[i] + v[i+1]
+    end
+    w[5] = v[4] - 2v[5]
+    w .= w .* u
+    nothing
+end
+
+function Cfunc!(v,u,p,t)
+    w = zeros(5)
+    Cfunc!(w,v,u,p,t)
+    w
+end
+
+mfopC = FunctionOperator(Cfunc!, zeros(5), zeros(5))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FunctionOperator(5 × 5)</code></pre><p>And now let&#39;s create the operator <code>mfopC + dt*I</code>. We can just directly build it:</p><pre><code class="language-julia hljs">mfopD = mfopC + 0.5*I</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(FunctionOperator(5 × 5) + ScalarOperator(0.5) * IdentityOperator(5))</code></pre><p>SciMLOperators.jl uses an <code>IdentityOperator</code> and <code>ScalarOperator</code> instead of the Base utilities, but the final composed operator acts just like the operator that was built:</p><pre><code class="language-julia hljs">mfopB(v, Array(2:1.0:6), 0.5, nothing) - mfopD(v, Array(2:1.0:6), 0.5, nothing)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Float64}:
+ 0.0
+ 0.0
+ 0.0
+ 0.0
+ 0.0</code></pre><p>There are many cool things you can do with operator algebras, such as <code>kron</code> (Kronecker products), adjoints, inverses, and more. For more information, see the <a href="../operator_algebras/#operator_algebras">operator algebras tutorial</a>.</p><h2 id="Where-to-go-next?"><a class="docs-heading-anchor" href="#Where-to-go-next?">Where to go next?</a><a id="Where-to-go-next?-1"></a><a class="docs-heading-anchor-permalink" href="#Where-to-go-next?" title="Permalink"></a></h2><p>Great! You now know how to be state/parameter/time-dependent operators and make them matrix-free, along with doing algebras on operators. What&#39;s next?</p><ul><li>Interested in more examples of building operators? See the example of <a href="../fftw/#fft">making a fast fourier transform linear operator</a></li><li>Interested in more operators ready to go? See the <a href="../../premade_operators/#premade_operators">Premade Operators page</a> for all of the operators included with SciMLOperators. Note that there are also downstream packages that make new operators.</li><li>Want to make your own SciMLOperator? See the <a href="../../interface/#operator_interface">AbstractSciMLOperator interface page</a> which describes the full interface.</li></ul><p>How do you use SciMLOperators? Check out the following downstream pages:</p><ul><li><a href="https://docs.sciml.ai/LinearSolve/stable/tutorials/linear/">Using SciMLOperators in LinearSolve.jl for matrix-free Krylov methods</a></li><li><a href="https://docs.sciml.ai/DiffEqDocs/stable/solvers/nonautonomous_linear_ode/">Using SciMLOperators in OrdinaryDiffEq.jl for semi-linear ODE solvers</a></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../operator_algebras/">- »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.4 on <span class="colophon-date" title="Sunday 18 May 2025 17:04">Sunday 18 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
