@@ -77,14 +77,16 @@ function (ii::IdentityOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
-function (ii::IdentityOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+function (ii::IdentityOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     @assert size(v, 1) == ii.len
     update_coefficients!(ii, u, p, t; kwargs...)
     copy!(w, v)
 end
 
 # In-place with scaling: w = α*(ii*v) + β*w
-function (ii::IdentityOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (ii::IdentityOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     @assert size(v, 1) == ii.len
     update_coefficients!(ii, u, p, t; kwargs...)
     mul!(w, I, v, α, β)
@@ -181,7 +183,8 @@ function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; k
 end
 
 # In-place with scaling: w = α*(nn*v) + β*w
-function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (nn::NullOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     @assert size(v, 1) == nn.len
     lmul!(β, w)
     w
@@ -236,7 +239,8 @@ end
 
 # constructors
 for T in SCALINGNUMBERTYPES[2:end]
-    @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(
+    @eval ScaledOperator(
+        λ::$T, L::AbstractSciMLOperator) = ScaledOperator(
         ScalarOperator(λ),
         L)
 end
@@ -401,7 +405,8 @@ function (L::ScaledOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; 
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::ScaledOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::ScaledOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     if iszero(L.λ)
         lmul!(β, w)
@@ -412,7 +417,6 @@ function (L::ScaledOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, 
         return w
     end
 end
-
 
 """
 Lazy operator addition
@@ -634,7 +638,8 @@ function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; k
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::AddedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     lmul!(β, w)
     for op in L.ops
@@ -680,15 +685,19 @@ end
 # constructors
 for op in (:*, :∘)
     @eval Base.$op(ops::AbstractSciMLOperator...) = reduce($op, ops)
-    @eval Base.$op(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(
+    @eval Base.$op(
+        A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(
         A,
         B)
-    @eval Base.$op(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(
+    @eval Base.$op(
+        A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(
         A.ops...,
         B)
-    @eval Base.$op(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A,
+    @eval Base.$op(
+        A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A,
         B.ops...)
-    @eval Base.$op(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops...,
+    @eval Base.$op(
+        A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops...,
         B.ops...)
 end
 
@@ -786,7 +795,8 @@ for fact in (:lu, :lu!,
     :bunchkaufman, :bunchkaufman!,
     :lq, :lq!,
     :svd, :svd!)
-    @eval LinearAlgebra.$fact(L::ComposedOperator, args...) = prod(
+    @eval LinearAlgebra.$fact(
+        L::ComposedOperator, args...) = prod(
         op -> $fact(op, args...),
         reverse(L.ops))
 end
@@ -910,22 +920,23 @@ end
 function (L::ComposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
-    
-    vecs = (w, L.cache[1:(end-1)]..., v)
+
+    vecs = (w, L.cache[1:(end - 1)]..., v)
     for i in reverse(1:length(L.ops))
-        L.ops[i](vecs[i], vecs[i+1], u, p, t; kwargs...)
+        L.ops[i](vecs[i], vecs[i + 1], u, p, t; kwargs...)
     end
     w
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::ComposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::ComposedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
-    
+
     cache = L.cache[end]
     copy!(cache, w)
-    
+
     L(w, v, u, p, t; kwargs...)
     lmul!(α, w)
     axpy!(β, cache, w)
@@ -1064,10 +1075,11 @@ function (L::InvertedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::InvertedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::InvertedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for InvertedOperator. Call cache_operator(L, u) first."
-    
+
     copy!(L.cache, w)
     ldiv!(w, L.L, v)
     lmul!(α, w)

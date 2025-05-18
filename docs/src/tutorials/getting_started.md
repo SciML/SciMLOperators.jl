@@ -11,16 +11,16 @@ and updating operators.
 Before we get into the deeper operators, let's show the simplest SciMLOperator:
 `MatrixOperator`. `MatrixOperator` just turns a matrix into an `AbstractSciMLOperator`,
 so it's not really a matrix-free operator but it's a starting point that is good for
-understanding the interface and testing. To create a `MatrixOperator`, simply call the 
+understanding the interface and testing. To create a `MatrixOperator`, simply call the
 constructor on a matrix:
 
 ```@example getting_started
 using SciMLOperators, LinearAlgebra
-A = [-2.0  1  0  0  0
-      1 -2  1  0  0
-      0  1 -2  1  0
-      0  0  1 -2  1
-      0  0  0  1 -2]
+A = [-2.0 1 0 0 0
+     1 -2 1 0 0
+     0 1 -2 1 0
+     0 0 1 -2 1
+     0 0 0 1 -2]
 
 opA = MatrixOperator(A)
 ```
@@ -29,7 +29,7 @@ The operators can do [operations as defined in the operator interface](@ref oper
 matrix multiplication as the core action:
 
 ```@example getting_started
-v = [3.0,2.0,1.0,2.0,3.0]
+v = [3.0, 2.0, 1.0, 2.0, 3.0]
 opA*v
 ```
 
@@ -43,7 +43,8 @@ mul!(w, opA, v)
 ```
 
 ```@example getting_started
-α = 1.0; β = 1.0
+α = 1.0;
+β = 1.0
 mul!(w, opA, v, α, β) # α*opA*v + β*w
 ```
 
@@ -64,18 +65,20 @@ For example, let's make the operator `A .* u + dt*I` where `dt` is a parameter
 and `u` is a state vector:
 
 ```@example getting_started
-A = [-2.0  1  0  0  0
-      1 -2  1  0  0
-      0  1 -2  1  0
-      0  0  1 -2  1
-      0  0  0  1 -2]
+A = [-2.0 1 0 0 0
+     1 -2 1 0 0
+     0 1 -2 1 0
+     0 0 1 -2 1
+     0 0 0 1 -2]
 
 function update_function!(B, u, p, t)
     dt = p
     B .= A .* u + dt*I
 end
 
-u = Array(1:1.0:5); p = 0.1; t = 0.0
+u = Array(1:1.0:5);
+p = 0.1;
+t = 0.0
 opB = MatrixOperator(copy(A); update_func! = update_function!)
 ```
 
@@ -123,18 +126,18 @@ With `FunctionOperator`, we directly define the operator application function `o
 which means `w = opA(u,p,t)*v`. For exmaple we can do the following:
 
 ```@example getting_started
-function Afunc!(w,v,u,p,t)
+function Afunc!(w, v, u, p, t)
     w[1] = -2v[1] + v[2]
     for i in 2:4
-        w[i] = v[i-1] - 2v[i] + v[i+1]
+        w[i] = v[i - 1] - 2v[i] + v[i + 1]
     end
     w[5] = v[4] - 2v[5]
     nothing
 end
 
-function Afunc!(v,u,p,t)
+function Afunc!(v, u, p, t)
     w = zeros(5)
-    Afunc!(w,v,u,p,t)
+    Afunc!(w, v, u, p, t)
     w
 end
 
@@ -148,29 +151,29 @@ mfopA*v - opA*v
 ```
 
 ```@example getting_started
-mfopA(v,u,p,t) - opA(v,u,p,t)
+mfopA(v, u, p, t) - opA(v, u, p, t)
 ```
 
 We can also create the state-dependent operator as well:
 
 ```@example getting_started
-function Bfunc!(w,v,u,p,t)
+function Bfunc!(w, v, u, p, t)
     dt = p
     w[1] = -(2*u[1]-dt)*v[1] + v[2]*u[1]
     for i in 2:4
-        w[i] = v[i-1]*u[i] - (2*u[i]-dt)*v[i] + v[i+1]*u[i]
+        w[i] = v[i - 1]*u[i] - (2*u[i]-dt)*v[i] + v[i + 1]*u[i]
     end
     w[5] = v[4]*u[5] - (2*u[5]-dt)*v[5]
     nothing
 end
 
-function Bfunc!(v,u,p,t)
+function Bfunc!(v, u, p, t)
     w = zeros(5)
-    Bfunc!(w,v,u,p,t)
+    Bfunc!(w, v, u, p, t)
     w
 end
 
-mfopB = FunctionOperator(Bfunc!, zeros(5), zeros(5); u, p, t, isconstant=false)
+mfopB = FunctionOperator(Bfunc!, zeros(5), zeros(5); u, p, t, isconstant = false)
 ```
 
 ```@example getting_started
@@ -187,19 +190,19 @@ operator for `A .* u` (since right now there is not a built in operator for vect
 but that would be a fantastic thing to add!):
 
 ```@example getting_started
-function Cfunc!(w,v,u,p,t)
+function Cfunc!(w, v, u, p, t)
     w[1] = -2v[1] + v[2]
     for i in 2:4
-        w[i] = v[i-1] - 2v[i] + v[i+1]
+        w[i] = v[i - 1] - 2v[i] + v[i + 1]
     end
     w[5] = v[4] - 2v[5]
     w .= w .* u
     nothing
 end
 
-function Cfunc!(v,u,p,t)
+function Cfunc!(v, u, p, t)
     w = zeros(5)
-    Cfunc!(w,v,u,p,t)
+    Cfunc!(w, v, u, p, t)
     w
 end
 
@@ -227,11 +230,11 @@ adjoints, inverses, and more. For more information, see the [operator algebras t
 Great! You now know how to be state/parameter/time-dependent operators and make them matrix-free, along with
 doing algebras on operators. What's next?
 
-* Interested in more examples of building operators? See the example of [making a fast fourier transform linear operator](@ref fft)
-* Interested in more operators ready to go? See the [Premade Operators page](@ref premade_operators) for all of the operators included with SciMLOperators. Note that there are also downstream packages that make new operators.
-* Want to make your own SciMLOperator? See the [AbstractSciMLOperator interface page](@ref operator_interface) which describes the full interface.
+  - Interested in more examples of building operators? See the example of [making a fast fourier transform linear operator](@ref fft)
+  - Interested in more operators ready to go? See the [Premade Operators page](@ref premade_operators) for all of the operators included with SciMLOperators. Note that there are also downstream packages that make new operators.
+  - Want to make your own SciMLOperator? See the [AbstractSciMLOperator interface page](@ref operator_interface) which describes the full interface.
 
 How do you use SciMLOperators? Check out the following downstream pages:
 
-* [Using SciMLOperators in LinearSolve.jl for matrix-free Krylov methods](https://docs.sciml.ai/LinearSolve/stable/tutorials/linear/)
-* [Using SciMLOperators in OrdinaryDiffEq.jl for semi-linear ODE solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/nonautonomous_linear_ode/)
+  - [Using SciMLOperators in LinearSolve.jl for matrix-free Krylov methods](https://docs.sciml.ai/LinearSolve/stable/tutorials/linear/)
+  - [Using SciMLOperators in OrdinaryDiffEq.jl for semi-linear ODE solvers](https://docs.sciml.ai/DiffEqDocs/stable/solvers/nonautonomous_linear_ode/)

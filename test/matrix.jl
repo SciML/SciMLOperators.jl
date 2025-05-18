@@ -14,7 +14,7 @@ K = 19
     u = rand(N, K)  # Both update and action vector
     v = rand(N, K)  # Output/action vector
     w = zeros(N, K)  # Output vector
-    
+
     p = nothing
     t = 0
     α = rand()
@@ -58,7 +58,7 @@ K = 19
     # Test with new interface - same vector for update and action
     @test A * u ≈ AA(u, u, p, t)
     @test At * u ≈ AAt(u, u, p, t)
-    
+
     # Test with different vectors for update and action
     @test A * v ≈ AA(v, u, p, t)
     @test At * v ≈ AAt(v, u, p, t)
@@ -70,7 +70,7 @@ K = 19
     copy!(w, zeros(N, K))
     AA(w, v, u, p, t)
     @test w ≈ A * v
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -83,7 +83,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     p = nothing
     t = 0
     α = rand()
@@ -106,7 +106,7 @@ end
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ d .* v
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -117,7 +117,7 @@ end
     copy!(w, zeros(N, K))
     ldiv!(w, L, u)
     @test w ≈ d .\ u
-    
+
     # Existing test for in-place ldiv!
     v = copy(u)
     ldiv!(L, v)
@@ -129,7 +129,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     p = rand(N)
     t = rand()
     α = rand()
@@ -143,30 +143,30 @@ end
 
     # Expected matrix after update
     A = p * p'
-    
+
     # Test with new interface - same vector for update and action
     @test L(u, u, p, t) ≈ A * u
-    
+
     # Test with different vectors for update and action
     @test L(v, u, p, t) ≈ A * v
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ A * v
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
     L(w, v, u, p, t, α, β)
     @test w ≈ α * (A * v) + β * orig_w
 
-    A = [-2.0  1  0  0  0
-      1 -2  1  0  0
-      0  1 -2  1  0
-      0  0  1 -2  1
-      0  0  0  1 -2]
-    v = [3.0,2.0,1.0,2.0,3.0]
+    A = [-2.0 1 0 0 0
+         1 -2 1 0 0
+         0 1 -2 1 0
+         0 0 1 -2 1
+         0 0 0 1 -2]
+    v = [3.0, 2.0, 1.0, 2.0, 3.0]
     opA = MatrixOperator(A)
 
     function update_function!(B, u, p, t)
@@ -174,28 +174,31 @@ end
         B .= A .* u + dt*I
     end
 
-    u = Array(1:1.0:5); p = 0.1; t = 0.0
+    u = Array(1:1.0:5);
+    p = 0.1;
+    t = 0.0
     opB = MatrixOperator(copy(A); update_func! = update_function!)
 
-    function Bfunc!(w,v,u,p,t)
+    function Bfunc!(w, v, u, p, t)
         dt = p
         w[1] = -(2*u[1]-dt)*v[1] + v[2]*u[1]
         for i in 2:4
-            w[i] = v[i-1]*u[i] - (2*u[i]-dt)*v[i] + v[i+1]*u[i]
+            w[i] = v[i - 1]*u[i] - (2*u[i]-dt)*v[i] + v[i + 1]*u[i]
         end
         w[5] = v[4]*u[5] - (2*u[5]-dt)*v[5]
         nothing
     end
 
-    function Bfunc!(v,u,p,t)
+    function Bfunc!(v, u, p, t)
         w = zeros(5)
-        Bfunc!(w,v,u,p,t)
+        Bfunc!(w, v, u, p, t)
         w
     end
 
-    mfopB = FunctionOperator(Bfunc!, zeros(5), zeros(5); u, p, t, isconstant=false)
+    mfopB = FunctionOperator(Bfunc!, zeros(5), zeros(5); u, p, t, isconstant = false)
 
-    @test iszero(opB(v, Array(2:1.0:6), 0.5, nothing) - mfopB(v, Array(2:1.0:6), 0.5, nothing))
+    @test iszero(opB(v, Array(2:1.0:6), 0.5, nothing) -
+                 mfopB(v, Array(2:1.0:6), 0.5, nothing))
 end
 
 @testset "DiagonalOperator update test" begin
@@ -203,7 +206,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     p = rand(N)
     t = rand()
     α = rand()
@@ -219,15 +222,15 @@ end
 
     # Expected result after update
     expected = (p * t) .* v
-    
+
     # Test with new interface - different vectors for update and action
     @test D(v, u, p, t) ≈ expected
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     D(w, v, u, p, t)
     @test w ≈ expected
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -240,7 +243,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     d = rand(N, K)
     α = rand()
     β = rand()
@@ -256,12 +259,12 @@ end
 
     # Test with new interface
     @test L(v, u, p, t) ≈ d .* v
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ d .* v
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -270,11 +273,11 @@ end
 
     # Test division operations
     @test L \ u ≈ d .\ u
-    
+
     copy!(w, zeros(N, K))
     ldiv!(w, L, u)
     @test w ≈ d .\ u
-    
+
     # Existing test for in-place ldiv!
     v = copy(u)
     ldiv!(L, u)
@@ -286,7 +289,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     d = zeros(N, K)
     p = rand(N, K)
     t = rand()
@@ -301,10 +304,10 @@ end
 
     # Expected result after update
     expected = (p * t) .* v
-    
+
     # Test with new interface - different vectors for update and action
     @test D(v, u, p, t) ≈ expected
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     D(w, v, u, p, t)
@@ -316,7 +319,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     A = rand(N, N)
     B = rand(N, N)
     D = Diagonal(A)
@@ -334,12 +337,12 @@ end
     # Test with new interface
     expected = A * v + B * b
     @test L(v, u, p, t) ≈ expected
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ expected
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -352,11 +355,11 @@ end
 
     # Test division operations
     @test L \ u ≈ D \ (u - B * b)
-    
+
     copy!(w, zeros(N, K))
     ldiv!(w, L, u)
     @test w ≈ D \ (u - B * b)
-    
+
     # Existing test for in-place ldiv!
     v = copy(u)
     ldiv!(L, u)
@@ -370,23 +373,23 @@ end
     expected = v + b
     @test L(v, u, p, t) ≈ expected
     @test L \ u ≈ u - b
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ expected
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
     L(w, v, u, p, t, α, β)
     @test w ≈ α * expected + β * orig_w
-    
+
     # Test division operations
     copy!(w, zeros(N, K))
     ldiv!(w, L, u)
     @test w ≈ u - b
-    
+
     # Existing test for in-place ldiv!
     v = copy(u)
     ldiv!(L, u)
@@ -400,23 +403,23 @@ end
     expected = v + B * b
     @test L(v, u, p, t) ≈ expected
     @test L \ u ≈ u - B * b
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ expected
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
     L(w, v, u, p, t, α, β)
     @test w ≈ α * expected + β * orig_w
-    
+
     # Test division operations
     copy!(w, zeros(N, K))
     ldiv!(w, L, u)
     @test w ≈ u - B * b
-    
+
     # Existing test for in-place ldiv!
     v = copy(u)
     ldiv!(L, u)
@@ -428,7 +431,7 @@ end
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     A = rand(N, N)
     B = rand(N, N)
     p = rand(N, K)
@@ -445,15 +448,15 @@ end
     # Expected updated bias and result
     b = p * t
     expected = A * v + B * b
-    
+
     # Test with new interface - different vectors for update and action
     @test L(v, u, p, t) ≈ expected
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     L(w, v, u, p, t)
     @test w ≈ expected
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -496,11 +499,11 @@ end
     # Inputs/Update vectors
     u2 = rand(n1 * n2, K)
     u3 = rand(n1 * n2 * n3, K)
-    
+
     # Action vectors (same as update vectors initially)
     v2 = copy(u2)
     v3 = copy(u3)
-    
+
     # Output vectors
     w2 = zeros(m1 * m2, K)
     w3 = zeros(m1 * m2 * m3, K)
@@ -545,11 +548,11 @@ end
     @test AB * v2 ≈ opAB(v2, u2, p, t)
     @test ABC * v3 ≈ opABC(v3, u3, p, t)
 
-    @test AB \ w2 ≈ opAB \ w2 
+    @test AB \ w2 ≈ opAB \ w2
     @test AB \ w2 ≈ opAB_F \ w2
-    @test ABC \ w3 ≈ opABC \ w3 
+    @test ABC \ w3 ≈ opABC \ w3
     @test ABC \ w3 ≈ opABC_F \ w3
-    
+
     @test !iscached(opAB)
     @test !iscached(opABC)
 
@@ -578,7 +581,7 @@ end
     w2 = zeros(M2, K)      # Output vector
     opAB(w2, v2, u2, p, t)
     @test w2 ≈ AB * v2
-    
+
     v3 = rand(n1 * n2 * n3, K)  # Action vector
     w3 = zeros(M3, K)           # Output vector
     opABC(w3, v3, u3, p, t)
@@ -590,7 +593,7 @@ end
     orig_w2 = copy(w2)
     opAB(w2, v2, u2, p, t, α, β)
     @test w2 ≈ α * AB * v2 + β * orig_w2
-    
+
     v3 = rand(n1 * n2 * n3, K)  # Action vector
     w3 = rand(M3, K)            # Output vector
     orig_w3 = copy(w3)
@@ -602,23 +605,23 @@ end
         v2 = rand(M2, K)     # Action vector (size of output space)
         u2 = rand(N2, K)     # Update vector (size of input space)
         w2 = zeros(N2, K)    # Output vector (size of input space)
-        
+
         # ldiv! with new interface
         ldiv!(w2, opAB_F, v2)
         @test w2 ≈ AB \ v2
-        
+
         v3 = rand(M3, K)     # Action vector
         u3 = rand(N3, K)     # Update vector
         w3 = zeros(N3, K)    # Output vector
         ldiv!(w3, opABC_F, v3)
         @test w3 ≈ ABC \ v3
-        
+
         # In-place ldiv! (original style)
         v2 = rand(M2, K)
         u2 = copy(v2)
         ldiv!(opAB_F, v2)
         @test v2 ≈ AB \ u2
-        
+
         v3 = rand(M3, K)
         u3 = copy(v3)
         ldiv!(opABC_F, v3)
@@ -627,13 +630,13 @@ end
         v2 = rand(M2, K)     # Action vector
         u2 = rand(N2, K)     # Update vector
         w2 = zeros(N2, K)    # Output vector
-        
+
         if VERSION < v"1.9-"
             @test_broken ldiv!(w2, opAB_F, v2) ≈ AB \ v2
         else
             @test ldiv!(w2, opAB_F, v2) ≈ AB \ v2
         end
-        
+
         v3 = rand(M3, K)     # Action vector
         u3 = rand(N3, K)     # Update vector
         w3 = zeros(N3, K)    # Output vector

@@ -45,7 +45,8 @@ function set_op(
         op) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType, oType}
     return FunctionOperator{
         iip, oop, mul5, T, typeof(op), Fa, Fi, Fai, Tr, U, P, Tt, C, iType,
-        oType}(op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, f.u, f.p, f.t,
+        oType}(
+        op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, f.u, f.p, f.t,
         f.cache)
 end
 
@@ -54,7 +55,8 @@ function set_op_adjoint(
             iType, oType},
         op_adjoint) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt,
         C, iType, oType}
-    return FunctionOperator{iip, oop, mul5, T, F, typeof(op_adjoint), Fi, Fai, Tr, U, P, Tt,
+    return FunctionOperator{
+        iip, oop, mul5, T, F, typeof(op_adjoint), Fi, Fai, Tr, U, P, Tt,
         C, iType, oType}(f.op, op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits,
         f.u, f.p, f.t, f.cache)
 end
@@ -64,7 +66,8 @@ function set_op_inverse(
             iType, oType},
         op_inverse) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt,
         C, iType, oType}
-    return FunctionOperator{iip, oop, mul5, T, F, Fa, typeof(op_inverse), Fai, Tr, U, P, Tt,
+    return FunctionOperator{
+        iip, oop, mul5, T, F, Fa, typeof(op_inverse), Fai, Tr, U, P, Tt,
         C, iType, oType}(f.op, f.op_adjoint, op_inverse, f.op_adjoint_inverse, f.traits,
         f.u, f.p, f.t, f.cache)
 end
@@ -94,8 +97,10 @@ function set_u(
             iType, oType},
         u) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType,
         oType}
-    return FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, typeof(u), P, Tt, C, iType,
-        oType}(f.op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, u, f.p, f.t,
+    return FunctionOperator{
+        iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, typeof(u), P, Tt, C, iType,
+        oType}(
+        f.op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, u, f.p, f.t,
         f.cache)
 end
 
@@ -104,8 +109,10 @@ function set_p(
             iType, oType},
         p) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType,
         oType}
-    return FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, typeof(p), Tt, C, iType,
-        oType}(f.op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, f.u, p, f.t,
+    return FunctionOperator{
+        iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, typeof(p), Tt, C, iType,
+        oType}(
+        f.op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, f.u, p, f.t,
         f.cache)
 end
 
@@ -113,8 +120,10 @@ function set_t(
         f::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType,
             oType},
         t) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType, oType}
-    return FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, typeof(t), C, iType,
-        oType}(f.op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, f.u, f.p, t,
+    return FunctionOperator{
+        iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, typeof(t), C, iType,
+        oType}(
+        f.op, f.op_adjoint, f.op_inverse, f.op_adjoint_inverse, f.traits, f.u, f.p, t,
         f.cache)
 end
 
@@ -128,13 +137,15 @@ function set_cache(
         f.u, f.p, f.t, cache)
 end
 
-function input_eltype(::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C,
+function input_eltype(::FunctionOperator{
+        iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C,
         iType, oType
 }) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType, oType}
     return iType
 end
 
-function output_eltype(::FunctionOperator{iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C,
+function output_eltype(::FunctionOperator{
+        iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C,
         iType, oType
 }) where {iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C, iType, oType}
     return oType
@@ -143,7 +154,7 @@ end
 """
 $(SIGNATURES)
 
-Wrap callable object `op` within an `AbstractSciMLOperator`. 
+Wrap callable object `op` within an `AbstractSciMLOperator`.
 
 ## Mathematical Description
 
@@ -190,25 +201,25 @@ below traits.
 Keyword arguments are used to set operator traits, which are assumed to be
 uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
 
-* `u` - Prototype of the state struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `u` is set to `nothing` if no value is provided.
-* `p` - Prototype of parameter struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `p` is set to `nothing` if no value is provided.
-* `t` - Protype of scalar time variable passed to the operator during evaluation. `t` is set to `zero(T)` if no value is provided.
-* `accepted_kwargs` - `Tuple` of `Symbol`s corresponding to the keyword arguments accepted by `op*`, and `update_coefficients[!]`. For example, if `op` accepts kwarg `scale`, as in `op(u, p, t; scale)`, then `accepted_kwargs = (:scale,)`.
-* `T` - `eltype` of the operator. If no value is provided, the constructor inferrs the value from types of `input`, and `output`
-* `isinplace` - `true` if the operator can be used is a mutating way with in-place allocations. This trait is inferred if no value is provided.
-* `outofplace` - `true` if the operator can be used is a non-mutating way with in-place allocations. This trait is inferred if no value is provided.
-* `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
-* `isconstant` - `true` if the operator is constant, and doesn't need to be updated via `update_coefficients[!]` during operator evaluation. Defaults to false.
-* `islinear` - `true` if the operator is linear. Defaults to `false`.
-* `isconvertible` - `true` a cheap `convert(AbstractMatrix, L.op)` method is available. Defaults to `false`.
-* `batch` - Boolean indicating if the input/output arrays comprise of batched column-vectors stacked in a matrix. If `true`, the input/output arrays must be `AbstractVecOrMat`s, and the length of the  second dimension (the batch dimension) must be the same. The batch dimension is not involved in size computation. For example, with `batch = true`, and `size(output), size(input) = (M, K), (N, K)`, the `FunctionOperator` size is set to `(M, N)`. If `batch = false`, which is the default, the `input`/`output` arrays may of any size so long as `ndims(input) == ndims(output)`, and the `size` of `FunctionOperator` is set to `(length(input), length(output))`.
-* `ifcache` - Allocate cache arrays in constructor. Defaults to `true`. Cache can be generated afterwards by calling `cache_operator(L, input, output)`
-* `cache` - Pregenerated cache arrays for in-place evaluations. Expected to be of type and shape `(similar(input), similar(output),)`. The constructor generates cache if no values are provided. Cache generation by the constructor can be disabled by setting the kwarg `ifcache = false`.
-* `opnorm` - The norm of `op`. Can be a `Number`, or function `opnorm(p::Integer)`. Defaults to `nothing`.
-* `issymmetric` - `true` if the operator is linear and symmetric. Defaults to `false`.
-* `ishermitian` - `true` if the operator is linear and hermitian. Defaults to `false`.
-* `isposdef` - `true` if the operator is linear and positive-definite. Defaults to `false`.
-* `kwargs` - Keyword arguments for cache initialization. If `accepted_kwargs` is provided, the corresponding keyword arguments must be passed.
+  - `u` - Prototype of the state struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `u` is set to `nothing` if no value is provided.
+  - `p` - Prototype of parameter struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `p` is set to `nothing` if no value is provided.
+  - `t` - Protype of scalar time variable passed to the operator during evaluation. `t` is set to `zero(T)` if no value is provided.
+  - `accepted_kwargs` - `Tuple` of `Symbol`s corresponding to the keyword arguments accepted by `op*`, and `update_coefficients[!]`. For example, if `op` accepts kwarg `scale`, as in `op(u, p, t; scale)`, then `accepted_kwargs = (:scale,)`.
+  - `T` - `eltype` of the operator. If no value is provided, the constructor inferrs the value from types of `input`, and `output`
+  - `isinplace` - `true` if the operator can be used is a mutating way with in-place allocations. This trait is inferred if no value is provided.
+  - `outofplace` - `true` if the operator can be used is a non-mutating way with in-place allocations. This trait is inferred if no value is provided.
+  - `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
+  - `isconstant` - `true` if the operator is constant, and doesn't need to be updated via `update_coefficients[!]` during operator evaluation. Defaults to false.
+  - `islinear` - `true` if the operator is linear. Defaults to `false`.
+  - `isconvertible` - `true` a cheap `convert(AbstractMatrix, L.op)` method is available. Defaults to `false`.
+  - `batch` - Boolean indicating if the input/output arrays comprise of batched column-vectors stacked in a matrix. If `true`, the input/output arrays must be `AbstractVecOrMat`s, and the length of the  second dimension (the batch dimension) must be the same. The batch dimension is not involved in size computation. For example, with `batch = true`, and `size(output), size(input) = (M, K), (N, K)`, the `FunctionOperator` size is set to `(M, N)`. If `batch = false`, which is the default, the `input`/`output` arrays may of any size so long as `ndims(input) == ndims(output)`, and the `size` of `FunctionOperator` is set to `(length(input), length(output))`.
+  - `ifcache` - Allocate cache arrays in constructor. Defaults to `true`. Cache can be generated afterwards by calling `cache_operator(L, input, output)`
+  - `cache` - Pregenerated cache arrays for in-place evaluations. Expected to be of type and shape `(similar(input), similar(output),)`. The constructor generates cache if no values are provided. Cache generation by the constructor can be disabled by setting the kwarg `ifcache = false`.
+  - `opnorm` - The norm of `op`. Can be a `Number`, or function `opnorm(p::Integer)`. Defaults to `nothing`.
+  - `issymmetric` - `true` if the operator is linear and symmetric. Defaults to `false`.
+  - `ishermitian` - `true` if the operator is linear and hermitian. Defaults to `false`.
+  - `isposdef` - `true` if the operator is linear and positive-definite. Defaults to `false`.
+  - `kwargs` - Keyword arguments for cache initialization. If `accepted_kwargs` is provided, the corresponding keyword arguments must be passed.
 """
 function FunctionOperator(op,
         input::AbstractArray,
@@ -849,7 +860,7 @@ function (L::FunctionOperator)(v::AbstractArray, u, p, t; kwargs...)
     L = update_coefficients(L, u, p, t; kwargs...)
     _sizecheck(L, v, nothing)
     V, _, vec_output = _unvec(L, v, nothing)
-    
+
     # Apply the operator to action vector v after updating with u
     if L.traits.outofplace
         result = L.op(V, L.u, L.p, L.t; L.traits.kwargs...)
@@ -867,11 +878,11 @@ end
 # In-place: w is destination, v is action vector, u is update vector
 function (L::FunctionOperator)(w::AbstractArray, v::AbstractArray, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
-    
+
     # Check dimensions
     _sizecheck(L, v, w)
     V, W, _ = _unvec(L, v, w)
-    
+
     # Apply the operator in-place to action vector v after updating with u
     if L.traits.isinplace
         L.op(W, V, L.u, L.p, L.t; L.traits.kwargs...)
@@ -880,18 +891,18 @@ function (L::FunctionOperator)(w::AbstractArray, v::AbstractArray, u, p, t; kwar
         result = L.op(V, L.u, L.p, L.t; L.traits.kwargs...)
         copyto!(W, result)
     end
-    
+
     return w
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
 function (L::FunctionOperator)(w::AbstractArray, v::AbstractArray, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
-    
+
     # Check dimensions
     _sizecheck(L, v, w)
     V, W, _ = _unvec(L, v, w)
-    
+
     # Apply the operator in-place to action vector v with scaling
     if L.traits.isinplace && L.traits.has_mul5
         # Direct 5-arg mul! if supported
@@ -906,7 +917,7 @@ function (L::FunctionOperator)(w::AbstractArray, v::AbstractArray, u, p, t, α, 
         result = L.op(V, L.u, L.p, L.t; L.traits.kwargs...)
         axpby!(β, W, α, result)
     end
-    
+
     return w
 end
 #

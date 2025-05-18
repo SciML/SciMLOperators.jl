@@ -6,6 +6,4 @@ pages = [
         "FFT Tutorial" => "tutorials/fftw.md"
     ],
     "interface.md",
-    "Premade Operators" => "premade_operators.md",
-
-]
+    "Premade Operators" => "premade_operators.md"]
