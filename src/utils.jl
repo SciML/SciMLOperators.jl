@@ -24,7 +24,7 @@ end
 update_func_isconstant(::Nothing) = true
 function update_func_isconstant(update_func)
     if update_func isa FilterKwargs
-        return update_func.f === DEFAULT_UPDATE_FUNC
+        return update_func.f === DEFAULT_UPDATE_FUNC || update_func.f === nothing
     else
         return update_func === DEFAULT_UPDATE_FUNC
     end

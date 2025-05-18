@@ -1,4 +1,4 @@
-## Demonstration of Operator Algebras and Kron
+## [Demonstration of Operator Algebras and Kron](@id operator_algebras)
 
 Let `M`, `D`, `F` be matrix-based, diagonal-matrix-based, and function-based
 `SciMLOperators` respectively.
