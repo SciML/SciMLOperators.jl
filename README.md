@@ -49,7 +49,7 @@ f(w, v, u, p, t) = w .= v .* u
 M = MatrixOperator(rand(N, N))
 D = DiagonalOperator(rand(N))
 # Fix: Specify that we're providing a parameter placeholder
-F = FunctionOperator(f, zeros(N), zeros(N); p=1.0, isconstant=true)
+F = FunctionOperator(f, zeros(N), zeros(N); p=nothing, isconstant=true)
 ```
 
 Then, the following codes just work.
