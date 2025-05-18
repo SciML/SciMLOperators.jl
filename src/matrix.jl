@@ -437,7 +437,9 @@ LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 # Out-of-place: v is action vector, u is update vector
 function (L::InvertibleOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    L = update_coefficients(L, u, p, t; kwargs...)
+    if !isconstant(L)
+        L = update_coefficients(L, u, p, t; kwargs...)
+    end
     L.L * v
 end
 

@@ -83,15 +83,19 @@ end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
 function update_coefficients(L::BatchedDiagonalOperator, u, p, t; kwargs...)
-    if isnothingfunc(L.update_func)
+    if !isnothingfunc(L.update_func)
         return @reset L.diag = L.update_func(L.diag, u, p, t; kwargs...)
+    elseif !isnothingfunc(L.update_func!)
+        L.update_func!(L.diag, u, p, t; kwargs...)
+        return L
     end
-    L
 end
 
 function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
-    if isnothingfunc(L.update_func!)
+    if !isnothingfunc(L.update_func!)
         L.update_func!(L.diag, u, p, t; kwargs...)
+    elseif !isnothingfunc(L.update_func)
+        L.diag = L.update_func(L.diag, u, p, t; kwargs...)
     end
     nothing
 end
@@ -154,12 +158,13 @@ function LinearAlgebra.ldiv!(L::BatchedDiagonalOperator, u::AbstractVecOrMat)
     d = vec(L.diag)
     D = Diagonal(d)
     ldiv!(D, U)
-
     u
 end
 
 function (L::BatchedDiagonalOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    L = update_coefficients(L, u, p, t; kwargs...)
+    if !isconstant(L)
+        L = update_coefficients(L, u, p, t; kwargs...)
+    end
     L.diag .* v
 end
 

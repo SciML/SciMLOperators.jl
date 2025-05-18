@@ -980,8 +980,9 @@ function Base.resize!(L::InvertedOperator, n::Integer)
 end
 
 function update_coefficients(L::InvertedOperator, u, p, t)
-    @reset L.L = update_coefficients(L.L, u, p, t)
-
+    if !isconstant(L.L)
+        @reset L.L = update_coefficients(L.L, u, p, t)
+    end
     L
 end
 

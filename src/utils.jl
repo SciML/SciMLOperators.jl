@@ -54,9 +54,9 @@ function (f::FilterKwargs)(args...; kwargs...)
     f.f(args...; filtered_kwargs...)
 end
 
-isnothingfunc(f::FilterKwargs{Nothing}) = true 
-isnothingfunc(f::FilterKwargs) = false
+isnothingfunc(f::FilterKwargs) = isnothingfunc(f.f) 
 isnothingfunc(f::Nothing) = true
+isnothingfunc(f) = false
 #
 
 _unwrap_val(x) = x
