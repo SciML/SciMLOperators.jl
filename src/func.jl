@@ -734,11 +734,33 @@ function Base.:*(L::FunctionOperator{iip, true}, v::AbstractArray) where {iip}
     vec_output ? vec(W) : W
 end
 
+function Base.:*(L::FunctionOperator{iip, false}, v::AbstractArray) where {iip}
+    _sizecheck(L, v, nothing)
+    V, _, vec_output = _unvec(L, v, nothing)
+
+    W, _ = L.cache
+    W = copy(W)
+    L.op(W, V, L.u, L.p, L.t; L.traits.kwargs...)
+
+    vec_output ? vec(W) : W
+end
+
 function Base.:\(L::FunctionOperator{iip, true}, v::AbstractArray) where {iip}
     _sizecheck(L, nothing, v)
     _, V, vec_output = _unvec(L, nothing, v)
 
     W = L.op_inverse(V, L.u, L.p, L.t; L.traits.kwargs...)
+
+    vec_output ? vec(W) : W
+end
+
+function Base.:\(L::FunctionOperator{iip, false}, v::AbstractArray) where {iip}
+    _sizecheck(L, nothing, v)
+    _, V, vec_output = _unvec(L, nothing, v)
+
+    W, _ = L.cache
+    W = copy(W)
+    L.op_inverse(W, V, L.u, L.p, L.t; L.traits.kwargs...)
 
     vec_output ? vec(W) : W
 end
@@ -750,9 +772,12 @@ function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{true}, v::Abst
     vec_output ? vec(W) : W
 end
 
-function LinearAlgebra.mul!(::AbstractArray, L::FunctionOperator{false}, ::AbstractArray,
+function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{false}, ::AbstractArray,
         args...)
-    @error "LinearAlgebra.mul! not defined for out-of-place operator $L"
+    _sizecheck(L, v, w)
+    V, W, vec_output = _unvec(L, v, w)
+    W .= L.op(V, L.u, L.p, L.t; L.traits.kwargs...)
+    vec_output ? vec(W) : W
 end
 
 function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{true, oop, false},
@@ -797,15 +822,26 @@ function LinearAlgebra.ldiv!(L::FunctionOperator{true}, v::AbstractArray)
     copy!(W, V)
     L.op_inverse(W, V, L.u, L.p, L.t; L.traits.kwargs...) # ldiv!(U, L, V)
 
-    vec_output ? vec(W) : W
+    V .= W
+    vec_output ? vec(V) : V
 end
 
-function LinearAlgebra.ldiv!(v::AbstractArray, L::FunctionOperator{false}, u::AbstractArray)
-    @error "LinearAlgebra.ldiv! not defined for out-of-place $L"
+function LinearAlgebra.ldiv!(w::AbstractArray, L::FunctionOperator{false}, v::AbstractArray)
+    _sizecheck(L, v, w)
+    W, V, _ = _unvec(L, w, v)
+
+    W .= L.op_inverse(V, L.u, L.p, L.t; L.traits.kwargs...)
+
+    w
 end
 
-function LinearAlgebra.ldiv!(L::FunctionOperator{false}, u::AbstractArray)
-    @error "LinearAlgebra.ldiv! not defined for out-of-place $L"
+function LinearAlgebra.ldiv!(L::FunctionOperator{false}, v::AbstractArray)
+    _sizecheck(L, nothing, v)
+    V, _, vec_output = _unvec(L, v, nothing)
+
+    V .= L.op_inverse(V, L.u, L.p, L.t; L.traits.kwargs...) # ldiv!(W, L, V)
+
+    vec_output ? vec(V) : V
 end
 
 # Out-of-place: v is action vector, u is update vector
