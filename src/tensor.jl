@@ -172,7 +172,7 @@ function Base.:*(L::TensorProductOperator, v::AbstractVecOrMat)
     k = size(v, 2)
 
     U = reshape(v, (ni, no * k))
-    C = inner * U
+    C = stack([inner * _v for _v in eachcol(U)])
 
     V = outer_mul(L, v, C)
 
