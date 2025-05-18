@@ -120,7 +120,7 @@ isconstant(opB)
 
 Now let's define the operators from above in a matrix-free way using `FunctionOperator`.
 With `FunctionOperator`, we directly define the operator application function `opA(w,v,u,p,t)`
-which means `w = opA(u,p,t)*v`. For exmaple we can do the following:
+which means `w = opA(u,p,t)*v`. For example we can do the following:
 
 ```@example getting_started
 function Afunc!(w,v,u,p,t)
