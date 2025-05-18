@@ -1,4 +1,4 @@
-# Wrap a Fourier transform with SciMLOperators
+# [Wrap a Fourier transform with SciMLOperators](@id fft)
 
 In this tutorial, we will wrap a Fast Fourier Transform (FFT) in a SciMLOperator via the
 `FunctionOperator` interface. FFTs are commonly used algorithms for performing numerical

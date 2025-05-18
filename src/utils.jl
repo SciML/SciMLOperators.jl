@@ -14,16 +14,17 @@ arguments. Required in implementation of lazy `Base.adjoint`,
 struct NoKwargFilter end
 
 function preprocess_update_func(update_func, accepted_kwargs)
-    _update_func = (update_func === nothing) ? DEFAULT_UPDATE_FUNC : update_func
     _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs
     # accepted_kwargs can be passed as nothing to indicate that we should not filter
     # (e.g. if the function already accepts all kwargs...).
-    return (_accepted_kwargs isa NoKwargFilter) ? _update_func :
-           FilterKwargs(_update_func, _accepted_kwargs)
+    return (_accepted_kwargs isa NoKwargFilter) ? update_func :
+           FilterKwargs(update_func, _accepted_kwargs)
 end
+
+update_func_isconstant(::Nothing) = true
 function update_func_isconstant(update_func)
     if update_func isa FilterKwargs
-        return update_func.f === DEFAULT_UPDATE_FUNC
+        return update_func.f === DEFAULT_UPDATE_FUNC || update_func.f === nothing
     else
         return update_func === DEFAULT_UPDATE_FUNC
     end
@@ -52,6 +53,10 @@ function (f::FilterKwargs)(args...; kwargs...)
     filtered_kwargs = get_filtered_kwargs(kwargs, f.accepted_kwargs)
     f.f(args...; filtered_kwargs...)
 end
+
+isnothingfunc(f::FilterKwargs) = isnothingfunc(f.f) 
+isnothingfunc(f::Nothing) = true
+isnothingfunc(f) = false
 #
 
 _unwrap_val(x) = x

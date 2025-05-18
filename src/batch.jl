@@ -26,8 +26,8 @@ struct BatchedDiagonalOperator{T, D, F, F!} <: AbstractSciMLOperator{T}
 end
 
 function DiagonalOperator(u::AbstractArray;
-        update_func = DEFAULT_UPDATE_FUNC,
-        update_func! = DEFAULT_UPDATE_FUNC,
+        update_func = nothing,
+        update_func! = nothing,
         accepted_kwargs = nothing)
     update_func = preprocess_update_func(update_func, accepted_kwargs)
     update_func! = preprocess_update_func(update_func!, accepted_kwargs)
@@ -48,13 +48,13 @@ function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
     update_func, update_func! = if isreal(L)
         L.update_func, L.update_func!
     else
-        uf = (L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag),
+        uf = L.update_func === nothing ? nothing : (L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag),
             u,
             p,
             t;
             kwargs...))
-        uf! = (L, u, p, t; kwargs...) -> begin
-            L.update_func(conj!(L.diag), u, p, t; kwargs...)
+        uf! = L.update_func! === nothing ? nothing : (L, u, p, t; kwargs...) -> begin
+            L.update_func!(conj!(L.diag), u, p, t; kwargs...)
             conj!(L.diag)
         end
         uf, uf!
@@ -83,12 +83,20 @@ end
 LinearAlgebra.isposdef(L::BatchedDiagonalOperator) = isposdef(Diagonal(vec(L.diag)))
 
 function update_coefficients(L::BatchedDiagonalOperator, u, p, t; kwargs...)
-    @reset L.diag = L.update_func(L.diag, u, p, t; kwargs...)
+    if !isnothingfunc(L.update_func)
+        return @reset L.diag = L.update_func(L.diag, u, p, t; kwargs...)
+    elseif !isnothingfunc(L.update_func!)
+        L.update_func!(L.diag, u, p, t; kwargs...)
+        return L
+    end
 end
 
 function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
-    L.update_func!(L.diag, u, p, t; kwargs...)
-
+    if !isnothingfunc(L.update_func!)
+        L.update_func!(L.diag, u, p, t; kwargs...)
+    elseif !isnothingfunc(L.update_func)
+        L.diag = L.update_func(L.diag, u, p, t; kwargs...)
+    end
     nothing
 end
 
@@ -150,12 +158,13 @@ function LinearAlgebra.ldiv!(L::BatchedDiagonalOperator, u::AbstractVecOrMat)
     d = vec(L.diag)
     D = Diagonal(d)
     ldiv!(D, U)
-
     u
 end
 
 function (L::BatchedDiagonalOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    L = update_coefficients(L, u, p, t; kwargs...)
+    if !isconstant(L)
+        L = update_coefficients(L, u, p, t; kwargs...)
+    end
     L.diag .* v
 end
 

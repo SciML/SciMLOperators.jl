@@ -92,8 +92,8 @@ struct MatrixOperator{T, AT <: AbstractMatrix{T}, F, F!} <: AbstractSciMLOperato
 end
 
 function MatrixOperator(A;
-        update_func = DEFAULT_UPDATE_FUNC,
-        update_func! = DEFAULT_UPDATE_FUNC,
+        update_func = nothing,
+        update_func! = nothing,
         accepted_kwargs = nothing)
     update_func = preprocess_update_func(update_func, accepted_kwargs)
     update_func! = preprocess_update_func(update_func!, accepted_kwargs)
@@ -127,12 +127,12 @@ for op in (:adjoint,
     @eval function Base.$op(L::MatrixOperator)
         isconstant(L) && return MatrixOperator($op(L.A))
 
-        update_func = (A, u, p, t; kwargs...) -> $op(L.update_func($op(L.A),
+        update_func = L.update_func === nothing ? nothing : (A, u, p, t; kwargs...) -> $op(L.update_func($op(L.A),
             u,
             p,
             t;
             kwargs...))
-        update_func! = (A, u, p, t; kwargs...) -> $op(L.update_func!($op(L.A),
+        update_func! =  L.update_func! === nothing ? nothing : (A, u, p, t; kwargs...) -> $op(L.update_func!($op(L.A),
             u,
             p,
             t;
@@ -148,12 +148,12 @@ end
 function Base.conj(L::MatrixOperator)
     isconstant(L) && return MatrixOperator(conj(L.A))
 
-    update_func = (A, u, p, t; kwargs...) -> conj(L.update_func(conj(L.A),
+    update_func = L.update_func === nothing ? nothing : (A, u, p, t; kwargs...) -> conj(L.update_func(conj(L.A),
         u,
         p,
         t;
         kwargs...))
-    update_func! = (A, u, p, t; kwargs...) -> begin
+    update_func! = L.update_func! === nothing ? nothing : (A, u, p, t; kwargs...) -> begin
         L.update_func!(conj!(L.A), u, p, t; kwargs...)
         conj!(L.A)
     end
@@ -171,12 +171,20 @@ function isconstant(L::MatrixOperator)
 end
 
 function update_coefficients(L::MatrixOperator, u, p, t; kwargs...)
-    @reset L.A = L.update_func(L.A, u, p, t; kwargs...)
+    if !isnothingfunc(L.update_func)
+        @reset L.A = L.update_func(L.A, u, p, t; kwargs...)
+    elseif !isnothingfunc(L.update_func!)
+        L.update_func!(L.A, u, p, t; kwargs...)
+    end
+    L
 end
 
 function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
-    L.update_func!(L.A, u, p, t; kwargs...)
-
+    if !isnothingfunc(L.update_func!)
+        L.update_func!(L.A, u, p, t; kwargs...)
+    elseif !isnothingfunc(L.update_func)
+        L.A = L.update_func(L.A, u, p, t; kwargs...)
+    end
     nothing
 end
 
@@ -281,8 +289,8 @@ $(UPDATE_COEFFS_WARNING)
 
 """
 function DiagonalOperator(diag::AbstractVector;
-        update_func = DEFAULT_UPDATE_FUNC,
-        update_func! = DEFAULT_UPDATE_FUNC,
+        update_func = nothing,
+        update_func! = nothing,
         accepted_kwargs = nothing)
     diag_update_func = update_func_isconstant(update_func) ? update_func :
                        (A, u, p, t; kwargs...) -> update_func(A.diag, u, p, t; kwargs...) |>
@@ -429,7 +437,9 @@ LinearAlgebra.ldiv!(L::InvertibleOperator, u::AbstractVecOrMat) = ldiv!(L.F, u)
 
 # Out-of-place: v is action vector, u is update vector
 function (L::InvertibleOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    L = update_coefficients(L, u, p, t; kwargs...)
+    if !isconstant(L)
+        L = update_coefficients(L, u, p, t; kwargs...)
+    end
     L.L * v
 end
 
@@ -517,8 +527,8 @@ end
 function AffineOperator(A::Union{AbstractMatrix, AbstractSciMLOperator},
         B::Union{AbstractMatrix, AbstractSciMLOperator},
         b::AbstractArray;
-        update_func = DEFAULT_UPDATE_FUNC,
-        update_func! = DEFAULT_UPDATE_FUNC,
+        update_func = nothing,
+        update_func! = nothing,
         accepted_kwargs = nothing)
     @assert size(A, 1)==size(B, 1) "Dimension mismatch: A, B don't output vectors
   of same size"
@@ -540,8 +550,8 @@ Represents the affine operation `w = I * v + I * b`. The update functions,
 documentation of `AffineOperator` for more details.
 """
 function AddVector(b::AbstractVecOrMat;
-        update_func = DEFAULT_UPDATE_FUNC,
-        update_func! = DEFAULT_UPDATE_FUNC,
+        update_func = nothing,
+        update_func! = nothing,
         accepted_kwargs = nothing)
     N = size(b, 1)
     Id = IdentityOperator(N)
@@ -560,8 +570,8 @@ Represents the affine operation `w = I * v + B * b`. The update functions,
 documentation of `AffineOperator` for more details.
 """
 function AddVector(B, b::AbstractVecOrMat;
-        update_func = DEFAULT_UPDATE_FUNC,
-        update_func! = DEFAULT_UPDATE_FUNC,
+        update_func = nothing,
+        update_func! = nothing,
         accepted_kwargs = nothing)
     N = size(B, 1)
     Id = IdentityOperator(N)
@@ -575,11 +585,16 @@ end
 function update_coefficients(L::AffineOperator, u, p, t; kwargs...)
     @reset L.A = update_coefficients(L.A, u, p, t; kwargs...)
     @reset L.B = update_coefficients(L.B, u, p, t; kwargs...)
-    @reset L.b = L.update_func(L.b, u, p, t; kwargs...)
+    if !isnothingfunc(L.update_func)
+        @reset L.b = L.update_func(L.b, u, p, t; kwargs...)
+    end
+    L
 end
 
 function update_coefficients!(L::AffineOperator, u, p, t; kwargs...)
-    L.update_func!(L.b, u, p, t; kwargs...)
+    if !isnothingfunc(L.update_func)
+        L.update_func!(L.b, u, p, t; kwargs...)
+    end
     for op in getops(L)
         update_coefficients!(op, u, p, t; kwargs...)
     end
