@@ -43,12 +43,13 @@ Let `M`, `D`, `F` be matrix-based, diagonal-matrix-based, and function-based
 
 ```julia
 N = 4
-f(u, p, t) = u .* u
-f(v, u, p, t) = v .= u .* u
+f(v, u, p, t) = v .* u
+f(w, v, u, p, t) = w .= v .* u
 
 M = MatrixOperator(rand(N, N))
 D = DiagonalOperator(rand(N))
-F = FunctionOperator(f, zeros(N), zeros(N))
+# Fix: Specify that we're providing a parameter placeholder
+F = FunctionOperator(f, zeros(N), zeros(N); p=1.0, isconstant=true)
 ```
 
 Then, the following codes just work.
@@ -64,14 +65,33 @@ L5 = [M; D]' * [M F; F D] * [F; D]
 Each `L#` can be applied to `AbstractVector`s of appropriate sizes:
 
 ```julia
-p = nothing # parameter struct
+p = nothing # parameter struct - must be nothing or compatible with the FunctionOperator
 t = 0.0     # time
 
-u = rand(N)
-v = L1(u, p, t) # == L1 * u
+u = rand(N)  # update vector
+v = rand(N)  # action vector
+w = zeros(N) # output vector
 
-u_kron = rand(N^3)
-v_kron = L3(u_kron, p, t) # == L3 * u_kron
+# Out-of-place evaluation
+result1 = L1(v, u, p, t)  # L1 acting on v after updating with u
+
+# In-place evaluation (after caching)
+L1_cached = cache_operator(L1, v)
+L1_cached(w, v, u, p, t)  # Result stored in w
+
+# For tensor product operators
+v_kron = rand(N^3)
+u_kron = rand(N^3)  # Update vector for tensor product
+w_kron = zeros(N^3) # Output vector for tensor product
+
+# Cache the tensor product operator with the correct sized vector
+L3_cached = cache_operator(L3, v_kron)
+
+# Out-of-place evaluation (action vector v_kron, update vector u_kron)
+result_kron = L3_cached(v_kron, u_kron, p, t)
+
+# In-place evaluation (output to w_kron)
+L3_cached(w_kron, v_kron, u_kron, p, t)
 ```
 
 For mutating operator evaluations, call `cache_operator` to generate
@@ -80,13 +100,19 @@ in-place cache so the operation is nonallocating.
 ```julia
 α, β = rand(2)
 
-# allocate cache
-L2 = cache_operator(L2, u)
-L4 = cache_operator(L4, u)
+# Allocate and cache operators first
+L2 = cache_operator(L2, v)
+L4 = cache_operator(L4, v)
 
-# allocation-free evaluation
-L2(v, u, p, t) # == mul!(v, L2, u)
-L4(v, u, p, t, α, β) # == mul!(v, L4, u, α, β)
+# Allocation-free evaluation with separate update and action vectors
+w = zeros(N)
+L2(w, v, u, p, t)                # w = L2 * v
+L4(w, v, u, p, t)                # w = L4 * v
+
+# In-place evaluation with scaling: w = α*(L*v) + β*w
+result_w = rand(N)               # Start with random vector
+L2(result_w, v, u, p, t, α, β)   # result_w = α*(L2*v) + β*result_w
+L4(result_w, v, u, p, t, α, β)   # result_w = α*(L4*v) + β*result_w
 ```
 
 ## Roadmap
