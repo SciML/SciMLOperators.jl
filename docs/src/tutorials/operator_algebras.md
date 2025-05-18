@@ -1,7 +1,8 @@
 ## [Demonstration of Operator Algebras and Kron](@id operator_algebras)
 
 Let `M`, `D`, `F` be matrix-based, diagonal-matrix-based, and function-based
-`SciMLOperators` respectively.
+`SciMLOperators` respectively. Here are some examples of composing operators
+in order to build more complex objects and using their operations.
 
 ```@example operator_algebra
 using SciMLOperators, LinearAlgebra
@@ -56,14 +57,3 @@ L4 = cache_operator(L4, u)
 L2(w, v, u, p, t) # == mul!(w, L2, v)
 L4(w, v, u, p, t, α, β) # == mul!(w, L4, v, α, β)
 ```
-
-The calling signature `L(v, u, p, t)`, for out-of-place evaluations, is
-equivalent to `L * v`, and the in-place evaluation `L(w, v, u, p, t, args...)`
-is equivalent to `LinearAlgebra.mul!(w, L, v, args...)`, where the arguments
-`u, p, t` are passed to `L` to update its state. More details are provided
-in the operator update section below.
-
-The `(v, u, p, t)` calling signature is standardized over the `SciML`
-ecosystem and is flexible enough to support use cases such as time-evolution
-in ODEs, as well as sensitivity computation with respect to the parameter
-object `p`.
