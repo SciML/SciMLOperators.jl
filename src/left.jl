@@ -96,7 +96,8 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
     # constructor
     @eval Base.$op(L::AbstractSciMLOperator) = $LType(L)
 
-    @eval Base.convert(::Type{AbstractMatrix}, L::$LType) = $op(convert(AbstractMatrix,
+    @eval Base.convert(
+        ::Type{AbstractMatrix}, L::$LType) = $op(convert(AbstractMatrix,
         L.L))
 
     # traits
@@ -158,7 +159,6 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
     end
 end
 
-
 # For AdjointOperator
 # Out-of-place: v is action vector, u is update vector
 function (L::AdjointOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
@@ -181,9 +181,10 @@ function (L::AdjointOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t;
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::AdjointOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::AdjointOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     # Update the operator in-place
-    update_coefficients!(L.L, u, p ,t; kwargs...)
+    update_coefficients!(L.L, u, p, t; kwargs...)
     mul!(w', v', L.L, α, β)
     return w
 end
@@ -191,20 +192,22 @@ end
 # For TransposedOperator
 # Out-of-place
 function (L::TransposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-   L_updated = update_coefficients(L.L, u, p, t; kwargs...)
-   # (A^T)v = (v'A)' where v'A is computed by A'*v'
-   return (L_updated' * v')'
+    L_updated = update_coefficients(L.L, u, p, t; kwargs...)
+    # (A^T)v = (v'A)' where v'A is computed by A'*v'
+    return (L_updated' * v')'
 end
 
 # In-place
-function (L::TransposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+function (L::TransposedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L.L, u, p, t; kwargs...)
     mul!(w', v', L.L)
     return w
 end
 
 # In-place with scaling
-function (L::TransposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::TransposedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L.L, u, p, t; kwargs...)
     mul!(w', v', L.L, α, β)
     return w
