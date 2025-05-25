@@ -19,6 +19,9 @@ import Base: iszero, inv, adjoint, transpose, size, convert
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
 import LinearAlgebra: Matrix, Diagonal
 
+# Used for downstream checking
+const isv1 = true
+
 """
 $(TYPEDEF)
 
