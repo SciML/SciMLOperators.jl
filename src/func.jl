@@ -619,7 +619,7 @@ isconvertible(L::FunctionOperator) = L.traits.isconvertible
 isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(::FunctionOperator{iip}) where {iip} = true
-has_mul!(::FunctionOperator{iip}) where {iip} = iip
+has_mul!(::FunctionOperator{iip}) where {iip} = true
 has_ldiv(L::FunctionOperator{iip}) where {iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where {iip} = iip & !(L.op_inverse isa Nothing)
 
