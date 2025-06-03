@@ -133,7 +133,7 @@ end
     @test size(op1) == (NK, NK)
     @test has_adjoint(op1)
     @test has_mul(op1)
-    @test !has_mul!(op1)
+    @test has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
@@ -248,7 +248,7 @@ end
     @test size(op1) == (N, N)
     @test has_adjoint(op1)
     @test has_mul(op1)
-    @test !has_mul!(op1)
+    @test has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
