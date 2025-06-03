@@ -47,10 +47,10 @@ Let `M`, `D`, `F` be matrix-based, diagonal-matrix-based, and function-based
 ```@example operator_algebra
 using SciMLOperators, LinearAlgebra
 N = 4
-function f(v, u, p, t) 
+function f(v, u, p, t)
     u .* v
 end
-function f(w, v, u, p, t) 
+function f(w, v, u, p, t)
     w .= u .* v
 end
 
