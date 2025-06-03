@@ -133,7 +133,7 @@ end
     @test size(op1) == (NK, NK)
     @test has_adjoint(op1)
     @test has_mul(op1)
-    @test !has_mul!(op1)
+    @test has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
@@ -167,7 +167,7 @@ end
 
     # Test standard operator operations (from original test)
     w = rand(N, K)
-    @test _mul(A, v) ≈ op1 * v ≈ mul!(w, op2, v)
+    @test _mul(A, v) ≈ op1 * v ≈ mul!(w, op2, v) ≈ mul!(w, op1, v) 
     w = rand(N, K)
     @test _mul(A, v) ≈ op1(v, u, p, t) ≈ op2(v, u, p, t)
     v = rand(N, K)
@@ -248,7 +248,7 @@ end
     @test size(op1) == (N, N)
     @test has_adjoint(op1)
     @test has_mul(op1)
-    @test !has_mul!(op1)
+    @test has_mul!(op1)
     @test has_ldiv(op1)
     @test !has_ldiv!(op1)
 
