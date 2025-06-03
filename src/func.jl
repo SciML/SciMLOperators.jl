@@ -772,7 +772,7 @@ function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{true}, v::Abst
     vec_output ? vec(W) : W
 end
 
-function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{false}, ::AbstractArray,
+function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{false}, v::AbstractArray,
         args...)
     _sizecheck(L, v, w)
     V, W, vec_output = _unvec(L, v, w)
