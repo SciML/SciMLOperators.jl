@@ -491,7 +491,7 @@ A = MatrixOperator(rand(4, 4))
 B = MatrixOperator(rand(4, 4))
 
 vec_update_func = (b, u, p, t) -> p .* u * t
-L = AffineOperator(A, B, zero(4); update_func = vec_update_func)
+L = AffineOperator(A, B, zeros(4); update_func = vec_update_func)
 L = cache_operator(M, v)
 
 # update L and evaluate
