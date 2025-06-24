@@ -45,15 +45,20 @@ Base.iszero(L::BatchedDiagonalOperator) = iszero(L.diag)
 Base.transpose(L::BatchedDiagonalOperator) = L
 Base.adjoint(L::BatchedDiagonalOperator) = conj(L)
 function Base.conj(L::BatchedDiagonalOperator) # TODO - test this thoroughly
-    update_func, update_func! = if isreal(L)
+    update_func,
+    update_func! = if isreal(L)
         L.update_func, L.update_func!
     else
-        uf = L.update_func === nothing ? nothing : (L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag),
+        uf = L.update_func === nothing ? nothing :
+             (
+            L, u, p, t; kwargs...) -> conj(L.update_func(conj(L.diag),
             u,
             p,
             t;
             kwargs...))
-        uf! = L.update_func! === nothing ? nothing : (L, u, p, t; kwargs...) -> begin
+        uf! = L.update_func! === nothing ? nothing :
+              (
+            L, u, p, t; kwargs...) -> begin
             L.update_func!(conj!(L.diag), u, p, t; kwargs...)
             conj!(L.diag)
         end
@@ -168,19 +173,21 @@ function (L::BatchedDiagonalOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     L.diag .* v
 end
 
-function (L::BatchedDiagonalOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+function (L::BatchedDiagonalOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     w .= L.diag .* v
     return w
 end
 
-function (L::BatchedDiagonalOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::BatchedDiagonalOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     if β == 0
         w .= α .* (L.diag .* v)
     else
         w .= α .* (L.diag .* v) .+ β .* w
-    end    
+    end
     return w
 end
 #

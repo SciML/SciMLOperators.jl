@@ -126,26 +126,26 @@ end
 
     # Update operator
     @test_nowarn update_coefficients!(op, u, p, t; diag, matrix)
-    
+
     # Form dense operator manually 
     dense_T1 = kron(A, p * ones(N, N))
     dense_T2 = kron(_C, (p * t) .* matrix)
     dense_DD = Diagonal(vcat(p * ones(N2), p * t * diag))
     dense_op = hcat(dense_T1', dense_T2') * dense_DD * vcat(dense_T1, dense_T2)
-    
+
     # Test correctness of op
     @test op * v ≈ dense_op * v
-    
+
     # Test consistency with three-arg mul!
     w = rand(N2, K)
     @test mul!(w, op, v) ≈ op * v
-    
+
     # Test consistency with in-place five-arg mul!
     w = rand(N2, K)
     w2 = copy(w)
     @test mul!(w, op, v, α, β) ≈ α * (op * v) + β * w2
-    
-   # Create a fresh operator for each test
+
+    # Create a fresh operator for each test
     op_fresh = TT' * DD * TT
     op_fresh = cache_operator(op_fresh, v)
     # Use in-place update directly in test
@@ -154,7 +154,6 @@ end
     update_coefficients!(op_fresh, u, p, t; diag, matrix)
     @test result1 ≈ dense_op * v
 end
-
 
 @testset "Resize! test" begin
     M1 = 4

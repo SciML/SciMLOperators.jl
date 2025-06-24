@@ -60,15 +60,15 @@ K = 12
     # Tests with the new interface
     v = copy(u)  # Action vector
     w = zeros(N, K)  # Output vector
-    
+
     # Test with new interface
     result = α(v, u, nothing, 0.0)
     @test result ≈ v * x
-    
+
     # Test in-place operations
     α(w, v, u, nothing, 0.0)
     @test w ≈ v * x
-    
+
     # Test in-place operations with scaling
     orig_w = rand(N, K)
     copy!(w, orig_w)
@@ -81,7 +81,7 @@ end
     α = ScalarOperator(x)
     u = rand(N, K)  # Update vector
     v = rand(N, K)  # Action vector
-    
+
     # Test scalar operator combinations
     β = α + α
     @test β isa AddedScalarOperator
@@ -103,7 +103,7 @@ end
     @test β * u ≈ (1 / x) * u  # Original style test
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ 1 / x
-    
+
     β = α * inv(α)
     @test β isa ComposedScalarOperator
     @test β * u ≈ u
@@ -115,30 +115,30 @@ end
     @test β * u ≈ u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ true
-    
+
     # Test combination with other operators
     for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator(N))
         @test α + op isa SciMLOperators.AddedOperator
         @test (α + op) * u ≈ x * u + op * u
-        
+
         L = α + op
         @test L isa SciMLOperators.AddedOperator
         @test L(v, u, nothing, 0.0) ≈ x * v + op * v
-        
+
         @test α * op isa SciMLOperators.ScaledOperator
         @test (α * op) * u ≈ x * (op * u)
-        
+
         L = α * op
         @test L isa SciMLOperators.ScaledOperator
         @test L(v, u, nothing, 0.0) ≈ x * (op * v)
-        
+
         # Division tests from original
         @test all(map(T -> (T isa SciMLOperators.ScaledOperator),
             (α / op, op / α, op \ α, α \ op)))
         @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
         @test (op / α) * u ≈ (α \ op) * u ≈ 1 / α * op * u
     end
-    
+
     # Test for ComposedScalarOperator nesting (from original)
     α_new = ScalarOperator(rand())
     L = α_new * (α_new * α_new) * α_new
@@ -167,7 +167,7 @@ end
     w = zeros(N, K)  # Output vector
     p = 2.0
     t = 4.0
-    
+
     c = rand()
     d = rand()
 
@@ -197,7 +197,7 @@ end
     # Tests with new interface
     @test α(v, u, p, t) ≈ p * v
     @test β(v, u, p, t) ≈ t * v
-    
+
     # Test in-place with scaling
     orig_w = rand(N, K)
     copy!(w, orig_w)
@@ -214,37 +214,37 @@ end
     # Test operator combinations
     num = α + 2 / β * 3 - 4
     val = p + 2 / t * 3 - 4
-    
+
     @test convert(Number, num) ≈ val
 
     # Test with keyword arguments
     γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
-                     accepted_kwargs = (:dtgamma,))
-    
+        accepted_kwargs = (:dtgamma,))
+
     dtgamma = rand()
     # Original tests
     @test_throws MethodError γ(u, p, t; dtgamma) ≈ dtgamma * u
-    
+
     # New interface tests
     @test γ(v, u, p, t; dtgamma) ≈ dtgamma * v
-    
+
     # In-place test with keywords
     w_test = zeros(N, K)
     γ(w_test, v, u, p, t; dtgamma)
     @test w_test ≈ dtgamma * v
-    
+
     γ_added = γ + α
     # Original tests
     @test_throws MethodError γ_added(u, p, t; dtgamma) ≈ (dtgamma + p) * u
-    
+
     # New interface tests
     @test γ_added(v, u, p, t; dtgamma) ≈ (dtgamma + p) * v
-    
+
     # In-place test with keywords for combined operator
     w_test = zeros(N, K)
     γ_added(w_test, v, u, p, t; dtgamma)
     @test w_test ≈ (dtgamma + p) * v
-    
+
     # In-place test with scaling and keywords
     w_test = rand(N, K)
     w_orig = copy(w_test)
