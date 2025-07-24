@@ -4,6 +4,13 @@ using SciMLOperators: IdentityOperator,
                       ScaledOperator,
                       AddedOperator
 
+function apply_op!(H, w, v, u, p, t)
+    H(w, v, u, p, t)
+    return nothing
+end
+
+test_apply_noalloc(H, w, v, u, p, t) = @test (@allocations apply_op!(H, w, v, u, p, t)) == 0
+
 @testset "Allocations Check" begin
     Random.seed!(0)
     N = 8
@@ -17,13 +24,7 @@ using SciMLOperators: IdentityOperator,
     t = 0
     op = AddedOperator(A, B)
 
-    function apply_op!(H, w, v, u, p, t)
-        H(w, v, u, p, t)
-        return nothing
-    end
-
-    test_apply_noalloc(H, w, v, u, p, t) = @test (@allocations apply_op!(H, w, v, u, p, t)) == 0
-
+    apply_op!(op, w, v, u, p, t) # Warm up
     test_apply_noalloc(op, w, v, u, p, t)
 
     for T in (Float32, Float64, ComplexF32, ComplexF64)
@@ -53,6 +54,8 @@ using SciMLOperators: IdentityOperator,
         p = (ω = 0.1,)
         t = 0.1
 
+        apply_op!(H_sparse, w, v, u, p, t) # Warm up
+        apply_op!(H_dense, w, v, u, p, t) # Warm up
         test_apply_noalloc(H_sparse, w, v, u, p, t)
         test_apply_noalloc(H_dense, w, v, u, p, t)
     end
