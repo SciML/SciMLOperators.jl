@@ -616,33 +616,46 @@ end
         w
     end
 end
+
 # Out-of-place: v is action vector, u is update vector
 function (L::AddedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    L = update_coefficients(L, u, p, t; kwargs...)
-    sum(op -> iszero(op) ? zero(v) : op(v, u, p, t; kwargs...), L.ops)
+    # We don't need to update coefficients of L, as op(v, u, p, t) will do it for each op
+    sum(op -> op(v, u, p, t; kwargs...), L.ops)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
-function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
-    update_coefficients!(L, u, p, t; kwargs...)
-    for op in L.ops
-        if !iszero(op)
-            op(w, v, u, p, t, 1.0, 1.0; kwargs...)
+@generated function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    # We don't need to update coefficients of L, as op(w, v, u, p, t) will do it for each op
+
+    ops_types = L.parameters[2].parameters
+    N = length(ops_types)-1
+
+    quote
+        L.ops[1](w, v, u, p, t; kwargs...)
+        Base.@nexprs $N i->begin
+            op = L.ops[i+1]
+            op(w, v, u, p, t, true, true; kwargs...)
         end
+        w
     end
-    w
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
-    update_coefficients!(L, u, p, t; kwargs...)
-    lmul!(β, w)
-    for op in L.ops
-        if !iszero(op)
-            op(w, v, u, p, t, α, 1.0; kwargs...)
+@generated function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+    # We don't need to update coefficients of L, as op(w, v, u, p, t) will do it for each op
+
+    T = L.parameters[1]
+    ops_types = L.parameters[2].parameters
+    N = length(ops_types)-1
+
+    quote
+        L.ops[1](w, v, u, p, t, α, β; kwargs...)
+        Base.@nexprs $N i->begin
+            op = L.ops[i+1]
+            op(w, v, u, p, t, α, true; kwargs...)
         end
+        w
     end
-    w
 end
 
 """
