@@ -201,7 +201,7 @@ function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; 
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+Base.@constprop :aggressive function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     mul!(w, L.A, v, α, β)
 end

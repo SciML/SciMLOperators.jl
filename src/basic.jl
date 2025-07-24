@@ -620,14 +620,13 @@ end
 # Out-of-place: v is action vector, u is update vector
 function (L::AddedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     # We don't need to update coefficients of L, as op(v, u, p, t) will do it for each op
-    sum(op -> iszero(op) ? zero(v) : op(v, u, p, t; kwargs...), L.ops)
+    sum(op -> op(v, u, p, t; kwargs...), L.ops)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 @generated function (L::AddedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     # We don't need to update coefficients of L, as op(w, v, u, p, t) will do it for each op
 
-    T = L.parameters[1]
     ops_types = L.parameters[2].parameters
     N = length(ops_types)-1
 
@@ -635,7 +634,7 @@ end
         L.ops[1](w, v, u, p, t; kwargs...)
         Base.@nexprs $N i->begin
             op = L.ops[i+1]
-            op(w, v, u, p, t, one($T), one($T); kwargs...)
+            op(w, v, u, p, t, true, true; kwargs...)
         end
         w
     end
@@ -653,7 +652,7 @@ end
         L.ops[1](w, v, u, p, t, α, β; kwargs...)
         Base.@nexprs $N i->begin
             op = L.ops[i+1]
-            op(w, v, u, p, t, α, one($T); kwargs...)
+            op(w, v, u, p, t, α, true; kwargs...)
         end
         w
     end
