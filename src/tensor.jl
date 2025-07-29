@@ -204,7 +204,7 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
 
     # 3 arg mul!
     c1 = lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
-    c2 = lmul!(false, similar(v, (no, mi, k))) # permut (2, 1, 3)
+    c2 = lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
     c3 = lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
 
     # 5 arg mul!
@@ -215,7 +215,7 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
         c5, c6, c7 = c1, c2, c3
     else
         c5 = lmul!(false, similar(v, (ni, mo * k))) # c5 = inner \ v
-        c6 = lmul!(false, similar(v, (mo, ni, k))) # permut (2, 1, 3)
+        c6 = lmul!(false, similar(v, (mo, ni, k))) # permute (2, 1, 3)
         c7 = lmul!(false, similar(v, (no, ni * k))) # c7 = outer \ c6
     end
 
