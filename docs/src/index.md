@@ -48,7 +48,7 @@ act like “normal” functions for equation solvers. For example, if `A(v,u,p,t
 has the same operation as `update_coefficients(A, u, p, t); A * v`, then `A`
 can be used in any place where a differential equation definition
 `(u,p,t) -> A(u, u, p, t)` is used without requiring the user or solver to do any extra
-work. 
+work.
 
 Another example is state-dependent mass matrices. `M(u,p,t)*u' = f(u,p,t)`.
 When solving such an equation, the solver must understand how to "update M"
@@ -66,7 +66,7 @@ an extended operator interface with all of these properties, hence the
 `AbstractSciMLOperator` interface.
 
 !!! warn
-
+    
     This means that LinearMaps.jl is fundamentally lacking and is incompatible
     with many of the tools in the SciML ecosystem, except for the specific cases
     where the matrix-free operator is a constant!

@@ -49,7 +49,7 @@ test_apply_noalloc(H, w, v, u, p, t) = @test (@allocations apply_op!(H, w, v, u,
         H_dense = c1 * A1_dense + c2 * A2_dense + c3 * A3_dense
 
         u = rand(T, N)
-        v = rand(T, N) 
+        v = rand(T, N)
         w = similar(u)
         p = (ω = 0.1,)
         t = 0.1

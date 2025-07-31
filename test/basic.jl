@@ -19,8 +19,8 @@ K = 12
 @testset "IdentityOperator" begin
     A = rand(N, N) |> MatrixOperator
     u = rand(N, K)
-    v = rand(N, K)       
-    w = zeros(N, K)  
+    v = rand(N, K)
+    w = zeros(N, K)
     p = nothing
     t = 0
     α = rand()
@@ -47,15 +47,15 @@ K = 12
 
     # Test with new interface - same update and action vector
     @test Id(u, u, p, t) ≈ u
-    
+
     # Test with different vectors for update and action
     @test Id(v, u, p, t) ≈ v
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     Id(w, v, u, p, t)
     @test w ≈ v
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -82,8 +82,8 @@ end
 
 @testset "NullOperator" begin
     A = rand(N, N) |> MatrixOperator
-    u = rand(N, K)       
-    v = rand(N, K)       
+    u = rand(N, K)
+    v = rand(N, K)
     w = zeros(N, K)
     p = nothing
     t = 0
@@ -109,15 +109,15 @@ end
 
     # Test with new interface - same update and action vector
     @test Z(u, u, p, t) ≈ zero(u)
-    
+
     # Test with different vectors for update and action
     @test Z(v, u, p, t) ≈ zero(v)
-    
+
     # Test in-place operation
     copy!(w, ones(N, K))
     Z(w, v, u, p, t)
     @test w ≈ zero(v)
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -167,15 +167,15 @@ end
 
     # Test with new interface - same vector for update and action
     @test op(u, u, p, t) ≈ α * A * u
-    
+
     # Test with different vectors for update and action
     @test op(v, u, p, t) ≈ α * A * v
-    
+
     # Test in-place operation
     copy!(w, zeros(N, K))
     op(w, v, u, p, t)
     @test w ≈ α * A * v
-    
+
     # Test in-place with scaling
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -235,24 +235,24 @@ end
         @test op2 * u ≈ op(α * A * u, B * u)
         @test op3 * u ≈ op(A * u, β * B * u)
         @test op4 * u ≈ op(α * A * u, β * B * u)
-        
+
         # Test new interface - combined case
         @test op1(u, u, p, t) ≈ op(A * u, B * u)
         @test op2(u, u, p, t) ≈ op(α * A * u, B * u)
         @test op3(u, u, p, t) ≈ op(A * u, β * B * u)
         @test op4(u, u, p, t) ≈ op(α * A * u, β * B * u)
-        
+
         # Test new interface - separate vectors
         @test op1(v, u, p, t) ≈ op(A * v, B * v)
         @test op2(v, u, p, t) ≈ op(α * A * v, B * v)
         @test op3(v, u, p, t) ≈ op(A * v, β * B * v)
         @test op4(v, u, p, t) ≈ op(α * A * v, β * B * v)
-        
+
         # Test in-place operation
         copy!(w, zeros(N, K))
         op1(w, v, u, p, t)
         @test w ≈ op(A * v, B * v)
-        
+
         # Test in-place with scaling
         copy!(w, rand(N, K))
         orig_w = copy(w)
@@ -301,7 +301,7 @@ end
         H_dense = c1 * A1_dense + c2 * A2_dense + c3 * A3_dense
 
         u = rand(T, N)
-        v = rand(T, N) 
+        v = rand(T, N)
         du = similar(u)
         p = (ω = 0.1,)
         t = 0.1
@@ -341,22 +341,22 @@ end
 
     @test ABCmulu ≈ op * u
     @test ABCdivu ≈ op \ u ≈ opF \ u
-    
+
     # Test new interface - combined case
     @test op(u, u, p, t) ≈ ABCmulu
-    
+
     # Test new interface - separate vectors
     @test op(v, u, p, t) ≈ (A * B * C) * v
 
     @test !iscached(op)
     op = cache_operator(op, u)
     @test iscached(op)
-    
+
     # Test in-place operation with new interface
     copy!(w, zeros(N, K))
     op(w, v, u, p, t)
     @test w ≈ (A * B * C) * v
-    
+
     # Test in-place with scaling with new interface
     copy!(w, rand(N, K))
     orig_w = copy(w)
@@ -404,8 +404,8 @@ end
 
 @testset "Adjoint, Transpose" begin
     for (op,
-    LType,
-    VType) in ((adjoint, AdjointOperator, AbstractAdjointVecOrMat),
+        LType,
+        VType) in ((adjoint, AdjointOperator, AbstractAdjointVecOrMat),
         (transpose, TransposedOperator, AbstractTransposedVecOrMat))
         A = rand(N, N)
         D = Bidiagonal(rand(N, N), :L)
@@ -480,18 +480,18 @@ end
     @test islinear(Di)
 
     @test Di * u ≈ u ./ s
-    
+
     # Test new interface - same vectors
     @test Di(u, u, p, t) ≈ u ./ s
-    
+
     # Test new interface - separate vectors
     @test Di(v, u, p, t) ≈ v ./ s
-    
+
     # Test in-place operation
     copy!(w, zeros(N))
     Di(w, v, u, p, t)
     @test w ≈ v ./ s
-    
+
     # Test in-place with scaling
     copy!(w, rand(N))
     orig_w = copy(w)
