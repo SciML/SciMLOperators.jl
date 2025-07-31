@@ -9,6 +9,7 @@ to `update_coefficients[!](L, u, p, t)`. Both recursively call the
 `update_function`, `update_func` which is assumed to have the signature
 
     update_func(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> newA
+
 or
 
     update_func!(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> [modifies A]
@@ -29,6 +30,7 @@ adjoints, transposes.
 # Example
 
 Out-of-place update and usage
+
 ```
 v = rand(4)
 u = rand(4)
@@ -54,6 +56,7 @@ L(w, v, u, p, t, 2.0, β; scale = 1.0) # w = 2.0*(L*v) + 0.5*w
 ```
 
 In-place update and usage
+
 ```
 w = zeros(4)
 v = zeros(4)
@@ -127,12 +130,16 @@ for op in (:adjoint,
     @eval function Base.$op(L::MatrixOperator)
         isconstant(L) && return MatrixOperator($op(L.A))
 
-        update_func = L.update_func === nothing ? nothing : (A, u, p, t; kwargs...) -> $op(L.update_func($op(L.A),
+        update_func = L.update_func === nothing ? nothing :
+                      (
+            A, u, p, t; kwargs...) -> $op(L.update_func($op(L.A),
             u,
             p,
             t;
             kwargs...))
-        update_func! =  L.update_func! === nothing ? nothing : (A, u, p, t; kwargs...) -> $op(L.update_func!($op(L.A),
+        update_func! = L.update_func! === nothing ? nothing :
+                       (
+            A, u, p, t; kwargs...) -> $op(L.update_func!($op(L.A),
             u,
             p,
             t;
@@ -148,12 +155,16 @@ end
 function Base.conj(L::MatrixOperator)
     isconstant(L) && return MatrixOperator(conj(L.A))
 
-    update_func = L.update_func === nothing ? nothing : (A, u, p, t; kwargs...) -> conj(L.update_func(conj(L.A),
+    update_func = L.update_func === nothing ? nothing :
+                  (
+        A, u, p, t; kwargs...) -> conj(L.update_func(conj(L.A),
         u,
         p,
         t;
         kwargs...))
-    update_func! = L.update_func! === nothing ? nothing : (A, u, p, t; kwargs...) -> begin
+    update_func! = L.update_func! === nothing ? nothing :
+                   (
+        A, u, p, t; kwargs...) -> begin
         L.update_func!(conj!(L.A), u, p, t; kwargs...)
         conj!(L.A)
     end
@@ -201,11 +212,11 @@ function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; 
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-Base.@constprop :aggressive function (L::MatrixOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+Base.@constprop :aggressive function (L::MatrixOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     mul!(w, L.A, v, α, β)
 end
-
 
 # TODO - add tests for MatrixOperator indexing
 # propagate_inbounds here for the getindex fallback
@@ -213,7 +224,8 @@ Base.@propagate_inbounds Base.convert(::Type{AbstractMatrix}, L::MatrixOperator)
     AbstractMatrix,
     L.A)
 Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, i::Int) = (L.A[i] = v)
-Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, I::Vararg{Int, N}) where {N} = (L.A[I...] = v)
+Base.@propagate_inbounds Base.setindex!(L::MatrixOperator, v, I::Vararg{
+    Int, N}) where {N} = (L.A[I...] = v)
 
 Base.eachcol(L::MatrixOperator) = eachcol(L.A)
 Base.eachrow(L::MatrixOperator) = eachrow(L.A)
@@ -274,6 +286,7 @@ evaluation (`L([w,], v, u, p, t)`), or by calls to
 `update_function`, `update_func` which is assumed to have the signature
 
     update_func(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> new_diag
+
 or
 
     update_func!(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> [modifies diag]
@@ -286,15 +299,15 @@ are not provided.
 $(UPDATE_COEFFS_WARNING)
 
 # Example
-
 """
 function DiagonalOperator(diag::AbstractVector;
         update_func = nothing,
         update_func! = nothing,
         accepted_kwargs = nothing)
     diag_update_func = update_func_isconstant(update_func) ? update_func :
-                       (A, u, p, t; kwargs...) -> update_func(A.diag, u, p, t; kwargs...) |>
-                                                  Diagonal
+                       (
+        A, u, p, t; kwargs...) -> update_func(A.diag, u, p, t; kwargs...) |>
+                                  Diagonal
 
     diag_update_func! = update_func_isconstant(update_func!) ? update_func! :
                         (A, u, p, t; kwargs...) -> update_func!(A.diag, u, p, t; kwargs...)
@@ -348,9 +361,11 @@ for fact in (:lu, :lu!,
     :bunchkaufman, :bunchkaufman!,
     :lq, :lq!,
     :svd, :svd!)
-    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator, args...) = InvertibleOperator(L,
+    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator,
+        args...) = InvertibleOperator(L,
         $fact(convert(AbstractMatrix, L), args...))
-    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator; kwargs...) = InvertibleOperator(L,
+    @eval LinearAlgebra.$fact(L::AbstractSciMLOperator;
+        kwargs...) = InvertibleOperator(L,
         $fact(convert(AbstractMatrix, L); kwargs...))
 end
 
@@ -444,13 +459,15 @@ function (L::InvertibleOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
-function (L::InvertibleOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+function (L::InvertibleOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     mul!(w, L.L, v)
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::InvertibleOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::InvertibleOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     mul!(w, L.L, v, α, β)
 end
@@ -466,6 +483,7 @@ to `update_coefficients[!](L, u, p, t)`. The update functions are
 assumed to have the syntax
 
     update_func(b::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> new_b
+
 or
 
     update_func!(b::AbstractVecOrMat, u ,p , t; <accepted kwargs>) -> [modifies b]
@@ -497,7 +515,6 @@ L = cache_operator(M, v)
 # update L and evaluate
 w = L(v, u, p, t) # == A * v + B * (p .* u * t)
 ```
-
 """
 struct AffineOperator{T, AT, BT, bT, F, F!} <: AbstractSciMLOperator{T}
     A::AT
@@ -705,7 +722,8 @@ function (L::AffineOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; 
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::AffineOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::AffineOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     # Scale the existing w by β
     lmul!(β, w)

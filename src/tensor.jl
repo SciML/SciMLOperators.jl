@@ -583,14 +583,16 @@ function (L::TensorProductOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
-function (L::TensorProductOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+function (L::TensorProductOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     mul!(w, L, v)
     return w
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
-function (L::TensorProductOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+function (L::TensorProductOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     mul!(w, L, v, α, β)
     return w
