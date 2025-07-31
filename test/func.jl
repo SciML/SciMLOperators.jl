@@ -50,17 +50,18 @@ NK = N * K
         # test with ND-arrays and new interface
         @test _mul(A, v) ≈ L(v, u, p, t) ≈ L * v ≈ mul!(zero(w), L, v)
         @test α * _mul(A, v) + β * w ≈ mul!(copy(w), L, v, α, β)
-        
+
         # Test with different update and action vectors
         action_vec = rand(sz_in...)
         @test _mul(A, action_vec) ≈ L(action_vec, u, p, t)
-        
+
         if sz_in == sz_out
             @test _div(A, w) ≈ L \ w ≈ ldiv!(zero(v), L, w) ≈ ldiv!(L, copy(w))
         end
-        
+
         # test with vec(Array)
-        @test vec(_mul(A, v)) ≈ L(vec(v), u, p, t) ≈ L * vec(v) ≈ mul!(vec(zero(w)), L, vec(v))
+        @test vec(_mul(A, v)) ≈ L(vec(v), u, p, t) ≈ L * vec(v) ≈
+              mul!(vec(zero(w)), L, vec(v))
         @test vec(α * _mul(A, v) + β * w) ≈ mul!(vec(copy(w)), L, vec(v), α, β)
 
         if sz_in == sz_out
@@ -72,7 +73,7 @@ NK = N * K
         output_vec = zeros(sz_out...)
         L(output_vec, action_vec, u, p, t)
         @test output_vec ≈ _mul(A, action_vec)
-        
+
         # Test in-place with scaling
         output_vec = rand(sz_out...)
         orig_output = copy(output_vec)
@@ -128,7 +129,7 @@ end
     @test islinear(op1)
     @test islinear(op2)
     @test op1' === op1
-    
+
     # Test operator properties
     @test size(op1) == (NK, NK)
     @test has_adjoint(op1)
@@ -167,7 +168,7 @@ end
 
     # Test standard operator operations (from original test)
     w = rand(N, K)
-    @test _mul(A, v) ≈ op1 * v ≈ mul!(w, op2, v) ≈ mul!(w, op1, v) 
+    @test _mul(A, v) ≈ op1 * v ≈ mul!(w, op2, v) ≈ mul!(w, op1, v)
     w = rand(N, K)
     @test _mul(A, v) ≈ op1(v, u, p, t) ≈ op2(v, u, p, t)
     v = rand(N, K)
@@ -181,11 +182,11 @@ end
 
     # Test with new interface - out of place
     @test _mul(A, action_vec) ≈ op1(action_vec, u, p, t)
-    
+
     # Test with new interface - in place
     op2(result_vec, action_vec, u, p, t)
     @test result_vec ≈ _mul(A, action_vec)
-    
+
     # Test in-place with scaling
     result_vec = rand(N, K)
     orig_result = copy(result_vec)
@@ -278,11 +279,11 @@ end
 
     v = rand(N, K)
     @test *(A, v) ≈ op1 * v ≈ mul!(w, op2, v)
-    
+
     # Test with new interface
     v = rand(N, K)
     @test *(A, v) ≈ op1(w, v, u, p, t) ≈ op2(w, v, u, p, t)
-    
+
     v = rand(N, K)
     w = copy(v)
     @test α * *(A, v) + β * w ≈ mul!(w, op2, v, α, β)
@@ -292,7 +293,7 @@ end
     @test \(A, w) ≈ op1 \ w ≈ ldiv!(v, op2, w)
     w = copy(v)
     @test \(A, w) ≈ ldiv!(op2, w)
-    
+
     # Test new interface ldiv
     w = rand(N, K)
     ldiv_result = zeros(N, K)
@@ -316,12 +317,12 @@ end
     for acc_kw in ((:scale,), Val((:scale,)))
         # Function operator with keyword arguments
         L = FunctionOperator(f, v, w;
-                            u = u,
-                            p = zero(p), 
-                            t = zero(t), 
-                            batch = true,
-                            accepted_kwargs = acc_kw, 
-                            scale = 1.0)
+            u = u,
+            p = zero(p),
+            t = zero(t),
+            batch = true,
+            accepted_kwargs = acc_kw,
+            scale = 1.0)
 
         @test_throws ArgumentError FunctionOperator(
             f, v, w; u = u, p = zero(p), t = zero(t), batch = true,
@@ -333,15 +334,15 @@ end
         A = Diagonal(u * p * t * scale)
         expected = A * v
         ans = u * p .* t .* scale
-        
+
         # Test with new interface
         @test L(v, u, p, t; scale) ≈ expected
-        
+
         # Test in-place with new interface
         copy!(w, zeros(N, K))
-        L(w, v, u, p, t; scale) 
+        L(w, v, u, p, t; scale)
         @test w ≈ expected
-        
+
         # Test in-place with scaling
         copy!(w, rand(N, K))
         orig_w = copy(w)
@@ -349,7 +350,7 @@ end
         β_val = rand()
         L(w, v, u, p, t, α_val, β_val; scale)
         @test w ≈ α_val * expected + β_val * orig_w
-        
+
         # Test that outputs aren't accidentally mutated
         v1 = rand(N, K)
         v2 = rand(N, K)
@@ -359,17 +360,17 @@ end
         # Expected results with different vectors
         result1 = A * v1
         result2 = A * v2
-        
+
         # Test output consistency
         w1 = zeros(N, K)
         w2 = zeros(N, K)
-        
+
         L(w1, v1, u, p, t; scale)
         L(w2, v2, u, p, t; scale)
-        
+
         @test w1 ≈ result1
         @test w2 ≈ result2
-        
+
         # Test matrix-vector multiplication
         w1 = L * v1
         @test w1 ≈ A * v1
@@ -381,21 +382,21 @@ end
         # Test in-place matrix-vector multiplication
         v1 .= 0.0
         v2 .= 0.0
-        
+
         mul!(w1, L, v1)
         @test w1 ≈ A * v1
         mul!(w2, L, v2)
         @test w2 ≈ A * v2
         @test w1 ≈ A * v1
         @test w1 + w2 ≈ A * (v1 + v2)
-        
+
         # Test scaling
         v1 = rand(N, K)
         w1 = copy(v1)
         v2 = rand(N, K)
         w2 = copy(v2)
         a1, a2, b1, b2 = rand(4)
-        
+
         res = copy(w1)
         mul!(res, L, v1, a1, b1)
         @test res ≈ a1 * A * v1 + b1 * w1

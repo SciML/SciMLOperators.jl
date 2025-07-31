@@ -66,7 +66,7 @@ for (LType, L) in ((IdentityOperator, IdentityOperator(N)),
     (AddedScalarOperator, α + α),
     (ComposedScalarOperator, α * α))
     @assert L isa LType
-    
+
     # Cache the operator for efficient application
     L_cached = cache_operator(L, u0)
 
@@ -81,11 +81,11 @@ for (LType, L) in ((IdentityOperator, IdentityOperator(N)),
 
     loss_div = function (p)
         v = Diagonal(p) * u0
-        
+
         # Update coefficients first, then apply inverse
         L_updated = update_coefficients(L_cached, u0, p, t)
         w = L_updated \ v
-        
+
         l = sum(w)
     end
 

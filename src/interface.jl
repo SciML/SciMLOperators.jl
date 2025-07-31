@@ -63,7 +63,6 @@ result = L * v
 # Or use the interface which separrates the update from the application
 result = L(v, u, p, t; scale = 2.0)
 ```
-
 """
 update_coefficients(L, u, p, t; kwargs...) = L
 
@@ -98,7 +97,6 @@ t = 1.0
 update_coefficients!(L, u, p, t)
 L * v
 ```
-
 """
 update_coefficients!(L, u, p, t; kwargs...) = nothing
 
@@ -157,10 +155,10 @@ computation.
 iscached(L) = true
 
 iscached(::Union{# LinearAlgebra
-AbstractMatrix,
-UniformScaling,
-Factorization, # Base
-Number}) = true
+    AbstractMatrix,
+    UniformScaling,
+    Factorization, # Base
+    Number}) = true
 
 """
 $SIGNATURES
@@ -253,10 +251,10 @@ Checks if an `L`'s state is constant or needs to be updated by calling
 `update_coefficients`.
 """
 isconstant(::Union{# LinearAlgebra
-AbstractMatrix,
-UniformScaling,
-Factorization, # Base
-Number}) = true
+    AbstractMatrix,
+    UniformScaling,
+    Factorization, # Base
+    Number}) = true
 isconstant(L::AbstractSciMLOperator) = all(isconstant, getops(L))
 isconstant(L) = false
 
@@ -290,11 +288,13 @@ end
 Convert `SciMLOperator` to a concrete type via eager fusion. This method is a
 no-op for types that are already concrete.
 """
-concretize(L::Union{# LinearAlgebra
-AbstractMatrix,
-Factorization, # SciMLOperators
-AbstractSciMLOperator
-}) = convert(AbstractMatrix, L)
+function concretize(L::Union{# LinearAlgebra
+        AbstractMatrix,
+        Factorization, # SciMLOperators
+        AbstractSciMLOperator
+})
+    convert(AbstractMatrix, L)
+end
 
 function concretize(L::Union{
         # LinearAlgebra
@@ -318,48 +318,48 @@ islinear(::AbstractSciMLOperator) = false
 islinear(L) = false
 
 islinear(::Union{# LinearAlgebra
-AbstractMatrix,
-UniformScaling,
-Factorization, # Base
-Number
+    AbstractMatrix,
+    UniformScaling,
+    Factorization, # Base
+    Number
 }) = true
 
 has_mul(L) = false
 has_mul(::Union{# LinearAlgebra
-AbstractVecOrMat,
-AbstractMatrix,
-UniformScaling, # Base
-Number
+    AbstractVecOrMat,
+    AbstractMatrix,
+    UniformScaling, # Base
+    Number
 }) = true
 
 has_mul!(L) = false
 has_mul!(::Union{# LinearAlgebra
-AbstractVecOrMat,
-AbstractMatrix,
-UniformScaling, # Base
-Number
+    AbstractVecOrMat,
+    AbstractMatrix,
+    UniformScaling, # Base
+    Number
 }) = true
 
 has_ldiv(L) = false
 has_ldiv(::Union{
-AbstractMatrix,
-Factorization,
-Number
+    AbstractMatrix,
+    Factorization,
+    Number
 }) = true
 
 has_ldiv!(L) = false
 has_ldiv!(::Union{
-Diagonal,
-Bidiagonal,
-Factorization
+    Diagonal,
+    Bidiagonal,
+    Factorization
 }) = true
 
 has_adjoint(L) = islinear(L)
 has_adjoint(::Union{# LinearAlgebra
-AbstractMatrix,
-UniformScaling,
-Factorization, # Base
-Number
+    AbstractMatrix,
+    UniformScaling,
+    Factorization, # Base
+    Number
 }) = true
 
 """
@@ -368,9 +368,9 @@ Checks if `size(L, 1) == size(L, 2)`.
 issquare(L) = ndims(L) >= 2 && size(L, 1) == size(L, 2)
 issquare(::AbstractVector) = false
 issquare(::Union{# LinearAlgebra
-UniformScaling, # SciMLOperators
-AbstractSciMLScalarOperator, # Base
-Number
+    UniformScaling, # SciMLOperators
+    AbstractSciMLScalarOperator, # Base
+    Number
 }) = true
 issquare(A...) = @. (&)(issquare(A)...)
 

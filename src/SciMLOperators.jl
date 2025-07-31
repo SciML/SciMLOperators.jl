@@ -38,20 +38,20 @@ the following type of equation:
 w = L(u,p,t)[v]
 ```
 
-where `L[v]` is the operator application of ``L`` on the vector ``v``. 
+where `L[v]` is the operator application of ``L`` on the vector ``v``.
 
 ## Interface
 
 An `AbstractSciMLOperator` can be called  like a function in the following ways:
 
-- `L(v, u, p, t)` - Out-of-place application where `v` is the action vector and `u` is the update vector
-- `L(w, v, u, p, t)` - In-place application where `w` is the destination, `v` is the action vector, and `u` is the update vector
-- `L(w, v, u, p, t, α, β)` - In-place application with scaling: `w = α*(L*v) + β*w`
+  - `L(v, u, p, t)` - Out-of-place application where `v` is the action vector and `u` is the update vector
+  - `L(w, v, u, p, t)` - In-place application where `w` is the destination, `v` is the action vector, and `u` is the update vector
+  - `L(w, v, u, p, t, α, β)` - In-place application with scaling: `w = α*(L*v) + β*w`
 
 Operator state can be updated separately from application:
 
-- `update_coefficients!(L, u, p, t)` for in-place operator update
-- `L = update_coefficients(L, u, p, t)` for out-of-place operator update
+  - `update_coefficients!(L, u, p, t)` for in-place operator update
+  - `L = update_coefficients(L, u, p, t)` for out-of-place operator update
 
 SciMLOperators also overloads `Base.*`, `LinearAlgebra.mul!`,
 `LinearAlgebra.ldiv!` for operator evaluation without updating operator state.
@@ -186,7 +186,6 @@ M = MatrixOperator(zero(N, N); update_func = mat_update_func,
 M(v, u, p, t) == zeros(N) # true
 M(v, u, p, t; scale = 1.0) != zero(N)
 ```
-
 """
 abstract type AbstractSciMLOperator{T} end
 

@@ -174,7 +174,8 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 Base.show(io::IO, α::ScalarOperator) = print(io, "ScalarOperator($(α.val))")
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
-    update_func = (oldval, u, p, t; kwargs...) -> α.update_func(oldval |> conj,
+    update_func = (oldval, u, p, t;
+        kwargs...) -> α.update_func(oldval |> conj,
         u,
         p,
         t;
@@ -205,7 +206,6 @@ function SciMLOperators.update_coefficients(L::ScalarOperator, u, p, t; kwargs..
     return ScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
 end
 
-
 # Add ScalarOperator specific implementations for the new interface
 function (α::ScalarOperator)(v::AbstractArray, u, p, t; kwargs...)
     α = update_coefficients(α, u, p, t; kwargs...)
@@ -221,7 +221,6 @@ function (α::ScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, t, a, b;
     update_coefficients!(α, u, p, t; kwargs...)
     mul!(w, α, v, a, b)
 end
-
 
 """
 $TYPEDEF
@@ -307,11 +306,11 @@ function (α::AddedScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, t; 
     mul!(w, α, v)
 end
 
-function (α::AddedScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, t, a, b; kwargs...)
+function (α::AddedScalarOperator)(
+        w::AbstractArray, v::AbstractArray, u, p, t, a, b; kwargs...)
     update_coefficients!(α, u, p, t; kwargs...)
     mul!(w, α, v, a, b)
 end
-
 
 getops(α::AddedScalarOperator) = α.ops
 has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
@@ -339,16 +338,20 @@ end
 
 for op in (:*, :∘)
     @eval Base.$op(ops::AbstractSciMLScalarOperator...) = reduce($op, ops)
-    @eval Base.$op(A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(
+    @eval Base.$op(
+        A::AbstractSciMLScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(
         A,
         B)
-    @eval Base.$op(A::ComposedScalarOperator, B::AbstractSciMLScalarOperator) = ComposedScalarOperator(
+    @eval Base.$op(A::ComposedScalarOperator,
+        B::AbstractSciMLScalarOperator) = ComposedScalarOperator(
         A.ops...,
         B)
-    @eval Base.$op(A::AbstractSciMLScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(
+    @eval Base.$op(A::AbstractSciMLScalarOperator,
+        B::ComposedScalarOperator) = ComposedScalarOperator(
         A,
         B.ops...)
-    @eval Base.$op(A::ComposedScalarOperator, B::ComposedScalarOperator) = ComposedScalarOperator(
+    @eval Base.$op(A::ComposedScalarOperator,
+        B::ComposedScalarOperator) = ComposedScalarOperator(
         A.ops...,
         B.ops...)
 
@@ -422,7 +425,8 @@ function (α::ComposedScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, 
     mul!(w, α, v)
 end
 
-function (α::ComposedScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, t, a, b; kwargs...)
+function (α::ComposedScalarOperator)(
+        w::AbstractArray, v::AbstractArray, u, p, t, a, b; kwargs...)
     update_coefficients!(α, u, p, t; kwargs...)
     mul!(w, α, v, a, b)
 end
@@ -435,7 +439,6 @@ has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 $TYPEDEF
 
 Lazy inverse of `AbstractSciMLScalarOperator`s
-
 """
 struct InvertedScalarOperator{T, λType} <: AbstractSciMLScalarOperator{T}
     λ::λType
@@ -497,7 +500,8 @@ function (α::InvertedScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, 
     mul!(w, α, v)
 end
 
-function (α::InvertedScalarOperator)(w::AbstractArray, v::AbstractArray, u, p, t, a, b; kwargs...)
+function (α::InvertedScalarOperator)(
+        w::AbstractArray, v::AbstractArray, u, p, t, a, b; kwargs...)
     update_coefficients!(α, u, p, t; kwargs...)
     mul!(w, α, v, a, b)
 end

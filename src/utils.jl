@@ -54,7 +54,7 @@ function (f::FilterKwargs)(args...; kwargs...)
     f.f(args...; filtered_kwargs...)
 end
 
-isnothingfunc(f::FilterKwargs) = isnothingfunc(f.f) 
+isnothingfunc(f::FilterKwargs) = isnothingfunc(f.f)
 isnothingfunc(f::Nothing) = true
 isnothingfunc(f) = false
 #

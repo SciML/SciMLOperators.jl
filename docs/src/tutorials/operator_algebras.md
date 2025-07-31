@@ -7,10 +7,10 @@ in order to build more complex objects and using their operations.
 ```@example operator_algebra
 using SciMLOperators, LinearAlgebra
 N = 4
-function f(v, u, p, t) 
+function f(v, u, p, t)
     u .* v
 end
-function f(w, v, u, p, t) 
+function f(w, v, u, p, t)
     w .= u .* v
 end
 
