@@ -379,16 +379,14 @@ end
 for T in SCALINGNUMBERTYPES[2:end]
     @eval function Base.:*(α::ScalarOperator, x::$T)
         if isconstant(α)
-            T2 = promote_type($T, eltype(α))
-            return ScalarOperator(convert(T2, α) * x, α.update_func)
+            return ScalarOperator(concretize(α) * x)
         else
             return ComposedScalarOperator(α, ScalarOperator(x))
         end
     end
     @eval function Base.:*(x::$T, α::ScalarOperator)
         if isconstant(α)
-            T2 = promote_type($T, eltype(α))
-            return ScalarOperator(convert(T2, α) * x, α.update_func)
+            return ScalarOperator(concretize(α) * x)
         else
             return ComposedScalarOperator(ScalarOperator(x), α)
         end
