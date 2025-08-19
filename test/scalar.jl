@@ -74,6 +74,11 @@ K = 12
     copy!(w, orig_w)
     α(w, v, u, nothing, 0.0, a, b)
     @test w ≈ a * (x * v) + b * orig_w
+
+    # Operations with UniformScalar
+    α = ScalarOperator(1)
+    @test α * I == α
+    @test α + I isa AddedScalarOperator
 end
 
 @testset "ScalarOperator Combinations" begin
