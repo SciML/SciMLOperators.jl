@@ -151,6 +151,15 @@ function update_coefficients(L::TensorProductOperator, u, p, t)
 end
 
 getops(L::TensorProductOperator) = L.ops
+
+# Copy method to avoid aliasing
+function Base.copy(L::TensorProductOperator)
+    TensorProductOperator(
+        map(copy, L.ops),
+        L.cache === nothing ? nothing : deepcopy(L.cache)
+    )
+end
+
 islinear(L::TensorProductOperator) = reduce(&, islinear.(L.ops))
 isconvertible(::TensorProductOperator) = false
 Base.iszero(L::TensorProductOperator) = reduce(|, iszero.(L.ops))

@@ -439,6 +439,23 @@ function iscached(L::FunctionOperator)
     L.cache !== nothing
 end
 
+# Copy method to avoid aliasing
+function Base.copy(L::FunctionOperator)
+    FunctionOperator(
+        L.op,
+        L.op_adjoint,
+        L.op_inverse,
+        L.op_adjoint_inverse,
+        L.traits,
+        isdefined(L, :u) ? copy(L.u) : nothing,
+        isdefined(L, :p) ? deepcopy(L.p) : nothing,
+        L.t,
+        L.cache === nothing ? nothing : deepcopy(L.cache),
+        typeof(L).parameters[end-1],  # iType
+        typeof(L).parameters[end]      # oType
+    )
+end
+
 # fix method amg bw AbstractArray, AbstractVecOrMat
 cache_operator(L::FunctionOperator, u::AbstractArray) = _cache_operator(L, u)
 cache_operator(L::FunctionOperator, u::AbstractVecOrMat) = _cache_operator(L, u)
