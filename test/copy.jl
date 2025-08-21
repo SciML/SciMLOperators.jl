@@ -203,6 +203,36 @@ using Test
         @test L_copy.L.A[1, 1] != 999.0
     end
     
+    # Test ScaledOperator
+    @testset "ScaledOperator" begin
+        α = ScalarOperator(2.0)
+        A = MatrixOperator(rand(5, 5))
+        L = α * A
+        L_copy = copy(L)
+        
+        # Modify original
+        L.λ.val = 999.0
+        L.L.A[1, 1] = 888.0
+        
+        # Check that copy is not affected
+        @test L_copy.λ.val == 2.0
+        @test L_copy.L.A[1, 1] != 888.0
+    end
+    
+    # Test AddedOperator
+    @testset "AddedOperator" begin
+        A = MatrixOperator(rand(5, 5))
+        B = MatrixOperator(rand(5, 5))
+        L = A + B
+        L_copy = copy(L)
+        
+        # Modify original
+        L.ops[1].A[1, 1] = 999.0
+        
+        # Check that copy is not affected
+        @test L_copy.ops[1].A[1, 1] != 999.0
+    end
+    
     # Test that operators still work correctly after copying
     @testset "Functionality after copy" begin
         # MatrixOperator
