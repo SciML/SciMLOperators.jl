@@ -323,6 +323,12 @@ function update_coefficients!(L::ScaledOperator, u, p, t)
 end
 
 getops(L::ScaledOperator) = (L.λ, L.L)
+
+# Copy method to avoid aliasing
+function Base.copy(L::ScaledOperator)
+    ScaledOperator(copy(L.λ), copy(L.L))
+end
+
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
 islinear(L::ScaledOperator) = islinear(L.L)
 Base.iszero(L::ScaledOperator) = iszero(L.L) | iszero(L.λ)
@@ -562,6 +568,12 @@ end
 end
 
 getops(L::AddedOperator) = L.ops
+
+# Copy method to avoid aliasing
+function Base.copy(L::AddedOperator)
+    AddedOperator(map(copy, L.ops))
+end
+
 islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
