@@ -405,6 +405,15 @@ function update_coefficients!(L::InvertibleOperator, u, p, t; kwargs...)
 end
 
 getops(L::InvertibleOperator) = (L.L, L.F)
+
+# Copy method to avoid aliasing
+function Base.copy(L::InvertibleOperator)
+    InvertibleOperator(
+        copy(L.L),
+        copy(L.F)
+    )
+end
+
 islinear(L::InvertibleOperator) = islinear(L.L)
 isconvertible(L::InvertibleOperator) = isconvertible(L.L)
 
@@ -616,6 +625,17 @@ function update_coefficients!(L::AffineOperator, u, p, t; kwargs...)
         update_coefficients!(op, u, p, t; kwargs...)
     end
     nothing
+end
+
+# Copy method to avoid aliasing
+function Base.copy(L::AffineOperator)
+    AffineOperator(
+        copy(L.A),
+        copy(L.B),
+        copy(L.b);
+        update_func = L.update_func,
+        update_func! = L.update_func!
+    )
 end
 
 function isconstant(L::AffineOperator)

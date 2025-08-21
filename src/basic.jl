@@ -16,6 +16,9 @@ end
 
 Base.convert(::Type{AbstractMatrix}, ii::IdentityOperator) = Diagonal(ones(Bool, ii.len))
 
+# Copy method to avoid aliasing - IdentityOperator has no mutable fields, can return self
+Base.copy(L::IdentityOperator) = L
+
 # traits
 Base.show(io::IO, ii::IdentityOperator) = print(io, "IdentityOperator($(ii.len))")
 Base.size(ii::IdentityOperator) = (ii.len, ii.len)
@@ -130,6 +133,9 @@ function Base.zero(L::AbstractSciMLOperator)
 end
 
 Base.convert(::Type{AbstractMatrix}, nn::NullOperator) = Diagonal(zeros(Bool, nn.len))
+
+# Copy method to avoid aliasing - NullOperator has no mutable fields, can return self
+Base.copy(L::NullOperator) = L
 
 # traits
 Base.show(io::IO, nn::NullOperator) = print(io, "NullOperator($(nn.len))")
@@ -775,6 +781,15 @@ function update_coefficients(L::ComposedOperator, u, p, t)
 end
 
 getops(L::ComposedOperator) = L.ops
+
+# Copy method to avoid aliasing
+function Base.copy(L::ComposedOperator)
+    ComposedOperator(
+        map(copy, L.ops),
+        L.cache === nothing ? nothing : deepcopy(L.cache)
+    )
+end
+
 islinear(L::ComposedOperator) = all(islinear, L.ops)
 Base.iszero(L::ComposedOperator) = all(iszero, getops(L))
 has_adjoint(L::ComposedOperator) = all(has_adjoint, L.ops)
@@ -1014,6 +1029,14 @@ has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 
 Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
 Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
+
+# Copy method to avoid aliasing
+function Base.copy(L::InvertedOperator)
+    InvertedOperator(
+        copy(L.L),
+        L.cache === nothing ? nothing : deepcopy(L.cache)
+    )
+end
 
 function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
     cache = zero(u)

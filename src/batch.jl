@@ -107,6 +107,15 @@ end
 
 getops(L::BatchedDiagonalOperator) = (L.diag,)
 
+# Copy method to avoid aliasing
+function Base.copy(L::BatchedDiagonalOperator)
+    BatchedDiagonalOperator(
+        copy(L.diag),
+        L.update_func,
+        L.update_func!
+    )
+end
+
 function isconstant(L::BatchedDiagonalOperator)
     update_func_isconstant(L.update_func) & update_func_isconstant(L.update_func!)
 end

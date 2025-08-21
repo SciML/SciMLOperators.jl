@@ -206,6 +206,11 @@ function SciMLOperators.update_coefficients(L::ScalarOperator, u, p, t; kwargs..
     return ScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
 end
 
+# Copy method to avoid aliasing
+function Base.copy(L::ScalarOperator)
+    ScalarOperator(L.val, L.update_func)
+end
+
 # Add ScalarOperator specific implementations for the new interface
 function (α::ScalarOperator)(v::AbstractArray, u, p, t; kwargs...)
     α = update_coefficients(α, u, p, t; kwargs...)
@@ -313,6 +318,12 @@ function (α::AddedScalarOperator)(
 end
 
 getops(α::AddedScalarOperator) = α.ops
+
+# Copy method to avoid aliasing
+function Base.copy(L::AddedScalarOperator)
+    AddedScalarOperator(map(copy, L.ops))
+end
+
 has_ldiv(α::AddedScalarOperator) = !iszero(convert(Number, α))
 has_ldiv!(α::AddedScalarOperator) = has_ldiv(α)
 
@@ -432,6 +443,12 @@ function (α::ComposedScalarOperator)(
 end
 
 getops(α::ComposedScalarOperator) = α.ops
+
+# Copy method to avoid aliasing
+function Base.copy(L::ComposedScalarOperator)
+    ComposedScalarOperator(map(copy, L.ops))
+end
+
 has_ldiv(α::ComposedScalarOperator) = all(has_ldiv, α.ops)
 has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 
@@ -506,6 +523,12 @@ function (α::InvertedScalarOperator)(
     mul!(w, α, v, a, b)
 end
 getops(α::InvertedScalarOperator) = (α.λ,)
+
+# Copy method to avoid aliasing
+function Base.copy(L::InvertedScalarOperator)
+    InvertedScalarOperator(copy(L.λ))
+end
+
 has_ldiv(α::InvertedScalarOperator) = has_mul(α.λ)
 has_ldiv!(α::InvertedScalarOperator) = has_ldiv(α)
 #

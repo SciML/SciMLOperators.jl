@@ -106,6 +106,9 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
 
     @eval getops(L::$LType) = (L.L,)
 
+    # Copy method to avoid aliasing
+    @eval Base.copy(L::$LType) = $LType(copy(L.L))
+
     @eval @forward $LType.L (
         # LinearAlgebra
         LinearAlgebra.issymmetric,
