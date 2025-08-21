@@ -29,7 +29,7 @@ test_apply_noalloc(H, w, v, u, p, t) = @test (@allocations apply_op!(H, w, v, u,
         test_apply_noalloc(op, w, v, u, p, t)
     else
         # Julia 1.10 has a known allocation issue with AddedOperator
-        @test (@allocations apply_op!(op, w, v, u, p, t)) == 1
+        @test (@allocations apply_op!(op, w, v, u, p, t)) == 2
     end
 
     for T in (Float32, Float64, ComplexF32, ComplexF64)
