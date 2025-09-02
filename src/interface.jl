@@ -460,4 +460,34 @@ function LinearAlgebra.mul!(v::AbstractArray,
     end
     mul!(v, concretize(L), u, α, β)
 end
+
+"""
+    Base.copy(L::AbstractSciMLOperator)
+
+Default fallback for copying SciMLOperators. This method provides a safe
+fallback for operators that don't have a specific copy method defined,
+avoiding the need for deepcopy in LinearSolve.jl initialization paths.
+
+For operators that can be converted to concrete matrices, this creates a new
+operator from the copied concrete representation. For operators that cannot
+be easily converted, this falls back to deepcopy as a last resort.
+"""
+function Base.copy(L::AbstractSciMLOperator)
+    # This is the fallback method - it should only be called if no specific
+    # copy method is defined for the concrete type
+    if isconvertible(L)
+        # Try to reconstruct the operator from its concrete representation
+        try
+            concrete = concretize(L)
+            return MatrixOperator(copy(concrete))
+        catch
+            @warn "Failed to copy via concrete representation, falling back to deepcopy"
+            return deepcopy(L)
+        end
+    else
+        @warn "Using deepcopy fallback for non-convertible operator in Base.copy"
+        return deepcopy(L)
+    end
+end
+
 #
