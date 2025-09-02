@@ -447,8 +447,8 @@ function Base.copy(L::FunctionOperator)
         L.op_inverse,
         L.op_adjoint_inverse,
         L.traits,
-        isdefined(L, :u) ? copy(L.u) : nothing,
-        isdefined(L, :p) ? deepcopy(L.p) : nothing,
+        isdefined(L, :u) && L.u !== nothing ? copy(L.u) : nothing,
+        isdefined(L, :p) && L.p !== nothing ? deepcopy(L.p) : nothing,
         L.t,
         L.cache === nothing ? nothing : deepcopy(L.cache),
         typeof(L).parameters[end-1],  # iType
