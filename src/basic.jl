@@ -429,7 +429,7 @@ struct AddedOperator{T,
     function AddedOperator(ops)
         @assert !isempty(ops)
         _check_AddedOperator_sizes(ops)
-        T = promote_type(eltype.(ops)...)
+        T = mapreduce(eltype, promote_type, ops)
         new{T, typeof(ops)}(ops)
     end
 end
@@ -476,9 +476,13 @@ function Base.:+(Z::NullOperator, A::AddedOperator)
     A
 end
 
+Base.:-(A::AddedOperator) = AddedOperator(map(-, A.ops))
 Base.:-(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = AddedOperator(A, -B)
 Base.:-(A::AbstractSciMLOperator, B::AbstractMatrix) = A - MatrixOperator(B)
 Base.:-(A::AbstractMatrix, B::AbstractSciMLOperator) = MatrixOperator(A) - B
+Base.:-(A::AddedOperator, B::AbstractSciMLOperator) = AddedOperator(A.ops..., -B)
+Base.:-(A::AbstractSciMLOperator, B::AddedOperator) = AddedOperator(A, (-B).ops...)
+Base.:-(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., (-B).ops...)
 
 for op in (:+, :-)
     for T in SCALINGNUMBERTYPES
