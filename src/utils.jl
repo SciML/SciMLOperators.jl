@@ -18,6 +18,11 @@ function preprocess_update_func(update_func, accepted_kwargs)
     _accepted_kwargs = if accepted_kwargs === nothing
         Val(())
     elseif accepted_kwargs isa Tuple
+        # Deprecation: Encourage users to use Val((...)) directly for better performance
+        @warn """Passing accepted_kwargs as a plain Tuple is deprecated and will be removed in a future version.
+                 Please use Val((...)) instead for zero-allocation kwarg filtering.
+                 Example: accepted_kwargs = Val((:dtgamma,)) instead of accepted_kwargs = (:dtgamma,)
+                 This message will only be shown once per session.""" maxlog=1
         Val(accepted_kwargs)
     else
         accepted_kwargs  # Already a Val or NoKwargFilter

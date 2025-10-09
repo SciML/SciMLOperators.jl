@@ -14,8 +14,10 @@ or
 
     update_func!(A::AbstractMatrix, u, p, t; <accepted kwargs>) -> [modifies A]
 
-The set of keyword-arguments accepted by `update_func[!]` must be provided
-to `MatrixOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+The set of keyword-arguments accepted by `update_func[!]` should be provided
+to `MatrixOperator` via the kwarg `accepted_kwargs` as a `Val` of a tuple of `Symbol`s
+for zero-allocation kwarg filtering. For example, `accepted_kwargs = Val((:dtgamma,))`.
+Plain tuples like `(:dtgamma,)` are deprecated but still supported.
 `kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
 are not provided.
 
@@ -38,7 +40,7 @@ p = rand(4, 4)
 t = rand()
 
 mat_update = (A, u, p, t; scale = 0.0) -> t * p
-M = MatrixOperator(0.0; update_func = mat_update, accepted_kwargs = (:scale,))
+M = MatrixOperator(0.0; update_func = mat_update, accepted_kwargs = Val((:scale,)))
 
 L = M * M + 3I
 L = cache_operator(L, v)
@@ -65,7 +67,7 @@ p = rand(4) # Must be non-nothing
 t = rand()
 
 mat_update! = (A, u, p, t; scale = 0.0) -> (A .= t * p * u' * scale)
-M = MatrixOperator(zeros(4, 4); update_func! = mat_update!, accepted_kwargs = (:scale,))
+M = MatrixOperator(zeros(4, 4); update_func! = mat_update!, accepted_kwargs = Val((:scale,)))
 L = M * M + 3I
 L = cache_operator(L, v) 
 
@@ -291,8 +293,10 @@ or
 
     update_func!(diag::AbstractVecOrMat, u, p, t; <accepted kwargs>) -> [modifies diag]
 
-The set of keyword-arguments accepted by `update_func[!]` must be provided
-to `MatrixOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+The set of keyword-arguments accepted by `update_func[!]` should be provided
+to `DiagonalOperator` via the kwarg `accepted_kwargs` as a `Val` of a tuple of `Symbol`s
+for zero-allocation kwarg filtering. For example, `accepted_kwargs = Val((:dtgamma,))`.
+Plain tuples like `(:dtgamma,)` are deprecated but still supported.
 `kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
 are not provided.
 
@@ -501,8 +505,10 @@ and `B`, `b` are expected to have an appropriate size so that
 `A * v + B * b` makes sense. Specifically, `size(A, 1) == size(B, 1)`, and
 `size(v, 2) == size(b, 2)`.
 
-The set of keyword-arguments accepted by `update_func[!]` must be provided
-to `AffineOperator` via the kwarg `accepted_kwargs` as a tuple of `Symbol`s.
+The set of keyword-arguments accepted by `update_func[!]` should be provided
+to `AffineOperator` via the kwarg `accepted_kwargs` as a `Val` of a tuple of `Symbol`s
+for zero-allocation kwarg filtering. For example, `accepted_kwargs = Val((:dtgamma,))`.
+Plain tuples like `(:dtgamma,)` are deprecated but still supported.
 `kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
 are not provided.
 
