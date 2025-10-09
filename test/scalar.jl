@@ -224,7 +224,7 @@ end
 
     # Test with keyword arguments
     γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
-        accepted_kwargs = (:dtgamma,))
+        accepted_kwargs = Val((:dtgamma,)))
 
     dtgamma = rand()
     # Original tests

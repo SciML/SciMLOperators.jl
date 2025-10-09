@@ -67,7 +67,7 @@ using SciMLOperators
 
 γ = ScalarOperator(0.0;
     update_func = (a, u, p, t; my_special_scaling) -> my_special_scaling,
-    accepted_kwargs = (:my_special_scaling,))
+    accepted_kwargs = Val((:my_special_scaling,)))
 
 # Update coefficients, then apply operator
 update_coefficients!(γ, nothing, nothing, nothing; my_special_scaling = 7.0)
