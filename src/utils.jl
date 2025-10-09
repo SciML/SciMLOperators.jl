@@ -14,7 +14,14 @@ arguments. Required in implementation of lazy `Base.adjoint`,
 struct NoKwargFilter end
 
 function preprocess_update_func(update_func, accepted_kwargs)
-    _accepted_kwargs = (accepted_kwargs === nothing) ? () : accepted_kwargs
+    # Convert accepted_kwargs to Val for compile-time kwarg filtering to avoid allocations
+    _accepted_kwargs = if accepted_kwargs === nothing
+        Val(())
+    elseif accepted_kwargs isa Tuple
+        Val(accepted_kwargs)
+    else
+        accepted_kwargs  # Already a Val or NoKwargFilter
+    end
     # accepted_kwargs can be passed as nothing to indicate that we should not filter
     # (e.g. if the function already accepts all kwargs...).
     return (_accepted_kwargs isa NoKwargFilter) ? update_func :
@@ -46,7 +53,9 @@ end
 function get_filtered_kwargs(kwargs::Union{AbstractDict, NamedTuple},
         ::Val{accepted_kwargs}) where {accepted_kwargs}
     kwargs_nt = NamedTuple(kwargs)
-    return NamedTuple{accepted_kwargs}(kwargs_nt)  # This creates a new NamedTuple with keys specified by `accepted_kwargs`
+    # Only extract keys that exist in kwargs_nt to avoid errors
+    filtered_keys = filter(k -> haskey(kwargs_nt, k), accepted_kwargs)
+    return NamedTuple{filtered_keys}(kwargs_nt)
 end
 
 function (f::FilterKwargs)(args...; kwargs...)
