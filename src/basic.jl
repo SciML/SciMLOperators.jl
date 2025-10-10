@@ -899,13 +899,13 @@ end
     for i in N:-1:1
         if i == N
             # Last operator: mul!(L.cache[N-1], L.ops[N], v)
-            push!(exprs, :(mul!(L.cache[$(N-1)], L.ops[$i], v)))
+            push!(exprs, :(mul!(L.cache[$(N - 1)], L.ops[$i], v)))
         elseif i == 1
             # First operator: mul!(w, L.ops[1], L.cache[1])
             push!(exprs, :(mul!(w, L.ops[$i], L.cache[1])))
         else
             # Middle operators: mul!(L.cache[i-1], L.ops[i], L.cache[i])
-            push!(exprs, :(mul!(L.cache[$(i-1)], L.ops[$i], L.cache[$i])))
+            push!(exprs, :(mul!(L.cache[$(i - 1)], L.ops[$i], L.cache[$i])))
         end
     end
 
@@ -947,13 +947,13 @@ end
     for i in 1:N
         if i == 1
             # First operator: ldiv!(L.cache[N-1], L.ops[1], v)
-            push!(exprs, :(ldiv!(L.cache[$(N-1)], L.ops[$i], v)))
+            push!(exprs, :(ldiv!(L.cache[$(N - 1)], L.ops[$i], v)))
         elseif i == N
             # Last operator: ldiv!(w, L.ops[N], L.cache[1])
             push!(exprs, :(ldiv!(w, L.ops[$i], L.cache[1])))
         else
             # Middle operators: ldiv!(L.cache[N-i], L.ops[i], L.cache[N-i+1])
-            push!(exprs, :(ldiv!(L.cache[$(N-i)], L.ops[$i], L.cache[$(N-i+1)])))
+            push!(exprs, :(ldiv!(L.cache[$(N - i)], L.ops[$i], L.cache[$(N - i + 1)])))
         end
     end
 
@@ -984,7 +984,8 @@ function (L::ComposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
-@generated function (L::ComposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+@generated function (L::ComposedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     N = length(L.parameters[2].parameters)  # Number of operators
 
     # Generate the operator call expressions in reverse order
@@ -996,13 +997,13 @@ end
     for i in N:-1:1
         if i == N
             # Last operator: L.ops[N](L.cache[N-1], v, u, p, t; kwargs...)
-            push!(exprs, :(L.ops[$i](L.cache[$(N-1)], v, u, p, t; kwargs...)))
+            push!(exprs, :(L.ops[$i](L.cache[$(N - 1)], v, u, p, t; kwargs...)))
         elseif i == 1
             # First operator: L.ops[1](w, L.cache[1], u, p, t; kwargs...)
             push!(exprs, :(L.ops[$i](w, L.cache[1], u, p, t; kwargs...)))
         else
             # Middle operators: L.ops[i](L.cache[i-1], L.cache[i], u, p, t; kwargs...)
-            push!(exprs, :(L.ops[$i](L.cache[$(i-1)], L.cache[$i], u, p, t; kwargs...)))
+            push!(exprs, :(L.ops[$i](L.cache[$(i - 1)], L.cache[$i], u, p, t; kwargs...)))
         end
     end
 
