@@ -887,15 +887,35 @@ function cache_internals(L::ComposedOperator, v::AbstractVecOrMat)
     @reset L.ops = ops
 end
 
-function LinearAlgebra.mul!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
-    @assert iscached(L) """cache needs to be set up for operator of type
-    $L. Set up cache by calling `cache_operator(L, v)`"""
+@generated function LinearAlgebra.mul!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.parameters[2].parameters)  # Number of operators
 
-    vecs = (w, L.cache[1:(end - 1)]..., v)
-    for i in reverse(1:length(L.ops))
-        mul!(vecs[i], L.ops[i], vecs[i + 1])
+    # Generate the mul! calls in reverse order
+    # vecs conceptually is (w, L.cache[1], L.cache[2], ..., L.cache[N-1], v)
+    # For i in reverse(1:N):
+    #   mul!(vecs[i], L.ops[i], vecs[i+1])
+
+    exprs = []
+    for i in N:-1:1
+        if i == N
+            # Last operator: mul!(L.cache[N-1], L.ops[N], v)
+            push!(exprs, :(mul!(L.cache[$(N - 1)], L.ops[$i], v)))
+        elseif i == 1
+            # First operator: mul!(w, L.ops[1], L.cache[1])
+            push!(exprs, :(mul!(w, L.ops[$i], L.cache[1])))
+        else
+            # Middle operators: mul!(L.cache[i-1], L.ops[i], L.cache[i])
+            push!(exprs, :(mul!(L.cache[$(i - 1)], L.ops[$i], L.cache[$i])))
+        end
     end
-    w
+
+    quote
+        @assert iscached(L) """cache needs to be set up for operator of type
+        $L. Set up cache by calling `cache_operator(L, v)`"""
+
+        $(exprs...)
+        w
+    end
 end
 
 function LinearAlgebra.mul!(w::AbstractVecOrMat,
@@ -914,15 +934,36 @@ function LinearAlgebra.mul!(w::AbstractVecOrMat,
     axpy!(β, cache, w)
 end
 
-function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
-    @assert iscached(L) """cache needs to be set up for operator of type
-    $L. Set up cache by calling `cache_operator(L, v)`."""
+@generated function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.parameters[2].parameters)  # Number of operators
 
-    vecs = (v, reverse(L.cache[1:(end - 1)])..., w)
-    for i in 1:length(L.ops)
-        ldiv!(vecs[i + 1], L.ops[i], vecs[i])
+    # Generate the ldiv! calls in forward order
+    # vecs conceptually is (v, reverse(L.cache[1:(N-1)])..., w)
+    # = (v, L.cache[N-1], L.cache[N-2], ..., L.cache[1], w)
+    # For i in 1:N:
+    #   ldiv!(vecs[i+1], L.ops[i], vecs[i])
+
+    exprs = []
+    for i in 1:N
+        if i == 1
+            # First operator: ldiv!(L.cache[N-1], L.ops[1], v)
+            push!(exprs, :(ldiv!(L.cache[$(N - 1)], L.ops[$i], v)))
+        elseif i == N
+            # Last operator: ldiv!(w, L.ops[N], L.cache[1])
+            push!(exprs, :(ldiv!(w, L.ops[$i], L.cache[1])))
+        else
+            # Middle operators: ldiv!(L.cache[N-i], L.ops[i], L.cache[N-i+1])
+            push!(exprs, :(ldiv!(L.cache[$(N - i)], L.ops[$i], L.cache[$(N - i + 1)])))
+        end
     end
-    w
+
+    quote
+        @assert iscached(L) """cache needs to be set up for operator of type
+        $L. Set up cache by calling `cache_operator(L, v)`."""
+
+        $(exprs...)
+        w
+    end
 end
 
 function LinearAlgebra.ldiv!(L::ComposedOperator, v::AbstractVecOrMat)
@@ -943,15 +984,36 @@ function (L::ComposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
-function (L::ComposedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
-    update_coefficients!(L, u, p, t; kwargs...)
-    @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
+@generated function (L::ComposedOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+    N = length(L.parameters[2].parameters)  # Number of operators
 
-    vecs = (w, L.cache[1:(end - 1)]..., v)
-    for i in reverse(1:length(L.ops))
-        L.ops[i](vecs[i], vecs[i + 1], u, p, t; kwargs...)
+    # Generate the operator call expressions in reverse order
+    # vecs conceptually is (w, L.cache[1], L.cache[2], ..., L.cache[N-1], v)
+    # For i in reverse(1:N):
+    #   L.ops[i](vecs[i], vecs[i+1], u, p, t; kwargs...)
+
+    exprs = []
+    for i in N:-1:1
+        if i == N
+            # Last operator: L.ops[N](L.cache[N-1], v, u, p, t; kwargs...)
+            push!(exprs, :(L.ops[$i](L.cache[$(N - 1)], v, u, p, t; kwargs...)))
+        elseif i == 1
+            # First operator: L.ops[1](w, L.cache[1], u, p, t; kwargs...)
+            push!(exprs, :(L.ops[$i](w, L.cache[1], u, p, t; kwargs...)))
+        else
+            # Middle operators: L.ops[i](L.cache[i-1], L.cache[i], u, p, t; kwargs...)
+            push!(exprs, :(L.ops[$i](L.cache[$(i - 1)], L.cache[$i], u, p, t; kwargs...)))
+        end
     end
-    w
+
+    quote
+        update_coefficients!(L, u, p, t; kwargs...)
+        @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
+
+        $(exprs...)
+        w
+    end
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
