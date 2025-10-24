@@ -27,7 +27,9 @@ end
 # The function fields (update_func) are just code that computes coefficients.
 
 # Mark specific scalar and matrix operator types that have function fields as inactive
-Enzyme.EnzymeRules.inactive_type(::Type{<:SciMLOperators.AbstractSciMLScalarOperator}) = true
+function Enzyme.EnzymeRules.inactive_type(::Type{<:SciMLOperators.AbstractSciMLScalarOperator})
+    true
+end
 Enzyme.EnzymeRules.inactive_type(::Type{<:SciMLOperators.AbstractSciMLOperator}) = true
 
 # Note: The actual differentiation will happen through the mathematical operations
