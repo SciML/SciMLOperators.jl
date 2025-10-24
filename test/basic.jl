@@ -288,9 +288,11 @@ end
         func4(a, u, p, t) = t^4
         func5(a, u, p, t) = t^5
 
-        O1 = MatrixOperator(A) + ScalarOperator(0.0, func1) * MatrixOperator(A) + ScalarOperator(0.0, func2) * MatrixOperator(A)
+        O1 = MatrixOperator(A) + ScalarOperator(0.0, func1) * MatrixOperator(A) +
+             ScalarOperator(0.0, func2) * MatrixOperator(A)
 
-        O2 = MatrixOperator(A) + ScalarOperator(0.0, func3) * MatrixOperator(A) + ScalarOperator(0.0, func4) * MatrixOperator(A)
+        O2 = MatrixOperator(A) + ScalarOperator(0.0, func3) * MatrixOperator(A) +
+             ScalarOperator(0.0, func4) * MatrixOperator(A)
 
         O3 = MatrixOperator(A) + ScalarOperator(0.0, func5) * MatrixOperator(A)
 
