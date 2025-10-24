@@ -21,15 +21,16 @@ function Enzyme.EnzymeRules.inactive_type(::Type{SciMLOperators.NoKwargFilter})
     return true
 end
 
-# The key insight: Function-typed fields in operators are code (update functions),
-# not differentiable data. Tell Enzyme to treat them as inactive.
-# This prevents Enzyme from trying to differentiate through closure captures.
-function Enzyme.EnzymeRules.inactive_type(::Type{F}) where {F <: Function}
-    return true
-end
+# For operator types with function fields, we need to tell Enzyme that the operators
+# themselves are inactive during forward/reverse passes - the differentiation happens
+# through the mathematical operations (mul!, ldiv!, etc.) not through the operator structures.
+# The function fields (update_func) are just code that computes coefficients.
+
+# Mark specific scalar and matrix operator types that have function fields as inactive
+Enzyme.EnzymeRules.inactive_type(::Type{<:SciMLOperators.AbstractSciMLScalarOperator}) = true
+Enzyme.EnzymeRules.inactive_type(::Type{<:SciMLOperators.AbstractSciMLOperator}) = true
 
 # Note: The actual differentiation will happen through the mathematical operations
-# (mul!, *, +, etc.) which Enzyme knows how to handle natively. The operator
-# structures just orchestrate these operations.
+# (mul!, *, +, etc.) which Enzyme knows how to handle natively.
 
 end # module
