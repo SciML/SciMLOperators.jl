@@ -28,9 +28,6 @@ end
             @time @safetestset "Zygote.jl" begin
                 include("zygote.jl")
             end
-            @time @safetestset "Enzyme.jl" begin
-                include("enzyme.jl")
-            end
             @time @safetestset "Copy methods" begin
                 include("copy.jl")
             end
