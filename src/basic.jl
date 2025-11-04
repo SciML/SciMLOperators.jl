@@ -243,9 +243,11 @@ end
 
 # constructors
 for T in SCALINGNUMBERTYPES[2:end]
-    @eval ScaledOperator(λ::$T, L::AbstractSciMLOperator) = ScaledOperator(
-        ScalarOperator(λ),
-        L)
+    @eval function ScaledOperator(λ::$T, L::AbstractSciMLOperator)
+        T2 = Base.promote_eltype(λ, L)
+        Λ = λ isa UniformScaling ? UniformScaling(T2(λ.λ)) : T2(λ)
+        ScaledOperator(ScalarOperator(Λ), L)
+    end
 end
 
 for T in SCALINGNUMBERTYPES
@@ -276,27 +278,15 @@ for T in SCALINGNUMBERTYPES[2:end]
         isconstant(L.λ) && return ScaledOperator(α * L.λ, L.L)
         return ScaledOperator(L.λ, α * L.L) # Try to propagate the rule
     end
-    @eval function Base.:*(α::$T, L::MatrixOperator)
-        isconstant(L) && return MatrixOperator(α * L.A)
-        return ScaledOperator(α, L) # Going back to the generic case
-    end
-    @eval function Base.:*(L::MatrixOperator, α::$T)
-        isconstant(L) && return MatrixOperator(α * L.A)
-        return ScaledOperator(α, L) # Going back to the generic case
-    end
 end
 
 Base.:+(L::AbstractSciMLOperator) = L
-Base.:-(L::AbstractSciMLOperator) = ScaledOperator(-true, L)
+Base.:-(L::AbstractSciMLOperator{T}) where T = ScaledOperator(-one(T), L)
 
 # Special cases for constant scalars. These simplify the structure when applicable
 function Base.:-(L::ScaledOperator)
     isconstant(L.λ) && return ScaledOperator(-L.λ, L.L)
     return ScaledOperator(L.λ, -L.L) # Try to propagate the rule
-end
-function Base.:-(L::MatrixOperator)
-    isconstant(L) && return MatrixOperator(-L.A)
-    return ScaledOperator(-true, L) # Going back to the generic case
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::ScaledOperator)

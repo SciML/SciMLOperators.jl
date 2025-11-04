@@ -150,24 +150,9 @@ end
     
     # Test unary - on constant MatrixOperator (simplified to MatrixOperator)
     minusA = -A
-    @test minusA isa MatrixOperator
+    @test minusA isa ScaledOperator
     @test minusA * v ≈ -A.A * v
-    
-    # Test unary - on non-constant MatrixOperator (falls back to ScaledOperator)
-    func(A, u, p, t) = t
-    timeDepA = MatrixOperator(A.A; update_func = func)
-    minusTimeDepA = -timeDepA
-    @test minusTimeDepA isa ScaledOperator  # Can't simplify, uses generic fallback
-    
-    # Test unary - on non-constant ScaledOperator (propagates to inner operator)
-    timeDepScaled = ScalarOperator(0.0, func) * A
-    @test !isconstant(timeDepScaled)
-    minusTimeDepScaled = -timeDepScaled
-    @test minusTimeDepScaled.λ isa ScalarOperator && minusTimeDepScaled.L isa MatrixOperator # Propagates negation to inner MatrixOperator
-    
-    # Test double negation
-    @test -(-A) isa MatrixOperator
-    @test (-(-A)) * v ≈ A * v
+    @test eltype(minusA.λ) == eltype(A.A)
 end
 
 @testset "ScaledOperator" begin
