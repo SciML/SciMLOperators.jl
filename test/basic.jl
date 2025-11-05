@@ -141,6 +141,20 @@ end
     end
 end
 
+@testset "Unary +/-" begin
+    A = MatrixOperator(rand(N, N))
+    v = rand(N, K)
+
+    # Test unary +
+    @test +A === A
+    
+    # Test unary - on constant MatrixOperator (simplified to MatrixOperator)
+    minusA = -A
+    @test minusA isa ScaledOperator
+    @test minusA * v ≈ -A.A * v
+    @test eltype(minusA.λ) == eltype(A.A)
+end
+
 @testset "ScaledOperator" begin
     A = rand(N, N)
     D = Diagonal(rand(N))
@@ -269,13 +283,24 @@ end
     w_orig = copy(v)
     @test mul!(v, op, u, α, β) ≈ α * (A + B) * u + β * w_orig
 
-    # ensure AddedOperator doesn't nest
+    # Test flattening of nested AddedOperators via direct constructor
     A = MatrixOperator(rand(N, N))
-    L = A + (A + A) + A
+    B = MatrixOperator(rand(N, N))
+    C = MatrixOperator(rand(N, N))
+    
+    # Create nested structure: (A + B) is an AddedOperator
+    AB = A + B
+    @test AB isa AddedOperator
+    
+    # When we create AddedOperator((AB, C)), it should flatten
+    L = AddedOperator((AB, C))
     @test L isa AddedOperator
-    for op in L.ops
-        @test !isa(op, AddedOperator)
-    end
+    @test length(L.ops) == 3  # Should have A, B, C (not AB and C)
+    @test all(op -> !isa(op, AddedOperator), L.ops)
+    
+    # Verify correctness
+    test_vec = rand(N, K)
+    @test L * test_vec ≈ (A + B + C) * test_vec
 
     ## Time-Dependent Coefficients
     for T in (Float32, Float64, ComplexF32, ComplexF64)
