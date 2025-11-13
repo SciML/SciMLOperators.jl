@@ -337,7 +337,7 @@ struct ComposedScalarOperator{T, O} <: AbstractSciMLScalarOperator{T}
 
     function ComposedScalarOperator(ops::NTuple{N, AbstractSciMLScalarOperator}) where {N}
         @assert !isempty(ops)
-        T = promote_type(eltype.(ops)...)
+        T = reduce(Base.promote_eltype, ops)
         new{T, typeof(ops)}(ops)
     end
 end
@@ -395,7 +395,7 @@ end
 
 function Base.convert(T::Type{<:Number}, α::ComposedScalarOperator)
     iszero(α) && return zero(T)
-    prod(convert.(T, α.ops))
+    prod(concretize, α.ops)
 end
 
 function Base.show(io::IO, α::ComposedScalarOperator)
@@ -410,20 +410,22 @@ end
 Base.conj(L::ComposedScalarOperator) = ComposedScalarOperator(conj.(L.ops))
 Base.:-(α::AbstractSciMLScalarOperator{T}) where {T} = (-one(T)) * α
 
-function update_coefficients(L::ComposedScalarOperator, u, p, t; kwargs...)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
+@generated function update_coefficients(L::ComposedScalarOperator, u, p, t; kwargs...)
+    N = length(L.parameters[2].parameters)
+    quote
+        ops = Base.@ntuple $N i -> update_coefficients(L.ops[i], u, p, t; kwargs...)
+        ComposedScalarOperator(ops)
     end
+end
 
-    ComposedScalarOperator(ops)
-end
-function update_coefficients!(L::ComposedScalarOperator, u, p, t; kwargs...)
-    for op in L.ops
-        update_coefficients!(op, u, p, t; kwargs...)
+@generated function update_coefficients!(L::ComposedScalarOperator, u, p, t; kwargs...)
+    N = length(L.parameters[2].parameters)
+    quote
+        Base.@nexprs $N i -> update_coefficients!(L.ops[i], u, p, t; kwargs...)
+        nothing
     end
-    nothing
 end
+
 function (α::ComposedScalarOperator)(v::AbstractArray, u, p, t; kwargs...)
     α = update_coefficients(α, u, p, t; kwargs...)
     convert(Number, α) * v
