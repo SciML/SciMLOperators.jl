@@ -67,7 +67,7 @@ struct TensorProductOperator{T, O, C} <: AbstractSciMLOperator{T}
                 Union{AbstractMatrix, AbstractSciMLOperator}
             },
             cache::Union{Tuple, Nothing})
-        T = promote_type(eltype.(ops)...)
+        T = reduce(Base.promote_eltype, ops)
 
         new{T,
             typeof(ops),
