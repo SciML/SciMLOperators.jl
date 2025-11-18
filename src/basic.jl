@@ -571,13 +571,13 @@ function Base.resize!(L::AddedOperator, n::Integer)
     L
 end
 
-function update_coefficients(L::AddedOperator, u, p, t)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t))
+@generated function update_coefficients(L::AddedOperator, u, p, t)
+    ops_types = L.parameters[2].parameters
+    N = length(ops_types)
+    quote
+        ops = Base.@ntuple $N i -> update_coefficients(L.ops[i], u, p, t)
+        return AddedOperator(ops)
     end
-
-    @reset L.ops = ops
 end
 
 @generated function update_coefficients!(L::AddedOperator, u, p, t)
@@ -607,10 +607,8 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
     quote
-        Base.@nexprs $N i->begin
-            @reset L.ops[i] = cache_operator(L.ops[i], v)
-        end
-        L
+        ops = Base.@ntuple $N i -> cache_operator(L.ops[i], v)
+        return AddedOperator(ops)
     end
 end
 
