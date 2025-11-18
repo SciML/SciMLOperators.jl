@@ -252,6 +252,7 @@ end
 # operator application
 Base.:*(L::MatrixOperator, v::AbstractVecOrMat) = L.A * v
 Base.:\(L::MatrixOperator, v::AbstractVecOrMat) = L.A \ v
+
 @inline function LinearAlgebra.mul!(
         w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
     mul!(w, L.A, v)
@@ -263,6 +264,16 @@ end
         β)
     mul!(w, L.A, v, α, β)
 end
+
+# These methods are used when the operator is applied from the right
+# We do this to avoid to fall into generic methods that would be inefficient
+@inline LinearAlgebra.mul!(w::AbstractTransposedVecOrMat, L::MatrixOperator, v::AbstractVecOrMat) = mul!(parent(w), transpose(v), transpose(L.A))
+@inline LinearAlgebra.mul!(w::AbstractTransposedVecOrMat,
+        L::MatrixOperator,
+        v::AbstractVecOrMat,
+        α,
+        β) = mul!(parent(w), transpose(v), transpose(L.A), α, β)
+
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
     ldiv!(w, L.A, v)
 end

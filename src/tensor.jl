@@ -67,7 +67,7 @@ struct TensorProductOperator{T, O, C} <: AbstractSciMLOperator{T}
                 Union{AbstractMatrix, AbstractSciMLOperator}
             },
             cache::Union{Tuple, Nothing})
-        T = promote_type(eltype.(ops)...)
+        T = reduce(Base.promote_eltype, ops)
 
         new{T,
             typeof(ops),
@@ -86,7 +86,7 @@ function TensorProductOperator(outer::Union{AbstractMatrix, AbstractSciMLOperato
 end
 
 # constructors
-TensorProductOperator(ops...) = reduce(TensorProductOperator, ops)
+TensorProductOperator(ops...) = foldr(TensorProductOperator, ops)
 TensorProductOperator(op::AbstractSciMLOperator) = op
 TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 function TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator)
