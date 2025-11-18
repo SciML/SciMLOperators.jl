@@ -759,3 +759,5 @@ function (L::AffineOperator)(
     mul!(w, L.B, L.b, α, true)
 end
 #
+
+has_concretization(::MatrixOperator) = true
