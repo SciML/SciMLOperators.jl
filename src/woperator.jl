@@ -5,7 +5,7 @@ struct StaticWOperator{isinv, T, F} <: AbstractWOperator{T}
     F::F
     function StaticWOperator(W::T, callinv = true) where {T}
         n = size(W, 1)
-        isinv = n <= 7 # cutoff where LU has noticable overhead
+        isinv = n <= 7 # cutoff where LU has noticeable overhead
 
         F = if isinv && callinv
             ArrayInterface.lu_instance(W)
