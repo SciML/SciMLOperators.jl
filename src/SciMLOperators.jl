@@ -209,6 +209,7 @@ include("basic.jl")
 include("batch.jl")
 include("func.jl")
 include("tensor.jl")
+include("woperator.jl")
 
 export
        IdentityOperator,
@@ -220,7 +221,9 @@ export
        AffineOperator,
        AddVector,
        FunctionOperator,
-       TensorProductOperator
+       TensorProductOperator,
+       WOperator,
+       StaticWOperator
 
 export update_coefficients!,
        update_coefficients, isconstant,
@@ -235,6 +238,7 @@ export update_coefficients!,
        has_mul,
        has_mul!,
        has_ldiv,
-       has_ldiv!
+       has_ldiv!,
+       has_concretization
 
 end # module
