@@ -145,16 +145,16 @@ function LinearAlgebra.mul!(Y::AbstractVecOrMat, W::WOperator, B::AbstractVecOrM
         a = -W.mass_matrix.λ / W.gamma
         @. Y=a*B
     else
-        mul!(_vec(Y), W.mass_matrix, _vec(B))
+        mul!(_vec(Y), W.mass_matrix, vec(B))
         lmul!(-inv(W.gamma), Y)
     end
     # Compute J * B and add
     if isnothing(W.jacvec)
-        mul!(_vec(W._func_cache), W.J, _vec(B))
+        mul!(vec(W._func_cache), W.J, vec(B))
     else
-        mul!(_vec(W._func_cache), W.jacvec, _vec(B))
+        mul!(vec(W._func_cache), W.jacvec, vec(B))
     end
-    _vec(Y) .+= _vec(W._func_cache)
+    vec(Y) .+= vec(W._func_cache)
 end
 
 has_concretization(::AbstractWOperator) = true
