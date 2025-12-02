@@ -4,7 +4,7 @@ FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 SciMLOperators = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 
 [sources]
-SciMLOperators = {path = "/home/chrisrackauckas/github-runners/deepsea4-4/_work/SciMLOperators.jl/SciMLOperators.jl"}
+SciMLOperators = {path = "/home/chrisrackauckas/github-runners/deepsea3-13/_work/SciMLOperators.jl/SciMLOperators.jl"}
 
 [compat]
 Documenter = "0.27, 1"
