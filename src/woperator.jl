@@ -139,22 +139,40 @@ function Base.:\(W::WOperator, x::Number)
     end
 end
 
-function LinearAlgebra.mul!(Y::AbstractVecOrMat, W::WOperator, B::AbstractVecOrMat)
+function LinearAlgebra.mul!(Y::AbstractVector, W::WOperator, B::AbstractVector)
     # Compute mass_matrix * B
     if isa(W.mass_matrix, UniformScaling)
         a = -W.mass_matrix.λ / W.gamma
         @. Y=a*B
     else
-        mul!(_vec(Y), W.mass_matrix, _vec(B))
+        mul!(Y, W.mass_matrix, B)
         lmul!(-inv(W.gamma), Y)
     end
     # Compute J * B and add
     if isnothing(W.jacvec)
-        mul!(_vec(W._func_cache), W.J, _vec(B))
+        mul!(W._func_cache, W.J, B)
     else
-        mul!(_vec(W._func_cache), W.jacvec, _vec(B))
+        mul!(W._func_cache, W.jacvec, B)
     end
-    _vec(Y) .+= _vec(W._func_cache)
+    Y .+= W._func_cache
+end
+
+function LinearAlgebra.mul!(Y::AbstractArray, W::WOperator, B::AbstractArray)
+    # Compute mass_matrix * B
+    if isa(W.mass_matrix, UniformScaling)
+        a = -W.mass_matrix.λ / W.gamma
+        @. Y=a*B
+    else
+        mul!(vec(Y), W.mass_matrix, vec(B))
+        lmul!(-inv(W.gamma), Y)
+    end
+    # Compute J * B and add
+    if isnothing(W.jacvec)
+        mul!(vec(W._func_cache), W.J, vec(B))
+    else
+        mul!(vec(W._func_cache), W.jacvec, vec(B))
+    end
+    vec(Y) .+= vec(W._func_cache)
 end
 
 has_concretization(::AbstractWOperator) = true
