@@ -511,8 +511,8 @@ end
     opAB = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
 
-    @test opAB isa TensorProductOperator{Float64}{Float64}
-    @test opABC isa TensorProductOperator{Float64}{Float64}
+    @test opAB isa TensorProductOperator{Float64}
+    @test opABC isa TensorProductOperator{Float64}
 
     @test isconstant(opAB)
     @test isconstant(opABC)
