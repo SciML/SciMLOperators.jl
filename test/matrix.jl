@@ -491,10 +491,10 @@ end
 
     # test Base.kron overload
     _A = rand(N, N)
-    @test kron(_A, MatrixOperator(_A)) isa TensorProductOperator
-    @test kron(MatrixOperator(_A), _A) isa TensorProductOperator
+    @test kron(_A, MatrixOperator(_A)) isa TensorProductOperator{Float64}
+    @test kron(MatrixOperator(_A), _A) isa TensorProductOperator{Float64}
 
-    @test kron(MatrixOperator(_A), MatrixOperator(_A)) isa TensorProductOperator
+    @test kron(MatrixOperator(_A), MatrixOperator(_A)) isa TensorProductOperator{Float64}
 
     # Inputs/Update vectors
     u2 = rand(n1 * n2, K)
@@ -511,8 +511,8 @@ end
     opAB = TensorProductOperator(A, B)
     opABC = TensorProductOperator(A, B, C)
 
-    @test opAB isa TensorProductOperator
-    @test opABC isa TensorProductOperator
+    @test opAB isa TensorProductOperator{Float64}
+    @test opABC isa TensorProductOperator{Float64}
 
     @test isconstant(opAB)
     @test isconstant(opABC)
@@ -538,8 +538,8 @@ end
     @test isconstant(opAB_F)
     @test isconstant(opABC_F)
 
-    @test opAB_F isa TensorProductOperator
-    @test opABC_F isa TensorProductOperator
+    @test opAB_F isa TensorProductOperator{Float64}
+    @test opABC_F isa TensorProductOperator{Float64}
 
     @test AB ≈ convert(AbstractMatrix, opAB_F)
     @test ABC ≈ convert(AbstractMatrix, opABC_F)
