@@ -183,7 +183,7 @@ cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 Base.eltype(::Type{AbstractSciMLOperator{T}}) where {T} = T
 Base.eltype(::AbstractSciMLOperator{T}) where {T} = T
-Base.promote_eltype(::AbstractSciMLOperator{<:TA}, ::AbstractSciMLOperator{<:TB}) where {TA,TB} = Base.promote_type(TA,TB)
+Base.promote_eltype(::AbstractSciMLOperator{<:T1}, ::AbstractSciMLOperator{<:T2}) where {T1,T2} = Base.promote_type(T1,T2)
 
 Base.oneunit(L::AbstractSciMLOperator) = one(L)
 Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)
