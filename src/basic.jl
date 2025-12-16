@@ -281,7 +281,7 @@ for T in SCALINGNUMBERTYPES[2:end]
 end
 
 Base.:+(L::AbstractSciMLOperator) = L
-Base.:-(L::AbstractSciMLOperator{T}) where T = ScaledOperator(-one(T), L)
+Base.:-(L::AbstractSciMLOperator{T}) where {T} = ScaledOperator(-one(T), L)
 
 # Special cases for constant scalars. These simplify the structure when applicable
 function Base.:-(L::ScaledOperator)
@@ -455,7 +455,7 @@ AddedOperator(L::AbstractSciMLOperator) = L
             exprs = (exprs..., :(ops[$i]))
         end
     end
-    
+
     return quote
         tuple($(exprs...))
     end
@@ -616,7 +616,10 @@ getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
 function Base.:*(L::AddedOperator, v::AbstractVecOrMat)
-    sum(op -> iszero(op) ? zero(v) : op * v, L.ops)
+    # Don't check iszero(op) here - it causes scalar indexing on GPU arrays
+    # that don't have specialized iszero implementations (e.g., CuSparseMatrixCSC)
+    # See: https://github.com/SciML/SciMLOperators.jl/issues/338
+    sum(op -> op * v, L.ops)
 end
 
 @generated function LinearAlgebra.mul!(
