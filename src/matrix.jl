@@ -440,7 +440,7 @@ LinearAlgebra.issymmetric(L::InvertibleOperator) = LinearAlgebra.issymmetric(L.L
 LinearAlgebra.ishermitian(L::InvertibleOperator) = LinearAlgebra.ishermitian(L.L)
 LinearAlgebra.isposdef(L::InvertibleOperator) = LinearAlgebra.isposdef(L.L)
 
-# SciML methods  
+# SciML methods
 isconstant(L::InvertibleOperator) = isconstant(L.L)
 has_adjoint(L::InvertibleOperator) = has_adjoint(L.L)
 has_mul(L::InvertibleOperator) = has_mul(L.L)
