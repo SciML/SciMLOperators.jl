@@ -8,7 +8,7 @@ using DocStringExtensions
 using LinearAlgebra
 
 import ArrayInterface
-import MacroTools: @forward
+# MacroTools dependency removed - using explicit method forwarding instead
 import Accessors: @reset
 
 # overload

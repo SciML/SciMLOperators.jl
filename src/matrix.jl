@@ -112,11 +112,13 @@ function Base.similar(L::MatrixOperator, ::Type{T}, dims::Dims) where {T}
 end
 
 # traits
-@forward MatrixOperator.A (LinearAlgebra.issymmetric,
-    LinearAlgebra.ishermitian,
-    LinearAlgebra.isposdef, issquare,
-    has_ldiv,
-    has_ldiv!)
+# Method forwarding for MatrixOperator (previously using @forward from MacroTools)
+LinearAlgebra.issymmetric(L::MatrixOperator) = LinearAlgebra.issymmetric(L.A)
+LinearAlgebra.ishermitian(L::MatrixOperator) = LinearAlgebra.ishermitian(L.A)
+LinearAlgebra.isposdef(L::MatrixOperator) = LinearAlgebra.isposdef(L.A)
+issquare(L::MatrixOperator) = issquare(L.A)
+has_ldiv(L::MatrixOperator) = has_ldiv(L.A)
+has_ldiv!(L::MatrixOperator) = has_ldiv!(L.A)
 
 isconvertible(::MatrixOperator) = true
 islinear(::MatrixOperator) = true
@@ -432,17 +434,17 @@ end
 islinear(L::InvertibleOperator) = islinear(L.L)
 isconvertible(L::InvertibleOperator) = isconvertible(L.L)
 
-@forward InvertibleOperator.L (
-    # LinearAlgebra
-    LinearAlgebra.issymmetric,
-    LinearAlgebra.ishermitian,
-    LinearAlgebra.isposdef,
+# Method forwarding for InvertibleOperator (previously using @forward from MacroTools)
+# LinearAlgebra methods
+LinearAlgebra.issymmetric(L::InvertibleOperator) = LinearAlgebra.issymmetric(L.L)
+LinearAlgebra.ishermitian(L::InvertibleOperator) = LinearAlgebra.ishermitian(L.L)
+LinearAlgebra.isposdef(L::InvertibleOperator) = LinearAlgebra.isposdef(L.L)
 
-    # SciML
-    isconstant,
-    has_adjoint,
-    has_mul,
-    has_mul!)
+# SciML methods
+isconstant(L::InvertibleOperator) = isconstant(L.L)
+has_adjoint(L::InvertibleOperator) = has_adjoint(L.L)
+has_mul(L::InvertibleOperator) = has_mul(L.L)
+has_mul!(L::InvertibleOperator) = has_mul!(L.L)
 
 has_ldiv(L::InvertibleOperator) = has_mul(L.F)
 has_ldiv!(L::InvertibleOperator) = has_ldiv!(L.F)

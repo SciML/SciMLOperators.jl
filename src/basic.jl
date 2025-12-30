@@ -1113,16 +1113,16 @@ has_mul!(L::InvertedOperator) = has_ldiv!(L.L)
 has_ldiv(L::InvertedOperator) = has_mul(L.L)
 has_ldiv!(L::InvertedOperator) = has_mul!(L.L)
 
-@forward InvertedOperator.L (
-    # LinearAlgebra
-    LinearAlgebra.issymmetric,
-    LinearAlgebra.ishermitian,
-    LinearAlgebra.isposdef,
-    LinearAlgebra.opnorm,
+# Method forwarding for InvertedOperator (previously using @forward from MacroTools)
+# LinearAlgebra methods
+LinearAlgebra.issymmetric(L::InvertedOperator) = LinearAlgebra.issymmetric(L.L)
+LinearAlgebra.ishermitian(L::InvertedOperator) = LinearAlgebra.ishermitian(L.L)
+LinearAlgebra.isposdef(L::InvertedOperator) = LinearAlgebra.isposdef(L.L)
+LinearAlgebra.opnorm(L::InvertedOperator) = LinearAlgebra.opnorm(L.L)
 
-    # SciML
-    isconstant,
-    has_adjoint)
+# SciML methods
+isconstant(L::InvertedOperator) = isconstant(L.L)
+has_adjoint(L::InvertedOperator) = has_adjoint(L.L)
 
 Base.:*(L::InvertedOperator, u::AbstractVecOrMat) = L.L \ u
 Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u

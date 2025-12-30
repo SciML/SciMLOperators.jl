@@ -109,19 +109,19 @@ for (op, LType, VType) in ((:adjoint, :AdjointOperator, :AbstractAdjointVecOrMat
     # Copy method to avoid aliasing
     @eval Base.copy(L::$LType) = $LType(copy(L.L))
 
-    @eval @forward $LType.L (
-        # LinearAlgebra
-        LinearAlgebra.issymmetric,
-        LinearAlgebra.ishermitian,
-        LinearAlgebra.isposdef,
-        LinearAlgebra.opnorm,
+    # Method forwarding (previously using @forward from MacroTools)
+    # LinearAlgebra methods
+    @eval LinearAlgebra.issymmetric(L::$LType) = LinearAlgebra.issymmetric(L.L)
+    @eval LinearAlgebra.ishermitian(L::$LType) = LinearAlgebra.ishermitian(L.L)
+    @eval LinearAlgebra.isposdef(L::$LType) = LinearAlgebra.isposdef(L.L)
+    @eval LinearAlgebra.opnorm(L::$LType) = LinearAlgebra.opnorm(L.L)
 
-        # SciML
-        isconstant,
-        has_mul,
-        has_mul!,
-        has_ldiv,
-        has_ldiv!)
+    # SciML methods
+    @eval isconstant(L::$LType) = isconstant(L.L)
+    @eval has_mul(L::$LType) = has_mul(L.L)
+    @eval has_mul!(L::$LType) = has_mul!(L.L)
+    @eval has_ldiv(L::$LType) = has_ldiv(L.L)
+    @eval has_ldiv!(L::$LType) = has_ldiv!(L.L)
 
     @eval function cache_internals(L::$LType, u::AbstractVecOrMat)
         @reset L.L = cache_operator(L.L, reshape(u, size(L, 1)))
