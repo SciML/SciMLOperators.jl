@@ -26,10 +26,12 @@ K = 12
     fwd(w, v, u, p, t) = mul!(w, P, v)
     bwd(w, v, u, p, t) = ldiv!(w, P, v)
 
-    ftr = FunctionOperator(fwd, x, im * k;
+    ftr = FunctionOperator(
+        fwd, x, im * k;
         T = ComplexF64, op_adjoint = bwd,
         op_inverse = bwd,
-        op_adjoint_inverse = fwd, islinear = true)
+        op_adjoint_inverse = fwd, islinear = true
+    )
 
     @test size(ftr) == (length(k), length(x))
 
@@ -42,15 +44,15 @@ K = 12
     v = @. sin(5x)cos(7x)
     w = @. 5cos(5x)cos(7x) - 7sin(5x)sin(7x)
     w2x = @. 5(-5sin(5x)cos(7x) - 7cos(5x)sin(7x)) +
-             -7(5cos(5x)sin(7x) + 7sin(5x)cos(7x))
+        -7(5cos(5x)sin(7x) + 7sin(5x)cos(7x))
 
-    @test ≈(Dx * v, w; atol = 1e-8)
-    @test ≈(D2x * v, w2x; atol = 1e-8)
+    @test ≈(Dx * v, w; atol = 1.0e-8)
+    @test ≈(D2x * v, w2x; atol = 1.0e-8)
 
     w2 = zero(w)
-    @test ≈(mul!(w2, D2x, v), w2x; atol = 1e-8)
+    @test ≈(mul!(w2, D2x, v), w2x; atol = 1.0e-8)
     w2 = zero(w)
-    @test ≈(mul!(w2, Dx, v), w; atol = 1e-8)
+    @test ≈(mul!(w2, Dx, v), w; atol = 1.0e-8)
 
     itr = inv(ftr)
     ftt = ftr'
@@ -101,9 +103,11 @@ end
     C = FunctionOperator(f, zeros(N); batch = true, issymmetric = true, p = p, u = u)
 
     # Introduce update function for D dependent on kwarg "matrix"
-    D = MatrixOperator(zeros(N, N);
+    D = MatrixOperator(
+        zeros(N, N);
         update_func! = (A, u, p, t; matrix) -> (A .= p * t * matrix),
-        accepted_kwargs = Val((:matrix,)))
+        accepted_kwargs = Val((:matrix,))
+    )
 
     matrix = rand(N, N)
     diag = rand(N2)
@@ -116,7 +120,8 @@ end
     D1 = DiagonalOperator(zeros(N2); update_func! = (d, u, p, t) -> d .= p)
     D2 = DiagonalOperator(
         zeros(N2); update_func! = (d, u, p, t; diag) -> d .= p * t * diag,
-        accepted_kwargs = Val((:diag,)))
+        accepted_kwargs = Val((:diag,))
+    )
 
     TT = [T1, T2]
     DD = Diagonal([D1, D2])
@@ -127,7 +132,7 @@ end
     # Update operator
     @test_nowarn update_coefficients!(op, u, p, t; diag, matrix)
 
-    # Form dense operator manually 
+    # Form dense operator manually
     dense_T1 = kron(A, p * ones(N, N))
     dense_T2 = kron(_C, (p * t) .* matrix)
     dense_DD = Diagonal(vcat(p * ones(N2), p * t * diag))
@@ -185,15 +190,17 @@ end
         @test ldiv!(zero(v), L, v) ≈ L \ v
     end
 
-    for (L, LT) in ((F, FunctionOperator),
-        (F + F, SciMLOperators.AddedOperator),
-        (F * 2, SciMLOperators.ScaledOperator),
-        (F ∘ F, SciMLOperators.ComposedOperator),
-        (AffineOperator(F, F, v), AffineOperator),
-        (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
-        (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
-        (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
-        (SciMLOperators.InvertibleOperator(F, F), SciMLOperators.InvertibleOperator))
+    for (L, LT) in (
+            (F, FunctionOperator),
+            (F + F, SciMLOperators.AddedOperator),
+            (F * 2, SciMLOperators.ScaledOperator),
+            (F ∘ F, SciMLOperators.ComposedOperator),
+            (AffineOperator(F, F, v), AffineOperator),
+            (SciMLOperators.AdjointOperator(F), SciMLOperators.AdjointOperator),
+            (SciMLOperators.TransposedOperator(F), SciMLOperators.TransposedOperator),
+            (SciMLOperators.InvertedOperator(F), SciMLOperators.InvertedOperator),
+            (SciMLOperators.InvertibleOperator(F, F), SciMLOperators.InvertibleOperator),
+        )
         L = deepcopy(L)
         L = cache_operator(L, v)
 

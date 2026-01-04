@@ -1,10 +1,10 @@
 using SciMLOperators, Random, SparseArrays, Test, LinearAlgebra
 using SciMLOperators: IdentityOperator,
-                      NullOperator,
-                      ScaledOperator,
-                      AddedOperator,
-                      ComposedOperator,
-                      cache_operator
+    NullOperator,
+    ScaledOperator,
+    AddedOperator,
+    ComposedOperator,
+    cache_operator
 
 function apply_op!(H, w, v, u, p, t)
     H(w, v, u, p, t)

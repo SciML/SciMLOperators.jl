@@ -2,15 +2,15 @@ using SciMLOperators, LinearAlgebra, SparseArrays
 using Random
 
 using SciMLOperators: IdentityOperator,
-                      NullOperator,
-                      ScaledOperator,
-                      AddedOperator,
-                      ComposedOperator,
-                      AdjointOperator,
-                      TransposedOperator,
-                      InvertedOperator, AbstractAdjointVecOrMat,
-                      AbstractTransposedVecOrMat, getops,
-                      cache_operator
+    NullOperator,
+    ScaledOperator,
+    AddedOperator,
+    ComposedOperator,
+    AdjointOperator,
+    TransposedOperator,
+    InvertedOperator, AbstractAdjointVecOrMat,
+    AbstractTransposedVecOrMat, getops,
+    cache_operator
 
 Random.seed!(0)
 N = 8
@@ -147,7 +147,7 @@ end
 
     # Test unary +
     @test +A === A
-    
+
     # Test unary - on constant MatrixOperator (simplified to MatrixOperator)
     minusA = -A
     @test minusA isa ScaledOperator
@@ -287,17 +287,17 @@ end
     A = MatrixOperator(rand(N, N))
     B = MatrixOperator(rand(N, N))
     C = MatrixOperator(rand(N, N))
-    
+
     # Create nested structure: (A + B) is an AddedOperator
     AB = A + B
     @test AB isa AddedOperator
-    
+
     # When we create AddedOperator((AB, C)), it should flatten
     L = AddedOperator((AB, C))
     @test L isa AddedOperator
     @test length(L.ops) == 3  # Should have A, B, C (not AB and C)
     @test all(op -> !isa(op, AddedOperator), L.ops)
-    
+
     # Verify correctness
     test_vec = rand(N, K)
     @test L * test_vec ≈ (A + B + C) * test_vec
@@ -421,10 +421,14 @@ end
 end
 
 @testset "Adjoint, Transpose" begin
-    for (op,
-        LType,
-        VType) in ((adjoint, AdjointOperator, AbstractAdjointVecOrMat),
-        (transpose, TransposedOperator, AbstractTransposedVecOrMat))
+    for (
+            op,
+            LType,
+            VType,
+        ) in (
+            (adjoint, AdjointOperator, AbstractAdjointVecOrMat),
+            (transpose, TransposedOperator, AbstractTransposedVecOrMat),
+        )
         A = rand(N, N)
         D = Bidiagonal(rand(N, N), :L)
         u = rand(N, K)       # Update vector
@@ -461,7 +465,7 @@ end
         @test op(u) * AAt ≈ op(A * u)
         @test op(u) / AAt ≈ op(A \ u)
 
-        # Not implementing separate test for adjoint/transpose operators 
+        # Not implementing separate test for adjoint/transpose operators
         # since they typically rely on the base operator implementations
 
         v = rand(N, K)

@@ -11,7 +11,7 @@ SparseArrays.sparse(L::SciMLOperators.ScaledOperator) = L.λ * sparse(L.L)
 SparseArrays.sparse(L::SciMLOperators.AddedOperator) = sum(sparse, L.ops)
 SparseArrays.sparse(L::SciMLOperators.ComposedOperator) = prod(sparse, L.ops)
 function SparseArrays.sparse(L::SciMLOperators.TensorProductOperator)
-    LinearAlgebra.kron(sparse.(AbstractMatrix, L.ops)...)
+    return LinearAlgebra.kron(sparse.(AbstractMatrix, L.ops)...)
 end
 
 end

@@ -11,7 +11,7 @@ end
 function Base.one(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
-    IdentityOperator(N)
+    return IdentityOperator(N)
 end
 
 Base.convert(::Type{AbstractMatrix}, ii::IdentityOperator) = Diagonal(ones(Bool, ii.len))
@@ -43,77 +43,82 @@ has_ldiv!(::IdentityOperator) = true
 for op in (:*, :\)
     @eval function Base.$op(ii::IdentityOperator, v::AbstractVecOrMat)
         @assert size(v, 1) == ii.len
-        copy(v)
+        return copy(v)
     end
 end
 
 @inline function LinearAlgebra.mul!(
-        w::AbstractVecOrMat, ii::IdentityOperator, v::AbstractVecOrMat)
+        w::AbstractVecOrMat, ii::IdentityOperator, v::AbstractVecOrMat
+    )
     @assert size(v, 1) == ii.len
-    copy!(w, v)
+    return copy!(w, v)
 end
 
-@inline function LinearAlgebra.mul!(w::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
         ii::IdentityOperator,
         v::AbstractVecOrMat,
         α,
-        β)
+        β
+    )
     @assert size(v, 1) == ii.len
-    mul!(w, I, v, α, β)
+    return mul!(w, I, v, α, β)
 end
 
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, ii::IdentityOperator, v::AbstractVecOrMat)
     @assert size(v, 1) == ii.len
-    copy!(w, v)
+    return copy!(w, v)
 end
 
 function LinearAlgebra.ldiv!(ii::IdentityOperator, v::AbstractVecOrMat)
     @assert size(v, 1) == ii.len
-    v
+    return v
 end
 
 # Out-of-place: v is action vector, u is update vector
 function (ii::IdentityOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     @assert size(v, 1) == ii.len
     update_coefficients(ii, u, p, t; kwargs...)
-    copy(v)
+    return copy(v)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 @inline function (ii::IdentityOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
+    )
     @assert size(v, 1) == ii.len
-    copy!(w, v)
+    return copy!(w, v)
 end
 
 # In-place with scaling: w = α*(ii*v) + β*w
 @inline function (ii::IdentityOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
     @assert size(v, 1) == ii.len
-    mul!(w, I, v, α, β)
+    return mul!(w, I, v, α, β)
 end
 
 # operator fusion with identity returns operator itself
 for op in (:*, :∘)
     @eval function Base.$op(ii::IdentityOperator, A::AbstractSciMLOperator)
         @assert size(A, 1) == ii.len
-        A
+        return A
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, ii::IdentityOperator)
         @assert size(A, 2) == ii.len
-        A
+        return A
     end
 end
 
 function Base.:\(ii::IdentityOperator, A::AbstractSciMLOperator)
     @assert size(A, 1) == ii.len
-    A
+    return A
 end
 
 function Base.:/(A::AbstractSciMLOperator, ii::IdentityOperator)
     @assert size(A, 2) == ii.len
-    A
+    return A
 end
 
 """
@@ -129,7 +134,7 @@ end
 function Base.zero(L::AbstractSciMLOperator)
     @assert issquare(L)
     N = size(L, 1)
-    NullOperator(N)
+    return NullOperator(N)
 end
 
 Base.convert(::Type{AbstractMatrix}, nn::NullOperator) = Diagonal(zeros(Bool, nn.len))
@@ -161,49 +166,52 @@ Base.:*(nn::NullOperator, v::AbstractVecOrMat) = (@assert size(v, 1) == nn.len; 
 
 function LinearAlgebra.mul!(w::AbstractVecOrMat, nn::NullOperator, v::AbstractVecOrMat)
     @assert size(v, 1) == size(w, 1) == nn.len
-    lmul!(false, w)
+    return lmul!(false, w)
 end
 
-function LinearAlgebra.mul!(w::AbstractVecOrMat,
+function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
         nn::NullOperator,
         v::AbstractVecOrMat,
         α,
-        β)
+        β
+    )
     @assert size(v, 1) == size(w, 1) == nn.len
-    lmul!(β, w)
+    return lmul!(β, w)
 end
 
 # Out-of-place: v is action vector, u is update vector
 function (nn::NullOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     @assert size(v, 1) == nn.len
-    zero(v)
+    return zero(v)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     @assert size(v, 1) == nn.len
     lmul!(false, w)
-    w
+    return w
 end
 
 # In-place with scaling: w = α*(nn*v) + β*w
 function (nn::NullOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
     @assert size(v, 1) == nn.len
     lmul!(β, w)
-    w
+    return w
 end
 
 # operator fusion, composition
 for op in (:*, :∘)
     @eval function Base.$op(nn::NullOperator, A::AbstractSciMLOperator)
         @assert size(A, 1) == nn.len
-        NullOperator(nn.len)
+        return NullOperator(nn.len)
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, nn::NullOperator)
         @assert size(A, 2) == nn.len
-        NullOperator(nn.len)
+        return NullOperator(nn.len)
     end
 end
 
@@ -211,12 +219,12 @@ end
 for op in (:+, :-)
     @eval function Base.$op(nn::NullOperator, A::AbstractSciMLOperator)
         @assert size(A) == (nn.len, nn.len)
-        A
+        return A
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, nn::NullOperator)
         @assert size(A) == (nn.len, nn.len)
-        A
+        return A
     end
 end
 
@@ -227,17 +235,20 @@ $TYPEDEF
 
     (λ L)*(v) = λ * L(v)
 """
-struct ScaledOperator{T,
-    λType,
-    LType
-} <: AbstractSciMLOperator{T}
+struct ScaledOperator{
+        T,
+        λType,
+        LType,
+    } <: AbstractSciMLOperator{T}
     λ::λType
     L::LType
 
-    function ScaledOperator(λ::AbstractSciMLScalarOperator{Tλ},
-            L::AbstractSciMLOperator{TL}) where {Tλ, TL}
+    function ScaledOperator(
+            λ::AbstractSciMLScalarOperator{Tλ},
+            L::AbstractSciMLOperator{TL}
+        ) where {Tλ, TL}
         T = promote_type(Tλ, TL)
-        new{T, typeof(λ), typeof(L)}(λ, L)
+        return new{T, typeof(λ), typeof(L)}(λ, L)
     end
 end
 
@@ -246,14 +257,14 @@ for T in SCALINGNUMBERTYPES[2:end]
     @eval function ScaledOperator(λ::$T, L::AbstractSciMLOperator)
         T2 = Base.promote_eltype(λ, L)
         Λ = λ isa UniformScaling ? UniformScaling(T2(λ.λ)) : T2(λ)
-        ScaledOperator(ScalarOperator(Λ), L)
+        return ScaledOperator(ScalarOperator(Λ), L)
     end
 end
 
 for T in SCALINGNUMBERTYPES
     @eval function ScaledOperator(λ::$T, L::ScaledOperator)
         λ = λ * L.λ
-        ScaledOperator(λ, L.L)
+        return ScaledOperator(λ, L.L)
     end
 
     for LT in SCALINGCOMBINETYPES
@@ -281,7 +292,7 @@ for T in SCALINGNUMBERTYPES[2:end]
 end
 
 Base.:+(L::AbstractSciMLOperator) = L
-Base.:-(L::AbstractSciMLOperator{T}) where T = ScaledOperator(-one(T), L)
+Base.:-(L::AbstractSciMLOperator{T}) where {T} = ScaledOperator(-one(T), L)
 
 # Special cases for constant scalars. These simplify the structure when applicable
 function Base.:-(L::ScaledOperator)
@@ -290,18 +301,20 @@ function Base.:-(L::ScaledOperator)
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::ScaledOperator)
-    convert(Number, L.λ) * convert(AbstractMatrix, L.L)
+    return convert(Number, L.λ) * convert(AbstractMatrix, L.L)
 end
 
 # traits
 function Base.show(io::IO, L::ScaledOperator{T}) where {T}
     show(io, L.λ)
     print(io, " * ")
-    show(io, L.L)
+    return show(io, L.L)
 end
 Base.size(L::ScaledOperator) = size(L.L)
-for op in (:adjoint,
-    :transpose)
+for op in (
+        :adjoint,
+        :transpose,
+    )
     @eval Base.$op(L::ScaledOperator) = ScaledOperator($op(L.λ), $op(L.L))
 end
 Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
@@ -312,21 +325,21 @@ function update_coefficients(L::ScaledOperator, u, p, t)
     @reset L.L = update_coefficients(L.L, u, p, t)
     @reset L.λ = update_coefficients(L.λ, u, p, t)
 
-    L
+    return L
 end
 
 function update_coefficients!(L::ScaledOperator, u, p, t)
     update_coefficients!(L.L, u, p, t)
     update_coefficients!(L.λ, u, p, t)
 
-    nothing
+    return nothing
 end
 
 getops(L::ScaledOperator) = (L.λ, L.L)
 
 # Copy method to avoid aliasing
 function Base.copy(L::ScaledOperator)
-    ScaledOperator(copy(L.λ), copy(L.L))
+    return ScaledOperator(copy(L.λ), copy(L.L))
 end
 
 isconstant(L::ScaledOperator) = isconstant(L.L) & isconstant(L.λ)
@@ -341,7 +354,7 @@ has_ldiv!(L::ScaledOperator) = has_ldiv!(L.L) & !iszero(L.λ)
 function cache_internals(L::ScaledOperator, v::AbstractVecOrMat)
     @reset L.L = cache_operator(L.L, v)
     @reset L.λ = cache_operator(L.λ, v)
-    L
+    return L
 end
 
 # getindex
@@ -349,13 +362,15 @@ Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.L[i]
 Base.getindex(L::ScaledOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]
 
 factorize(L::ScaledOperator) = L.λ * factorize(L.L)
-for fact in (:lu, :lu!,
-    :qr, :qr!,
-    :cholesky, :cholesky!,
-    :ldlt, :ldlt!,
-    :bunchkaufman, :bunchkaufman!,
-    :lq, :lq!,
-    :svd, :svd!)
+for fact in (
+        :lu, :lu!,
+        :qr, :qr!,
+        :cholesky, :cholesky!,
+        :ldlt, :ldlt!,
+        :bunchkaufman, :bunchkaufman!,
+        :lq, :lq!,
+        :svd, :svd!,
+    )
     @eval LinearAlgebra.$fact(L::ScaledOperator, args...) = L.λ * fact(L.L, args...)
 end
 
@@ -364,30 +379,33 @@ Base.:*(L::ScaledOperator, v::AbstractVecOrMat) = L.λ * (L.L * v)
 Base.:\(L::ScaledOperator, v::AbstractVecOrMat) = L.λ \ (L.L \ v)
 
 @inline function LinearAlgebra.mul!(
-        w::AbstractVecOrMat, L::ScaledOperator, v::AbstractVecOrMat)
+        w::AbstractVecOrMat, L::ScaledOperator, v::AbstractVecOrMat
+    )
     iszero(L.λ) && return lmul!(false, w)
     a = convert(Number, L.λ)
-    mul!(w, L.L, v, a, false)
+    return mul!(w, L.L, v, a, false)
 end
 
-@inline function LinearAlgebra.mul!(w::AbstractVecOrMat,
+@inline function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
         L::ScaledOperator,
         v::AbstractVecOrMat,
         α,
-        β)
+        β
+    )
     iszero(L.λ) && return lmul!(β, w)
     a = convert(Number, L.λ * α)
-    mul!(w, L.L, v, a, β)
+    return mul!(w, L.L, v, a, β)
 end
 
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::ScaledOperator, v::AbstractVecOrMat)
     ldiv!(w, L.L, v)
-    ldiv!(L.λ, w)
+    return ldiv!(L.λ, w)
 end
 
 function LinearAlgebra.ldiv!(L::ScaledOperator, v::AbstractVecOrMat)
     ldiv!(L.λ, v)
-    ldiv!(L.L, v)
+    return ldiv!(L.L, v)
 end
 
 # Out-of-place: v is action vector, u is update vector
@@ -402,7 +420,8 @@ end
 
 # In-place: w is destination, v is action vector, u is update vector
 @inline function (L::ScaledOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
+    )
     update_coefficients!(L.λ, u, p, t; kwargs...)
     a = convert(Number, L.λ)
     return L.L(w, v, u, p, t, a, false; kwargs...)
@@ -410,7 +429,8 @@ end
 
 # In-place with scaling: w = α*(L*v) + β*w
 @inline function (L::ScaledOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
     update_coefficients!(L.λ, u, p, t; kwargs...)
     a = convert(Number, L.λ * α)
     return L.L(w, v, u, p, t, a, β; kwargs...)
@@ -421,9 +441,10 @@ Lazy operator addition
 
     (A1 + A2 + A3...)v = A1*v + A2*v + A3*v ....
 """
-struct AddedOperator{T,
-    O <: Tuple{Vararg{AbstractSciMLOperator}}
-} <: AbstractSciMLOperator{T}
+struct AddedOperator{
+        T,
+        O <: Tuple{Vararg{AbstractSciMLOperator}},
+    } <: AbstractSciMLOperator{T}
     ops::O
 
     function AddedOperator(ops)
@@ -432,12 +453,12 @@ struct AddedOperator{T,
         ops_flat = _flatten_added_operators(ops)
         _check_AddedOperator_sizes(ops_flat)
         T = mapreduce(eltype, promote_type, ops_flat)
-        new{T, typeof(ops_flat)}(ops_flat)
+        return new{T, typeof(ops_flat)}(ops_flat)
     end
 end
 
 function AddedOperator(ops::AbstractSciMLOperator...)
-    AddedOperator(ops)
+    return AddedOperator(ops)
 end
 
 AddedOperator(L::AbstractSciMLOperator) = L
@@ -455,7 +476,7 @@ AddedOperator(L::AbstractSciMLOperator) = L
             exprs = (exprs..., :(ops[$i]))
         end
     end
-    
+
     return quote
         tuple($(exprs...))
     end
@@ -470,7 +491,7 @@ end
         sz_expr_list = (sz_expr_list..., :(size(ops[$i]) == sz))
     end
 
-    quote
+    return quote
         $sz_expr
         @assert all(tuple($(sz_expr_list...))) "Dimension mismatch: cannot add operators of different sizes."
         nothing
@@ -489,12 +510,12 @@ Base.:+(A::AddedOperator, B::AddedOperator) = AddedOperator(A.ops..., B.ops...)
 
 function Base.:+(A::AddedOperator, Z::NullOperator)
     @assert size(A) == size(Z)
-    A
+    return A
 end
 
 function Base.:+(Z::NullOperator, A::AddedOperator)
     @assert size(A) == size(Z)
-    A
+    return A
 end
 
 Base.:-(A::AddedOperator) = AddedOperator(map(-, A.ops))
@@ -513,7 +534,7 @@ for op in (:+, :-)
                 iszero(λ) && return L
                 N = size(L, 1)
                 Id = IdentityOperator(N)
-                AddedOperator(L, $op(λ) * Id)
+                return AddedOperator(L, $op(λ) * Id)
             end
 
             @eval function Base.$op(λ::$T, L::$LT)
@@ -521,7 +542,7 @@ for op in (:+, :-)
                 iszero(λ) && return $op(L)
                 N = size(L, 1)
                 Id = IdentityOperator(N)
-                AddedOperator(λ * Id, $op(L))
+                return AddedOperator(λ * Id, $op(L))
             end
         end
     end
@@ -530,22 +551,22 @@ end
 for T in SCALINGNUMBERTYPES[2:end]
     @eval function Base.:*(λ::$T, L::AddedOperator)
         ops = map(op -> λ * op, L.ops)
-        AddedOperator(ops)
+        return AddedOperator(ops)
     end
 
     @eval function Base.:*(L::AddedOperator, λ::$T)
         ops = map(op -> λ * op, L.ops)
-        AddedOperator(ops)
+        return AddedOperator(ops)
     end
 
     @eval function Base.:/(L::AddedOperator, λ::$T)
         ops = map(op -> op / λ, L.ops)
-        AddedOperator(ops)
+        return AddedOperator(ops)
     end
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::AddedOperator)
-    sum(op -> convert(AbstractMatrix, op), L.ops)
+    return sum(op -> convert(AbstractMatrix, op), L.ops)
 end
 
 # traits
@@ -556,11 +577,13 @@ function Base.show(io::IO, L::AddedOperator)
         print(io, " + ")
         show(io, L.ops[i])
     end
-    print(io, ")")
+    return print(io, ")")
 end
 Base.size(L::AddedOperator) = size(first(L.ops))
-for op in (:adjoint,
-    :transpose)
+for op in (
+        :adjoint,
+        :transpose,
+    )
     @eval Base.$op(L::AddedOperator) = AddedOperator($op.(L.ops)...)
 end
 Base.conj(L::AddedOperator) = AddedOperator(conj.(L.ops))
@@ -568,13 +591,13 @@ function Base.resize!(L::AddedOperator, n::Integer)
     for op in L.ops
         resize!(op, n)
     end
-    L
+    return L
 end
 
 @generated function update_coefficients(L::AddedOperator, u, p, t)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    quote
+    return quote
         ops = Base.@ntuple $N i -> update_coefficients(L.ops[i], u, p, t)
         return AddedOperator(ops)
     end
@@ -583,8 +606,8 @@ end
 @generated function update_coefficients!(L::AddedOperator, u, p, t)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    quote
-        Base.@nexprs $N i->begin
+    return quote
+        Base.@nexprs $N i -> begin
             update_coefficients!(L.ops[i], u, p, t)
         end
 
@@ -596,7 +619,7 @@ getops(L::AddedOperator) = L.ops
 
 # Copy method to avoid aliasing
 function Base.copy(L::AddedOperator)
-    AddedOperator(map(copy, L.ops))
+    return AddedOperator(map(copy, L.ops))
 end
 
 islinear(L::AddedOperator) = all(islinear, getops(L))
@@ -606,7 +629,7 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 @generated function cache_internals(L::AddedOperator, v::AbstractVecOrMat)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    quote
+    return quote
         ops = Base.@ntuple $N i -> cache_operator(L.ops[i], v)
         return AddedOperator(ops)
     end
@@ -616,32 +639,35 @@ getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
 getindex(L::AddedOperator, I::Vararg{Int, N}) where {N} = sum(op -> op[I...], L.ops)
 
 function Base.:*(L::AddedOperator, v::AbstractVecOrMat)
-    sum(op -> iszero(op) ? zero(v) : op * v, L.ops)
+    return sum(op -> iszero(op) ? zero(v) : op * v, L.ops)
 end
 
 @generated function LinearAlgebra.mul!(
-        w::AbstractVecOrMat, L::AddedOperator, v::AbstractVecOrMat)
+        w::AbstractVecOrMat, L::AddedOperator, v::AbstractVecOrMat
+    )
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    quote
+    return quote
         mul!(w, L.ops[1], v)
-        Base.@nexprs $(N - 1) i->begin
+        Base.@nexprs $(N - 1) i -> begin
             mul!(w, L.ops[i + 1], v, true, true)
         end
         w
     end
 end
 
-@generated function LinearAlgebra.mul!(w::AbstractVecOrMat,
+@generated function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
         L::AddedOperator,
         v::AbstractVecOrMat,
         α,
-        β)
+        β
+    )
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    quote
+    return quote
         lmul!(β, w)
-        Base.@nexprs $(N) i->begin
+        Base.@nexprs $(N) i -> begin
             mul!(w, L.ops[i], v, α, true)
         end
         w
@@ -651,20 +677,21 @@ end
 # Out-of-place: v is action vector, u is update vector
 function (L::AddedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     # We don't need to update coefficients of L, as op(v, u, p, t) will do it for each op
-    sum(op -> op(v, u, p, t; kwargs...), L.ops)
+    return sum(op -> op(v, u, p, t; kwargs...), L.ops)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 @generated function (L::AddedOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
+    )
     # We don't need to update coefficients of L, as op(w, v, u, p, t) will do it for each op
 
     ops_types = L.parameters[2].parameters
-    N = length(ops_types)-1
+    N = length(ops_types) - 1
 
-    quote
+    return quote
         L.ops[1](w, v, u, p, t; kwargs...)
-        Base.@nexprs $N i->begin
+        Base.@nexprs $N i -> begin
             op = L.ops[i + 1]
             op(w, v, u, p, t, true, true; kwargs...)
         end
@@ -674,16 +701,17 @@ end
 
 # In-place with scaling: w = α*(L*v) + β*w
 @generated function (L::AddedOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
     # We don't need to update coefficients of L, as op(w, v, u, p, t) will do it for each op
 
     T = L.parameters[1]
     ops_types = L.parameters[2].parameters
-    N = length(ops_types)-1
+    N = length(ops_types) - 1
 
-    quote
+    return quote
         L.ops[1](w, v, u, p, t, α, β; kwargs...)
-        Base.@nexprs $N i->begin
+        Base.@nexprs $N i -> begin
             op = L.ops[i + 1]
             op(w, v, u, p, t, α, true; kwargs...)
         end
@@ -710,17 +738,17 @@ struct ComposedOperator{T, O, C} <: AbstractSciMLOperator{T}
         for i in reverse(2:length(ops))
             opcurr = ops[i]
             opnext = ops[i - 1]
-            @assert size(opcurr, 1)==size(opnext, 2) "Dimension mismatch: cannot compose
+            @assert size(opcurr, 1) == size(opnext, 2) "Dimension mismatch: cannot compose
           operators of sizes $(size(opnext)), and $(size(opcurr))."
         end
 
         T = promote_type(eltype.(ops)...)
-        new{T, typeof(ops), typeof(cache)}(ops, cache)
+        return new{T, typeof(ops), typeof(cache)}(ops, cache)
     end
 end
 
 function ComposedOperator(ops::AbstractSciMLOperator...; cache = nothing)
-    ComposedOperator(ops, cache)
+    return ComposedOperator(ops, cache)
 end
 
 # constructors
@@ -728,51 +756,57 @@ for op in (:*, :∘)
     @eval Base.$op(ops::AbstractSciMLOperator...) = reduce($op, ops)
     @eval Base.$op(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = ComposedOperator(
         A,
-        B)
+        B
+    )
     @eval Base.$op(A::ComposedOperator, B::AbstractSciMLOperator) = ComposedOperator(
         A.ops...,
-        B)
-    @eval Base.$op(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(A,
-        B.ops...)
-    @eval Base.$op(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(A.ops...,
-        B.ops...)
+        B
+    )
+    @eval Base.$op(A::AbstractSciMLOperator, B::ComposedOperator) = ComposedOperator(
+        A,
+        B.ops...
+    )
+    @eval Base.$op(A::ComposedOperator, B::ComposedOperator) = ComposedOperator(
+        A.ops...,
+        B.ops...
+    )
 end
 
 for op in (:*, :∘)
     # identity
     @eval function Base.$op(ii::IdentityOperator, A::ComposedOperator)
         @assert size(A, 1) == ii.len
-        A
+        return A
     end
 
     @eval function Base.$op(A::ComposedOperator, ii::IdentityOperator)
         @assert size(A, 2) == ii.len
-        A
+        return A
     end
 
     # null operator
     @eval function Base.$op(nn::NullOperator, A::ComposedOperator)
         @assert size(A, 1) == nn.len
-        zero(A)
+        return zero(A)
     end
 
     @eval function Base.$op(A::ComposedOperator, nn::NullOperator)
         @assert size(A, 2) == nn.len
-        zero(A)
+        return zero(A)
     end
 
     # scalar operator
     @eval function Base.$op(λ::AbstractSciMLScalarOperator, L::ComposedOperator)
-        ScaledOperator(λ, L)
+        return ScaledOperator(λ, L)
     end
 
     @eval function Base.$op(L::ComposedOperator, λ::AbstractSciMLScalarOperator)
-        ScaledOperator(λ, L)
+        return ScaledOperator(λ, L)
     end
 end
 
 function Base.convert(::Type{AbstractMatrix}, L::ComposedOperator)
-    prod(op -> convert(AbstractMatrix, op), L.ops)
+    return prod(op -> convert(AbstractMatrix, op), L.ops)
 end
 
 # traits
@@ -783,13 +817,17 @@ function Base.show(io::IO, L::ComposedOperator)
         print(io, " * ")
         show(io, L.ops[i])
     end
-    print(io, ")")
+    return print(io, ")")
 end
 Base.size(L::ComposedOperator) = (size(first(L.ops), 1), size(last(L.ops), 2))
-for op in (:adjoint,
-    :transpose)
-    @eval Base.$op(L::ComposedOperator) = ComposedOperator($op.(reverse(L.ops))...;
-        cache = iscached(L) ? reverse(L.cache) : nothing)
+for op in (
+        :adjoint,
+        :transpose,
+    )
+    @eval Base.$op(L::ComposedOperator) = ComposedOperator(
+        $op.(reverse(L.ops))...;
+        cache = iscached(L) ? reverse(L.cache) : nothing
+    )
 end
 Base.conj(L::ComposedOperator) = ComposedOperator(conj.(L.ops); cache = L.cache)
 function Base.resize!(L::ComposedOperator, n::Integer)
@@ -801,7 +839,7 @@ function Base.resize!(L::ComposedOperator, n::Integer)
         resize!(v, n)
     end
 
-    L
+    return L
 end
 
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
@@ -812,14 +850,14 @@ function update_coefficients(L::ComposedOperator, u, p, t)
         ops = (ops..., update_coefficients(op, u, p, t))
     end
 
-    @reset L.ops = ops
+    return @reset L.ops = ops
 end
 
 getops(L::ComposedOperator) = L.ops
 
 # Copy method to avoid aliasing
 function Base.copy(L::ComposedOperator)
-    ComposedOperator(
+    return ComposedOperator(
         map(copy, L.ops),
         L.cache === nothing ? nothing : deepcopy(L.cache)
     )
@@ -834,16 +872,19 @@ has_ldiv(L::ComposedOperator) = all(has_ldiv, L.ops)
 has_ldiv!(L::ComposedOperator) = all(has_ldiv!, L.ops)
 
 factorize(L::ComposedOperator) = prod(factorize, L.ops)
-for fact in (:lu, :lu!,
-    :qr, :qr!,
-    :cholesky, :cholesky!,
-    :ldlt, :ldlt!,
-    :bunchkaufman, :bunchkaufman!,
-    :lq, :lq!,
-    :svd, :svd!)
+for fact in (
+        :lu, :lu!,
+        :qr, :qr!,
+        :cholesky, :cholesky!,
+        :ldlt, :ldlt!,
+        :bunchkaufman, :bunchkaufman!,
+        :lq, :lq!,
+        :svd, :svd!,
+    )
     @eval LinearAlgebra.$fact(L::ComposedOperator, args...) = prod(
         op -> $fact(op, args...),
-        reverse(L.ops))
+        reverse(L.ops)
+    )
 end
 
 # operator application
@@ -856,7 +897,7 @@ function Base.:\(L::ComposedOperator, v::AbstractVecOrMat)
         v = op \ v
     end
 
-    v
+    return v
 end
 
 function Base.:*(L::ComposedOperator, v::AbstractVecOrMat)
@@ -864,7 +905,7 @@ function Base.:*(L::ComposedOperator, v::AbstractVecOrMat)
         v = op * v
     end
 
-    v
+    return v
 end
 
 function cache_self(L::ComposedOperator, v::AbstractVecOrMat)
@@ -890,7 +931,7 @@ function cache_self(L::ComposedOperator, v::AbstractVecOrMat)
     end
 
     @reset L.cache = cache
-    L
+    return L
 end
 
 function cache_internals(L::ComposedOperator, v::AbstractVecOrMat)
@@ -903,7 +944,7 @@ function cache_internals(L::ComposedOperator, v::AbstractVecOrMat)
         ops = (cache_operator(L.ops[i], L.cache[i]), ops...)
     end
 
-    @reset L.ops = ops
+    return @reset L.ops = ops
 end
 
 @generated function LinearAlgebra.mul!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
@@ -928,7 +969,7 @@ end
         end
     end
 
-    quote
+    return quote
         @assert iscached(L) """cache needs to be set up for operator of type
         $L. Set up cache by calling `cache_operator(L, v)`"""
 
@@ -937,11 +978,13 @@ end
     end
 end
 
-function LinearAlgebra.mul!(w::AbstractVecOrMat,
+function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
         L::ComposedOperator,
         v::AbstractVecOrMat,
         α,
-        β)
+        β
+    )
     @assert iscached(L) """cache needs to be set up for operator of type
     $L. Set up cache by calling `cache_operator(L, v)`."""
 
@@ -950,7 +993,7 @@ function LinearAlgebra.mul!(w::AbstractVecOrMat,
 
     mul!(w, L, v)
     lmul!(α, w)
-    axpy!(β, cache, w)
+    return axpy!(β, cache, w)
 end
 
 @generated function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
@@ -976,7 +1019,7 @@ end
         end
     end
 
-    quote
+    return quote
         @assert iscached(L) """cache needs to be set up for operator of type
         $L. Set up cache by calling `cache_operator(L, v)`."""
 
@@ -989,7 +1032,7 @@ function LinearAlgebra.ldiv!(L::ComposedOperator, v::AbstractVecOrMat)
     for i in 1:length(L.ops)
         ldiv!(L.ops[i], v)
     end
-    v
+    return v
 end
 
 # Out-of-place: v is action vector, u is update vector
@@ -999,12 +1042,13 @@ function (L::ComposedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     for op in reverse(L.ops)
         result = op(result, u, p, t; kwargs...)
     end
-    result
+    return result
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 @generated function (L::ComposedOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
+    )
     N = length(L.parameters[2].parameters)  # Number of operators
 
     # Generate the operator call expressions in reverse order
@@ -1026,7 +1070,7 @@ end
         end
     end
 
-    quote
+    return quote
         update_coefficients!(L, u, p, t; kwargs...)
         @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
 
@@ -1037,7 +1081,8 @@ end
 
 # In-place with scaling: w = α*(L*v) + β*w
 function (L::ComposedOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
     update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
 
@@ -1046,7 +1091,7 @@ function (L::ComposedOperator)(
 
     L(w, v, u, p, t; kwargs...)
     lmul!(α, w)
-    axpy!(β, cache, w)
+    return axpy!(β, cache, w)
 end
 
 """
@@ -1057,16 +1102,16 @@ struct InvertedOperator{T, LType, C} <: AbstractSciMLOperator{T}
     cache::C
 
     function InvertedOperator(L::AbstractSciMLOperator{T}, cache) where {T}
-        new{T, typeof(L), typeof(cache)}(L, cache)
+        return new{T, typeof(L), typeof(cache)}(L, cache)
     end
 end
 
 function InvertedOperator(L::AbstractSciMLOperator{T}; cache = nothing) where {T}
-    InvertedOperator(L, cache)
+    return InvertedOperator(L, cache)
 end
 
 function InvertedOperator(A::AbstractMatrix{T}; cache = nothing) where {T}
-    InvertedOperator(MatrixOperator(A), cache)
+    return InvertedOperator(MatrixOperator(A), cache)
 end
 
 Base.inv(L::AbstractSciMLOperator) = InvertedOperator(L)
@@ -1075,33 +1120,33 @@ Base.:\(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = inv(A) * B
 Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 
 function Base.convert(::Type{AbstractMatrix}, L::InvertedOperator)
-    inv(convert(AbstractMatrix, L.L))
+    return inv(convert(AbstractMatrix, L.L))
 end
 
 function Base.show(io::IO, L::InvertedOperator)
     print(io, "1 / ")
-    show(io, L.L)
+    return show(io, L.L)
 end
 Base.size(L::InvertedOperator) = size(L.L) |> reverse
 function Base.transpose(L::InvertedOperator)
-    InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
+    return InvertedOperator(transpose(L.L); cache = iscached(L) ? L.cache' : nothing)
 end
 function Base.adjoint(L::InvertedOperator)
-    InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
+    return InvertedOperator(adjoint(L.L); cache = iscached(L) ? L.cache' : nothing)
 end
 Base.conj(L::InvertedOperator) = InvertedOperator(conj(L.L); cache = L.cache)
 function Base.resize!(L::InvertedOperator, n::Integer)
     resize!(L.L, n)
     resize!(L.cache, n)
 
-    L
+    return L
 end
 
 function update_coefficients(L::InvertedOperator, u, p, t)
     if !isconstant(L.L)
         @reset L.L = update_coefficients(L.L, u, p, t)
     end
-    L
+    return L
 end
 
 getops(L::InvertedOperator) = (L.L,)
@@ -1129,7 +1174,7 @@ Base.:\(L::InvertedOperator, u::AbstractVecOrMat) = L.L * u
 
 # Copy method to avoid aliasing
 function Base.copy(L::InvertedOperator)
-    InvertedOperator(
+    return InvertedOperator(
         copy(L.L),
         L.cache === nothing ? nothing : deepcopy(L.cache)
     )
@@ -1138,34 +1183,36 @@ end
 function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
     cache = zero(u)
     @reset L.cache = cache
-    L
+    return L
 end
 
 function cache_internals(L::InvertedOperator, u::AbstractVecOrMat)
     @reset L.L = cache_operator(L.L, u)
-    L
+    return L
 end
 
 function LinearAlgebra.mul!(w::AbstractVecOrMat, L::InvertedOperator, v::AbstractVecOrMat)
-    ldiv!(w, L.L, v)
+    return ldiv!(w, L.L, v)
 end
 
-function LinearAlgebra.mul!(w::AbstractVecOrMat,
+function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
         L::InvertedOperator,
         v::AbstractVecOrMat,
         α,
-        β)
+        β
+    )
     @assert iscached(L) """cache needs to be set up for operator of type
     $L. Set up cache by calling `cache_operator(L, v)`."""
 
     copy!(L.cache, w)
     ldiv!(w, L.L, v)
     lmul!(α, w)
-    axpy!(β, L.cache, w)
+    return axpy!(β, L.cache, w)
 end
 
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::InvertedOperator, v::AbstractVecOrMat)
-    mul!(w, L.L, v)
+    return mul!(w, L.L, v)
 end
 
 function LinearAlgebra.ldiv!(L::InvertedOperator, v::AbstractVecOrMat)
@@ -1173,25 +1220,26 @@ function LinearAlgebra.ldiv!(L::InvertedOperator, v::AbstractVecOrMat)
     $L. Set up cache by calling `cache_operator(L, v)`."""
 
     copy!(L.cache, v)
-    mul!(v, L.L, L.cache)
+    return mul!(v, L.L, L.cache)
 end
 
 # Out-of-place: v is action vector, u is update vector
 function (L::InvertedOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     L = update_coefficients(L, u, p, t; kwargs...)
-    L.L \ v
+    return L.L \ v
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 function (L::InvertedOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
     update_coefficients!(L, u, p, t; kwargs...)
     ldiv!(w, L.L, v)
-    w
+    return w
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
 function (L::InvertedOperator)(
-        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...)
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
     update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for InvertedOperator. Call cache_operator(L, u) first."
 
@@ -1199,6 +1247,6 @@ function (L::InvertedOperator)(
     ldiv!(w, L.L, v)
     lmul!(α, w)
     axpy!(β, L.cache, w)
-    w
+    return w
 end
 #

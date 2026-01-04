@@ -135,9 +135,11 @@ end
     α = rand()
     β = rand()
 
-    L = MatrixOperator(zeros(N, N);
+    L = MatrixOperator(
+        zeros(N, N);
         update_func = (A, u, p, t) -> p * p',
-        update_func! = (A, u, p, t) -> A .= p * p')
+        update_func! = (A, u, p, t) -> A .= p * p'
+    )
 
     @test !isconstant(L)
 
@@ -161,31 +163,33 @@ end
     L(w, v, u, p, t, α, β)
     @test w ≈ α * (A * v) + β * orig_w
 
-    A = [-2.0 1 0 0 0
-         1 -2 1 0 0
-         0 1 -2 1 0
-         0 0 1 -2 1
-         0 0 0 1 -2]
+    A = [
+        -2.0 1 0 0 0
+        1 -2 1 0 0
+        0 1 -2 1 0
+        0 0 1 -2 1
+        0 0 0 1 -2
+    ]
     v = [3.0, 2.0, 1.0, 2.0, 3.0]
     opA = MatrixOperator(A)
 
     function update_function!(B, u, p, t)
         dt = p
-        B .= A .* u + dt*I
+        B .= A .* u + dt * I
     end
 
-    u = Array(1:1.0:5);
-    p = 0.1;
+    u = Array(1:1.0:5)
+    p = 0.1
     t = 0.0
     opB = MatrixOperator(copy(A); update_func! = update_function!)
 
     function Bfunc!(w, v, u, p, t)
         dt = p
-        w[1] = -(2*u[1]-dt)*v[1] + v[2]*u[1]
+        w[1] = -(2 * u[1] - dt) * v[1] + v[2] * u[1]
         for i in 2:4
-            w[i] = v[i - 1]*u[i] - (2*u[i]-dt)*v[i] + v[i + 1]*u[i]
+            w[i] = v[i - 1] * u[i] - (2 * u[i] - dt) * v[i] + v[i + 1] * u[i]
         end
-        w[5] = v[4]*u[5] - (2*u[5]-dt)*v[5]
+        w[5] = v[4] * u[5] - (2 * u[5] - dt) * v[5]
         nothing
     end
 
@@ -197,8 +201,10 @@ end
 
     mfopB = FunctionOperator(Bfunc!, zeros(5), zeros(5); u, p, t, isconstant = false)
 
-    @test iszero(opB(v, Array(2:1.0:6), 0.5, nothing) -
-                 mfopB(v, Array(2:1.0:6), 0.5, nothing))
+    @test iszero(
+        opB(v, Array(2:1.0:6), 0.5, nothing) -
+            mfopB(v, Array(2:1.0:6), 0.5, nothing)
+    )
 end
 
 @testset "DiagonalOperator update test" begin
@@ -212,9 +218,11 @@ end
     α = rand()
     β = rand()
 
-    D = DiagonalOperator(zeros(N);
+    D = DiagonalOperator(
+        zeros(N);
         update_func = (diag, u, p, t) -> p * t,
-        update_func! = (diag, u, p, t) -> diag .= p * t)
+        update_func! = (diag, u, p, t) -> diag .= p * t
+    )
 
     @test !isconstant(D)
     @test issquare(D)
@@ -294,9 +302,11 @@ end
     p = rand(N, K)
     t = rand()
 
-    D = DiagonalOperator(d;
+    D = DiagonalOperator(
+        d;
         update_func = (diag, u, p, t) -> p * t,
-        update_func! = (diag, u, p, t) -> diag .= p * t)
+        update_func! = (diag, u, p, t) -> diag .= p * t
+    )
 
     @test !isconstant(D)
     @test issquare(D)
@@ -439,9 +449,11 @@ end
     α = rand()
     β = rand()
 
-    L = AffineOperator(A, B, zeros(N, K);
+    L = AffineOperator(
+        A, B, zeros(N, K);
         update_func = (b, u, p, t) -> p * t,
-        update_func! = (b, u, p, t) -> b .= p * t)
+        update_func! = (b, u, p, t) -> b .= p * t
+    )
 
     @test !isconstant(L)
 
