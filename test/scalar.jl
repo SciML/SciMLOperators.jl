@@ -1,11 +1,11 @@
 using SciMLOperators
 using SciMLOperators: AbstractSciMLScalarOperator,
-                      ComposedScalarOperator,
-                      AddedScalarOperator,
-                      InvertedScalarOperator,
-                      IdentityOperator,
-                      AddedOperator,
-                      ScaledOperator
+    ComposedScalarOperator,
+    AddedScalarOperator,
+    InvertedScalarOperator,
+    IdentityOperator,
+    AddedOperator,
+    ScaledOperator
 
 using LinearAlgebra, Random, Test
 
@@ -138,8 +138,12 @@ end
         @test L(v, u, nothing, 0.0) ≈ x * (op * v)
 
         # Division tests from original
-        @test all(map(T -> (T isa SciMLOperators.ScaledOperator),
-            (α / op, op / α, op \ α, α \ op)))
+        @test all(
+            map(
+                T -> (T isa SciMLOperators.ScaledOperator),
+                (α / op, op / α, op \ α, α \ op)
+            )
+        )
         @test (α / op) * u ≈ (op \ α) * u ≈ α * (op \ u)
         @test (op / α) * u ≈ (α \ op) * u ≈ 1 / α * op * u
     end
@@ -223,8 +227,10 @@ end
     @test convert(Number, num) ≈ val
 
     # Test with keyword arguments
-    γ = ScalarOperator(0.0; update_func = (args...; dtgamma) -> dtgamma,
-        accepted_kwargs = Val((:dtgamma,)))
+    γ = ScalarOperator(
+        0.0; update_func = (args...; dtgamma) -> dtgamma,
+        accepted_kwargs = Val((:dtgamma,))
+    )
 
     dtgamma = rand()
     # Original tests
