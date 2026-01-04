@@ -19,14 +19,16 @@ NK = N * K
     α = rand()
     β = rand()
 
-    for (sz_in, sz_out) in (((N1, N2, N3), (N1, N2, N3)), # equal size
-        ((N1, N2, N3), (M1, M2, M3)))
+    for (sz_in, sz_out) in (
+            ((N1, N2, N3), (N1, N2, N3)), # equal size
+            ((N1, N2, N3), (M1, M2, M3)),
+        )
         N = prod(sz_in)
         M = prod(sz_out)
 
         A = rand(M, N)
         u = nothing
-        v = rand(sz_in...) # action vector 
+        v = rand(sz_in...) # action vector
         w = rand(sz_out...) # output vector for in-place tests
 
         _mul(A, v) = reshape(A * vec(v), sz_out)
@@ -61,12 +63,12 @@ NK = N * K
 
         # test with vec(Array)
         @test vec(_mul(A, v)) ≈ L(vec(v), u, p, t) ≈ L * vec(v) ≈
-              mul!(vec(zero(w)), L, vec(v))
+            mul!(vec(zero(w)), L, vec(v))
         @test vec(α * _mul(A, v) + β * w) ≈ mul!(vec(copy(w)), L, vec(v), α, β)
 
         if sz_in == sz_out
             @test vec(_div(A, w)) ≈ L \ vec(w) ≈ ldiv!(vec(zero(v)), L, vec(w)) ≈
-                  ldiv!(L, vec(copy(w)))
+                ldiv!(L, vec(copy(w)))
         end
 
         # Test in-place with different update and action vectors
@@ -110,18 +112,22 @@ end
     f2i(w, v, u, p, t, α, β) = (mul!(vec(w), Ai, vec(v), α, β); w)
 
     # out of place
-    op1 = FunctionOperator(f1, v; op_inverse = f1i, ifcache = false, islinear = true,
+    op1 = FunctionOperator(
+        f1, v; op_inverse = f1i, ifcache = false, islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true)
+        isposdef = true
+    )
 
     # in place
-    op2 = FunctionOperator(f2, v, w; op_inverse = f2i, ifcache = false, islinear = true,
+    op2 = FunctionOperator(
+        f2, v, w; op_inverse = f2i, ifcache = false, islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true)
+        isposdef = true
+    )
 
     # Test traits
     @test issquare(op1)
@@ -221,22 +227,26 @@ end
     f2i(w, v, u, p, t, α, β) = mul!(w, Ai, v, α, β)
 
     # out of place
-    op1 = FunctionOperator(f1, v, A * v; op_inverse = f1i, ifcache = false,
+    op1 = FunctionOperator(
+        f1, v, A * v; op_inverse = f1i, ifcache = false,
         batch = true,
         islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true)
+        isposdef = true
+    )
 
     # in place
-    op2 = FunctionOperator(f2, v, A * v; op_inverse = f2i, ifcache = false,
+    op2 = FunctionOperator(
+        f2, v, A * v; op_inverse = f2i, ifcache = false,
         batch = true,
         islinear = true,
         opnorm = true,
         issymmetric = true,
         ishermitian = true,
-        isposdef = true)
+        isposdef = true
+    )
 
     @test issquare(op1)
     @test issquare(op2)
@@ -316,17 +326,20 @@ end
     # Test with both tuple and Val forms of accepted_kwargs
     for acc_kw in ((:scale,), Val((:scale,)))
         # Function operator with keyword arguments
-        L = FunctionOperator(f, v, w;
+        L = FunctionOperator(
+            f, v, w;
             u = u,
             p = zero(p),
             t = zero(t),
             batch = true,
             accepted_kwargs = acc_kw,
-            scale = 1.0)
+            scale = 1.0
+        )
 
         @test_throws ArgumentError FunctionOperator(
             f, v, w; u = u, p = zero(p), t = zero(t), batch = true,
-            accepted_kwargs = acc_kw)
+            accepted_kwargs = acc_kw
+        )
 
         @test size(L) == (N, N)
 
