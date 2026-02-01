@@ -11,4 +11,15 @@ Random.seed!(0)
     W = WOperator{true}(M, gamma, J, u)
 
     @test convert(AbstractMatrix, W) ≈ J - M / gamma
+
+    # Scalar WOperator
+    J_scalar = ScalarOperator(2.0)
+    gamma_scalar = 0.5
+    u_scalar = 1.0
+    W_scalar = WOperator{false}(I, gamma_scalar, J_scalar, u_scalar)
+    @test convert(Number, W_scalar) ≈ 2.0 - 1.0 / 0.5
+
+    # Update and convert again
+    update_coefficients!(W_scalar; gamma = 0.25)
+    @test convert(Number, W_scalar) ≈ 2.0 - 1.0 / 0.25
 end

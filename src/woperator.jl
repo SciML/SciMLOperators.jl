@@ -56,11 +56,16 @@ mutable struct WOperator{
     jacvec::JV
 
     function WOperator{IIP}(mass_matrix, gamma, J, u, jacvec = nothing) where {IIP}
-        AJ = J isa MatrixOperator ? convert(AbstractMatrix, J) : J
-        mm = mass_matrix isa MatrixOperator ?
-            convert(AbstractMatrix, mass_matrix) : mass_matrix
-        _concrete_form = -mm / gamma + AJ
-        _func_cache = zero(u)
+        if J isa Union{Number, ScalarOperator}
+            _concrete_form = -mass_matrix / gamma + convert(Number, J)
+            _func_cache = nothing
+        else
+            AJ = J isa MatrixOperator ? convert(AbstractMatrix, J) : J
+            mm = mass_matrix isa MatrixOperator ?
+                convert(AbstractMatrix, mass_matrix) : mass_matrix
+            _concrete_form = -mm / gamma + AJ
+            _func_cache = zero(u)
+        end
         T = eltype(_concrete_form)
         MType = typeof(mass_matrix)
         GType = typeof(gamma)
