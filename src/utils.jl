@@ -62,6 +62,16 @@ function get_filtered_kwargs(
         ::Val{accepted_kwargs}
     ) where {accepted_kwargs}
     kwargs_nt = NamedTuple(kwargs)
+    # Remap deprecated dtgamma -> gamma when gamma is accepted but dtgamma is not
+    if :gamma in accepted_kwargs && !(:dtgamma in accepted_kwargs) &&
+       haskey(kwargs_nt, :dtgamma) && !haskey(kwargs_nt, :gamma)
+        Base.depwarn(
+            "keyword argument `dtgamma` is deprecated, use `gamma` instead",
+            :update_coefficients!)
+        kwargs_nt = merge(
+            Base.structdiff(kwargs_nt, NamedTuple{(:dtgamma,)}),
+            (gamma = kwargs_nt.dtgamma,))
+    end
     # Only extract keys that exist in kwargs_nt to avoid errors
     filtered_keys = filter(k -> haskey(kwargs_nt, k), accepted_kwargs)
     return NamedTuple{filtered_keys}(kwargs_nt)
