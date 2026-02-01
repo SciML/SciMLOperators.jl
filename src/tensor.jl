@@ -149,10 +149,10 @@ function Base.conj(L::TensorProductOperator)
     return TensorProductOperator(conj.(L.ops)...; cache = L.cache)
 end
 
-function update_coefficients(L::TensorProductOperator, u, p, t)
+function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
     ops = ()
     for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
     end
 
     return @reset L.ops = ops

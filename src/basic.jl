@@ -321,16 +321,16 @@ Base.conj(L::ScaledOperator) = conj(L.λ) * conj(L.L)
 Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real = 2) = abs(L.λ) * opnorm(L.L, p)
 
-function update_coefficients(L::ScaledOperator, u, p, t)
-    @reset L.L = update_coefficients(L.L, u, p, t)
-    @reset L.λ = update_coefficients(L.λ, u, p, t)
+function update_coefficients(L::ScaledOperator, u, p, t; kwargs...)
+    @reset L.L = update_coefficients(L.L, u, p, t; kwargs...)
+    @reset L.λ = update_coefficients(L.λ, u, p, t; kwargs...)
 
     return L
 end
 
-function update_coefficients!(L::ScaledOperator, u, p, t)
-    update_coefficients!(L.L, u, p, t)
-    update_coefficients!(L.λ, u, p, t)
+function update_coefficients!(L::ScaledOperator, u, p, t; kwargs...)
+    update_coefficients!(L.L, u, p, t; kwargs...)
+    update_coefficients!(L.λ, u, p, t; kwargs...)
 
     return nothing
 end
@@ -594,21 +594,21 @@ function Base.resize!(L::AddedOperator, n::Integer)
     return L
 end
 
-@generated function update_coefficients(L::AddedOperator, u, p, t)
+@generated function update_coefficients(L::AddedOperator, u, p, t; kwargs...)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
     return quote
-        ops = Base.@ntuple $N i -> update_coefficients(L.ops[i], u, p, t)
+        ops = Base.@ntuple $N i -> update_coefficients(L.ops[i], u, p, t; kwargs...)
         return AddedOperator(ops)
     end
 end
 
-@generated function update_coefficients!(L::AddedOperator, u, p, t)
+@generated function update_coefficients!(L::AddedOperator, u, p, t; kwargs...)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
     return quote
         Base.@nexprs $N i -> begin
-            update_coefficients!(L.ops[i], u, p, t)
+            update_coefficients!(L.ops[i], u, p, t; kwargs...)
         end
 
         nothing
@@ -844,10 +844,10 @@ end
 
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
-function update_coefficients(L::ComposedOperator, u, p, t)
+function update_coefficients(L::ComposedOperator, u, p, t; kwargs...)
     ops = ()
     for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t))
+        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
     end
 
     return @reset L.ops = ops
@@ -1142,9 +1142,9 @@ function Base.resize!(L::InvertedOperator, n::Integer)
     return L
 end
 
-function update_coefficients(L::InvertedOperator, u, p, t)
+function update_coefficients(L::InvertedOperator, u, p, t; kwargs...)
     if !isconstant(L.L)
-        @reset L.L = update_coefficients(L.L, u, p, t)
+        @reset L.L = update_coefficients(L.L, u, p, t; kwargs...)
     end
     return L
 end
