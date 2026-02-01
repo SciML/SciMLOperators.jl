@@ -22,4 +22,9 @@ Random.seed!(0)
     # Update and convert again
     update_coefficients!(W_scalar; gamma = 0.25)
     @test convert(Number, W_scalar) ≈ 2.0 - 1.0 / 0.25
+
+    # Test deprecated dtgamma kwarg on WOperator
+    W_scalar2 = WOperator{false}(I, 0.5, ScalarOperator(2.0), 1.0)
+    @test_deprecated update_coefficients!(W_scalar2; dtgamma = 0.25)
+    @test convert(Number, W_scalar2) ≈ 2.0 - 1.0 / 0.25
 end

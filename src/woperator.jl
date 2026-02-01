@@ -94,13 +94,24 @@ Base.eltype(W::WOperator) = eltype(W.J)
 
 # In WOperator update_coefficients!, accept both missing u/p/t and missing gamma and don't update them in that case.
 # This helps support partial updating logic used with Newton solvers.
+# Accept both `gamma` and deprecated `dtgamma` kwargs for backwards compatibility.
 function update_coefficients!(
         W::WOperator,
         u = nothing,
         p = nothing,
         t = nothing;
-        gamma = nothing
+        gamma = nothing,
+        dtgamma = nothing
     )
+    if dtgamma !== nothing
+        Base.depwarn(
+            "keyword argument `dtgamma` is deprecated, use `gamma` instead",
+            :update_coefficients!
+        )
+        if gamma === nothing
+            gamma = dtgamma
+        end
+    end
     if (u !== nothing) && (p !== nothing) && (t !== nothing)
         update_coefficients!(W.J, u, p, t)
         update_coefficients!(W.mass_matrix, u, p, t)
