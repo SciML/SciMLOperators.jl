@@ -465,9 +465,9 @@ Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.L, n); resize!(L.F,
 LinearAlgebra.opnorm(L::InvertibleOperator{T}, p = 2) where {T} = one(T) / opnorm(L.F)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
-function update_coefficients(L::InvertibleOperator, u, p, t)
-    @reset L.L = update_coefficients(L.L, u, p, t)
-    @reset L.F = update_coefficients(L.F, u, p, t)
+function update_coefficients(L::InvertibleOperator, u, p, t; kwargs...)
+    @reset L.L = update_coefficients(L.L, u, p, t; kwargs...)
+    @reset L.F = update_coefficients(L.F, u, p, t; kwargs...)
     return L
 end
 function update_coefficients!(L::InvertibleOperator, u, p, t; kwargs...)
