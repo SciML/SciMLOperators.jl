@@ -104,10 +104,6 @@ function update_coefficients!(
         dtgamma = nothing
     )
     if dtgamma !== nothing
-        Base.depwarn(
-            "keyword argument `dtgamma` is deprecated, use `gamma` instead",
-            :update_coefficients!
-        )
         if gamma === nothing
             gamma = dtgamma
         end
@@ -118,6 +114,14 @@ function update_coefficients!(
         !isnothing(W.jacvec) && update_coefficients!(W.jacvec, u, p, t)
     end
     gamma !== nothing && (W.gamma = gamma)
+    # Emit deprecation warning after completing the update so that the operation
+    # succeeds even when running with --depwarn=error.
+    if dtgamma !== nothing
+        Base.depwarn(
+            "keyword argument `dtgamma` is deprecated, use `gamma` instead",
+            :update_coefficients!
+        )
+    end
     return W
 end
 
