@@ -19,7 +19,6 @@ jobs:
           - {user: SciML, repo: SciMLBase.jl, group: InterfaceII}
           - {user: SciML, repo: DiffEqBase.jl, group: InterfaceII}
           - {user: SciML, repo: LinearSolve.jl, group: InterfaceII}
-          - {user: JuliaDiff, repo: SparseDiffTools.jl, group: InterfaceI}
           - {user: SciML, repo: OrdinaryDiffEq.jl, group: InterfaceII}
 
     steps:
