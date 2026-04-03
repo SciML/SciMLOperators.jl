@@ -913,7 +913,7 @@ end
         push!(exprs, :(v = L.ops[$i] * v))
     end
 
-    quote
+    return quote
         $(exprs...)
         v
     end
@@ -927,25 +927,27 @@ end
     exprs = [:(cache = (zero(v),))]
 
     for i in N:-1:2
-        push!(exprs, quote
-            op = L.ops[$i]
-            M = size(op, 1)
-            sz = v isa AbstractMatrix ? (M, K) : (M,)
+        push!(
+            exprs, quote
+                op = L.ops[$i]
+                M = size(op, 1)
+                sz = v isa AbstractMatrix ? (M, K) : (M,)
 
-            T = if op isa FunctionOperator
-                # FunctionOperator isn't guaranteed to play by the rules of
-                # `promote_type`. For example, an irFFT is a complex operation
-                # that accepts complex vector and returns ones.
-                output_eltype(op)
-            else
-                promote_type(eltype.((op, cache[1]))...)
+                T = if op isa FunctionOperator
+                    # FunctionOperator isn't guaranteed to play by the rules of
+                    # `promote_type`. For example, an irFFT is a complex operation
+                    # that accepts complex vector and returns ones.
+                    output_eltype(op)
+                else
+                    promote_type(eltype.((op, cache[1]))...)
+                end
+
+                cache = (similar(v, T, sz), cache...)
             end
-
-            cache = (similar(v, T, sz), cache...)
-        end)
+        )
     end
 
-    quote
+    return quote
         K = size(v, 2)
         $(exprs...)
         @reset L.cache = cache
@@ -962,7 +964,7 @@ end
         push!(exprs, :(ops = (cache_operator(L.ops[$i], L.cache[$i]), ops...)))
     end
 
-    quote
+    return quote
         if isnothing(L.cache)
             L = cache_self(L, v)
         end
