@@ -900,51 +900,79 @@ function Base.:\(L::ComposedOperator, v::AbstractVecOrMat)
     return v
 end
 
-function Base.:*(L::ComposedOperator, v::AbstractVecOrMat)
-    for op in reverse(L.ops)
-        v = op * v
+@generated function Base.:*(L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.parameters[2].parameters)  # Number of operators
+
+    # Generate the composition in reverse order
+    # v = L.ops[N] * v
+    # v = L.ops[N-1] * v
+    # ...
+    # v = L.ops[1] * v
+    exprs = []
+    for i in N:-1:1
+        push!(exprs, :(v = L.ops[$i] * v))
     end
 
-    return v
+    return quote
+        $(exprs...)
+        v
+    end
 end
 
-function cache_self(L::ComposedOperator, v::AbstractVecOrMat)
-    K = size(v, 2)
-    cache = (zero(v),)
+@generated function cache_self(L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.parameters[2].parameters)  # Number of operators
 
-    for i in reverse(2:length(L.ops))
-        op = L.ops[i]
+    # Build cache from the end backwards (starting from zero(v))
+    # For each operator from N down to 2, create a cache entry
+    exprs = [:(cache = (zero(v),))]
 
-        M = size(op, 1)
-        sz = v isa AbstractMatrix ? (M, K) : (M,)
+    for i in N:-1:2
+        push!(
+            exprs, quote
+                op = L.ops[$i]
+                M = size(op, 1)
+                sz = v isa AbstractMatrix ? (M, K) : (M,)
 
-        T = if op isa FunctionOperator #
-            # FunctionOperator isn't guaranteed to play by the rules of
-            # `promote_type`. For example, an irFFT is a complex operation
-            # that accepts complex vector and returns  ones.
-            output_eltype(op)
-        else
-            promote_type(eltype.((op, cache[1]))...)
+                T = if op isa FunctionOperator
+                    # FunctionOperator isn't guaranteed to play by the rules of
+                    # `promote_type`. For example, an irFFT is a complex operation
+                    # that accepts complex vector and returns ones.
+                    output_eltype(op)
+                else
+                    promote_type(eltype.((op, cache[1]))...)
+                end
+
+                cache = (similar(v, T, sz), cache...)
+            end
+        )
+    end
+
+    return quote
+        K = size(v, 2)
+        $(exprs...)
+        @reset L.cache = cache
+        L
+    end
+end
+
+@generated function cache_internals(L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.parameters[2].parameters)  # Number of operators
+
+    # Cache each operator with its corresponding cache entry
+    exprs = []
+    for i in N:-1:1
+        push!(exprs, :(ops = (cache_operator(L.ops[$i], L.cache[$i]), ops...)))
+    end
+
+    return quote
+        if isnothing(L.cache)
+            L = cache_self(L, v)
         end
 
-        cache = (similar(v, T, sz), cache...)
+        ops = ()
+        $(exprs...)
+        @reset L.ops = ops
     end
-
-    @reset L.cache = cache
-    return L
-end
-
-function cache_internals(L::ComposedOperator, v::AbstractVecOrMat)
-    if isnothing(L.cache)
-        L = cache_self(L, v)
-    end
-
-    ops = ()
-    for i in reverse(1:length(L.ops))
-        ops = (cache_operator(L.ops[i], L.cache[i]), ops...)
-    end
-
-    return @reset L.ops = ops
 end
 
 @generated function LinearAlgebra.mul!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)
