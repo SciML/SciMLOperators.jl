@@ -23,26 +23,26 @@ w = L1(v, u, p, t) # == L1 * v
 
 v_kron = rand(N^3)
 w_kron = L3(v_kron, u, p, t) # == L3 * v_kron</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">64-element reshape(transpose(::Matrix{Float64}), 64) with eltype Float64:
- 0.10748324096259931
- 0.14287668812520002
- 0.13191754046387008
- 0.014251360458923598
- 0.13236635955236917
- 0.06981098117478728
- 0.12319816269558671
- 0.07684297506391725
- 0.03606213868433567
- 0.019185984893529958
+ 0.119918002380227
+ 0.43796410202734454
+ 0.3147398526164298
+ 0.18990907876525304
+ 0.014526323602566456
+ 0.062265278870143055
+ 0.09940632412515585
+ 0.032010847490832724
+ 0.11453146094912378
+ 0.2478212761687606
  ⋮
- 0.1177118060046906
- 0.052104069714245554
- 0.052008522440005464
- 0.032765949084917916
- 0.020462540535439416
- 0.6069321347270124
- 1.0786739543961064
- 0.8254232416080794
- 0.6025744861349788</code></pre><p>For mutating operator evaluations, call <code>cache_operator</code> to generate an in-place cache, so the operation is nonallocating.</p><pre><code class="language-julia hljs">α, β = rand(2)
+ 0.017517180625965585
+ 0.06342972358231738
+ 0.16529982201689697
+ 0.08036568402362854
+ 0.05124224304656458
+ 0.08176975364948577
+ 0.18717138386327778
+ 0.16695512903413443
+ 0.1177306797031689</code></pre><p>For mutating operator evaluations, call <code>cache_operator</code> to generate an in-place cache, so the operation is nonallocating.</p><pre><code class="language-julia hljs">α, β = rand(2)
 
 # allocate cache
 L2 = cache_operator(L2, u)
@@ -51,7 +51,7 @@ L4 = cache_operator(L4, u)
 # allocation-free evaluation
 L2(w, v, u, p, t) # == mul!(w, L2, v)
 L4(w, v, u, p, t, α, β) # == mul!(w, L4, v, α, β)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Float64}:
- 0.034186883929416344
- 0.007225634620496711
- 0.048099288333158276
- 0.22734529309746118</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../getting_started/">« Getting Started with Matrix-Free Operators in Julia</a><a class="docs-footer-nextpage" href="../fftw/">FFT Tutorial »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Saturday 4 April 2026 00:47">Saturday 4 April 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  2.1495878665234955
+  1.3888654540585708
+ -2.8708425713338204
+ -1.4873754348882087</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../getting_started/">« Getting Started with Matrix-Free Operators in Julia</a><a class="docs-footer-nextpage" href="../fftw/">FFT Tutorial »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Monday 6 April 2026 22:39">Monday 6 April 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
