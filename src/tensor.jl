@@ -96,6 +96,12 @@ TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 function TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator)
     return IdentityOperator(ii1.len * ii2.len)
 end
+function TensorProductOperator(ii::IdentityOperator, op::TensorProductOperator)
+    return TensorProductOperator(TensorProductOperator(ii, op.ops[1]), op.ops[2])
+end
+function TensorProductOperator(op::TensorProductOperator, ii::IdentityOperator)
+    return TensorProductOperator(op.ops[1], TensorProductOperator(op.ops[2], ii))
+end
 
 """
 $SIGNATURES
@@ -269,17 +275,19 @@ function LinearAlgebra.mul!(
 
     outer, inner = L.ops
 
-    _, ni = size(inner)
-    _, no = size(outer)
+    mi, ni = size(inner)
+    mo, no = size(outer)
     k = size(v, 2)
 
-    C1, C2, C3 = L.cache[1:3]
+    C1 = first(L.cache)
     U = reshape(v, (ni, no * k))
 
     #=
         v .= kron(B, A) * v
         V .= A * U * B'
     =#
+
+    outer isa IdentityOperator && return mul!(reshape(w, (mi, no * k)), inner, U)
 
     # C .= A * U
     mul!(C1, inner, U)
@@ -313,6 +321,8 @@ function LinearAlgebra.mul!(
         v .= α * kron(B, A) * u + β * v
         V .= α * (A * U * B') + β * v
     """
+
+    outer isa IdentityOperator && return mul!(reshape(w, (mi, no * k)), inner, U, α, β)
 
     # C .= A * U
     mul!(C1, inner, U)
@@ -424,10 +434,7 @@ function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVe
 
     C1 = first(L.cache)
 
-    if outer isa IdentityOperator
-        copyto!(w, C1)
-        return w
-    elseif outer isa ScaledOperator
+    if outer isa ScaledOperator
         outer_mul!(w, outer.L, v)
         lmul!(outer.λ, w)
         return w
@@ -467,11 +474,7 @@ function outer_mul!(
     m, _ = size(L)
     k = size(v, 2)
 
-    if outer isa IdentityOperator
-        v = reshape(v, (m, k))
-        axpby!(α, v, β, w)
-        return w
-    elseif outer isa ScaledOperator
+    if outer isa ScaledOperator
         a = convert(Number, α * outer.λ)
         outer_mul!(w, outer.L, v, a, β)
         return w
