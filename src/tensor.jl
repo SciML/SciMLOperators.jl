@@ -225,13 +225,15 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
     mo, no = size(outer)
     k = size(v, 2)
 
+    is_outer_identity = outer isa IdentityOperator
+
     # 3 arg mul!
-    c1 = lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
-    c2 = lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
-    c3 = lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
+    c1 = is_outer_identity ? nothing : lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
+    c2 = is_outer_identity ? nothing : lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
+    c3 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
 
     # 5 arg mul!
-    c4 = lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
+    c4 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
 
     # 3 arg ldiv!
     if reduce(&, issquare.(L.ops))
@@ -258,7 +260,7 @@ function cache_internals(L::TensorProductOperator, v::AbstractVecOrMat)
     k = size(v, 2)
 
     vinner = reshape(v, (ni, no * k))
-    vouter = reshape(L.cache[2], (no, mi * k))
+    vouter = reshape(v, (no, mi * k))
 
     @reset L.ops[2] = cache_operator(inner, vinner)
     @reset L.ops[1] = cache_operator(outer, vouter)
