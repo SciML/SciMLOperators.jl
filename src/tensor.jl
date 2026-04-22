@@ -98,13 +98,19 @@ function TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator)
 end
 function TensorProductOperator(ii::IdentityOperator, op::TensorProductOperator)
     left = TensorProductOperator(ii, op.ops[1])
-    # We call the main method to avoid recursion with the method below
-    return TensorProductOperator((left, op.ops[2]), nothing)
+    if op.ops[2] isa IdentityOperator
+        # We call the main method to avoid recursion with the method below
+        return TensorProductOperator((left, op.ops[2]), nothing)
+    end
+    return TensorProductOperator(left, op.ops[2])
 end
 function TensorProductOperator(op::TensorProductOperator, ii::IdentityOperator)
     right = TensorProductOperator(op.ops[2], ii)
-    # We call the main method to avoid recursion with the method above
-    return TensorProductOperator((op.ops[1], right), nothing)
+    if op.ops[1] isa IdentityOperator
+        # We call the main method to avoid recursion with the method above
+        return TensorProductOperator((op.ops[1], right), nothing)
+    end
+    return TensorProductOperator(op.ops[1], right)
 end
 
 """
