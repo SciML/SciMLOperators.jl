@@ -1,4 +1,5 @@
 using SciMLOperators, LinearAlgebra
+using SparseArrays
 using Random
 using Test
 
@@ -654,4 +655,16 @@ end
         w3 = zeros(N3, K)    # Output vector
         @test_broken ldiv!(w3, opABC_F, v3) ≈ ABC \ v3 # errors
     end
+end
+
+@testset "Sparse conversion tests" begin
+    A = rand(2, 2)
+    opA = MatrixOperator(A)
+    # Construct operator including TensorProductOperator, AddedOperator,
+    # IdentityOperator, ComposedOperator and ScaledOperator:
+    opB = kron(2 * opA + I, opA * opA)
+    B = kron(2 * A + I, A * A)
+    opB_sparse = sparse(opB)
+    @test opB_sparse == B
+    @test issparse(opB_sparse)
 end
