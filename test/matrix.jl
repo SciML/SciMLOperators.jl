@@ -1,4 +1,5 @@
 using SciMLOperators, LinearAlgebra
+using SparseArrays
 using Random
 using Test
 
@@ -722,4 +723,16 @@ end
         )
 
     end
+end
+
+@testset "Sparse conversion tests" begin
+    A = rand(2, 2)
+    opA = MatrixOperator(A)
+    # Construct operator including TensorProductOperator, AddedOperator,
+    # IdentityOperator, ComposedOperator and ScaledOperator:
+    opB = kron(2 * opA + I, opA * opA)
+    B = kron(2 * A + I, A * A)
+    opB_sparse = sparse(opB)
+    @test opB_sparse ≈ B
+    @test issparse(opB_sparse)
 end
