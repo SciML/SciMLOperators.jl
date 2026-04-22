@@ -97,10 +97,14 @@ function TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator)
     return IdentityOperator(ii1.len * ii2.len)
 end
 function TensorProductOperator(ii::IdentityOperator, op::TensorProductOperator)
-    return TensorProductOperator(TensorProductOperator(ii, op.ops[1]), op.ops[2])
+    left = TensorProductOperator(ii, op.ops[1])
+    # We call the main method to avoid recursion with the method below
+    return TensorProductOperator((left, op.ops[2]), nothing)
 end
 function TensorProductOperator(op::TensorProductOperator, ii::IdentityOperator)
-    return TensorProductOperator(op.ops[1], TensorProductOperator(op.ops[2], ii))
+    right = TensorProductOperator(op.ops[2], ii)
+    # We call the main method to avoid recursion with the method above
+    return TensorProductOperator((op.ops[1], right), nothing)
 end
 
 """
@@ -260,7 +264,7 @@ function cache_internals(L::TensorProductOperator, v::AbstractVecOrMat)
     k = size(v, 2)
 
     vinner = reshape(v, (ni, no * k))
-    vouter = reshape(v, (no, mi * k))
+    vouter = reshape(@view(v[1:(no * mi * k)]), (no, mi * k))
 
     @reset L.ops[2] = cache_operator(inner, vinner)
     @reset L.ops[1] = cache_operator(outer, vouter)

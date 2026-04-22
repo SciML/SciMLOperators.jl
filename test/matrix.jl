@@ -654,4 +654,72 @@ end
         w3 = zeros(N3, K)    # Output vector
         @test_broken ldiv!(w3, opABC_F, v3) ≈ ABC \ v3 # errors
     end
+
+    @testset "Simplified Structure with IdentityOperator" begin
+        Id1 = IdentityOperator(m1)
+        Id2 = IdentityOperator(m2)
+        Id3 = IdentityOperator(m3)
+        A1 = MatrixOperator(rand(n1, n1))
+        A2 = MatrixOperator(rand(n2, n2))
+
+        op1 = kron(A1, Id1, Id2, Id3)
+        op2 = kron(Id1, A1, Id2, Id3)
+        op3 = kron(Id1, Id2, A1, Id3)
+        op4 = kron(Id1, Id2, Id3, A1)
+
+        op5 = kron(A1, A2, Id1, Id2)
+        op6 = kron(Id1, A1, A2, Id2)
+        op7 = kron(Id1, Id2, A1, A2)
+
+        # Test the structure of the resulting operators
+        # The nesting depth structure should be 2 at most
+        @test op1.ops[1] isa MatrixOperator
+        @test op1.ops[2] isa IdentityOperator
+
+        @test op2.ops[1] isa TensorProductOperator
+        @test op2.ops[2] isa IdentityOperator
+        @test op2.ops[1].ops[1] isa IdentityOperator
+        @test op2.ops[1].ops[2] isa MatrixOperator
+
+        @test op3.ops[1] isa TensorProductOperator
+        @test op3.ops[2] isa IdentityOperator
+        @test op3.ops[1].ops[1] isa IdentityOperator
+        @test op3.ops[1].ops[2] isa MatrixOperator
+
+        @test op4.ops[1] isa IdentityOperator
+        @test op4.ops[2] isa MatrixOperator
+
+        @test op5.ops[1] isa MatrixOperator
+        @test op5.ops[2] isa TensorProductOperator
+        @test op5.ops[2].ops[1] isa MatrixOperator
+        @test op5.ops[2].ops[2] isa IdentityOperator
+
+        @test op6.ops[1] isa TensorProductOperator
+        @test op6.ops[2] isa TensorProductOperator
+        @test op6.ops[1].ops[1] isa IdentityOperator
+        @test op6.ops[1].ops[2] isa MatrixOperator
+        @test op6.ops[2].ops[1] isa MatrixOperator
+        @test op6.ops[2].ops[2] isa IdentityOperator
+
+        @test op7.ops[1] isa TensorProductOperator
+        @test op7.ops[2] isa MatrixOperator
+        @test op7.ops[1].ops[1] isa IdentityOperator
+        @test op7.ops[1].ops[2] isa MatrixOperator
+
+        @test convert(AbstractMatrix, op1) ≈ kron(convert(AbstractMatrix, A1), I(m1 * m2 * m3))
+        @test convert(AbstractMatrix, op2) ≈ kron(I(m1), convert(AbstractMatrix, A1), I(m2 * m3))
+        @test convert(AbstractMatrix, op3) ≈ kron(I(m1 * m2), convert(AbstractMatrix, A1), I(m3))
+        @test convert(AbstractMatrix, op4) ≈ kron(I(m1 * m2 * m3), convert(AbstractMatrix, A1))
+
+        @test convert(AbstractMatrix, op5) ≈ kron(
+            convert(AbstractMatrix, A1), convert(AbstractMatrix, A2), I(m1 * m2)
+        )
+        @test convert(AbstractMatrix, op6) ≈ kron(
+            I(m1), convert(AbstractMatrix, A1), convert(AbstractMatrix, A2), I(m2)
+        )
+        @test convert(AbstractMatrix, op7) ≈ kron(
+            I(m1 * m2), convert(AbstractMatrix, A1), convert(AbstractMatrix, A2)
+        )
+
+    end
 end
