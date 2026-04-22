@@ -96,6 +96,16 @@ TensorProductOperator(op::AbstractMatrix) = MatrixOperator(op)
 function TensorProductOperator(ii1::IdentityOperator, ii2::IdentityOperator)
     return IdentityOperator(ii1.len * ii2.len)
 end
+function TensorProductOperator(ii::IdentityOperator, op::TensorProductOperator)
+    left = TensorProductOperator(ii, op.ops[1])
+    # We call the main method to avoid recursion with the method below
+    return TensorProductOperator((left, op.ops[2]), nothing)
+end
+function TensorProductOperator(op::TensorProductOperator, ii::IdentityOperator)
+    right = TensorProductOperator(op.ops[2], ii)
+    # We call the main method to avoid recursion with the method above
+    return TensorProductOperator((op.ops[1], right), nothing)
+end
 
 """
 $SIGNATURES
@@ -219,13 +229,15 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
     mo, no = size(outer)
     k = size(v, 2)
 
+    is_outer_identity = outer isa IdentityOperator
+
     # 3 arg mul!
-    c1 = lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
-    c2 = lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
-    c3 = lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
+    c1 = is_outer_identity ? nothing : lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
+    c2 = is_outer_identity ? nothing : lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
+    c3 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
 
     # 5 arg mul!
-    c4 = lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
+    c4 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
 
     # 3 arg ldiv!
     if reduce(&, issquare.(L.ops))
@@ -252,7 +264,7 @@ function cache_internals(L::TensorProductOperator, v::AbstractVecOrMat)
     k = size(v, 2)
 
     vinner = reshape(v, (ni, no * k))
-    vouter = reshape(L.cache[2], (no, mi * k))
+    vouter = reshape(@view(v[1:(no * mi * k)]), (no, mi * k))
 
     @reset L.ops[2] = cache_operator(inner, vinner)
     @reset L.ops[1] = cache_operator(outer, vouter)
@@ -269,17 +281,19 @@ function LinearAlgebra.mul!(
 
     outer, inner = L.ops
 
-    _, ni = size(inner)
-    _, no = size(outer)
+    mi, ni = size(inner)
+    mo, no = size(outer)
     k = size(v, 2)
 
-    C1, C2, C3 = L.cache[1:3]
+    C1 = first(L.cache)
     U = reshape(v, (ni, no * k))
 
     #=
         v .= kron(B, A) * v
         V .= A * U * B'
     =#
+
+    outer isa IdentityOperator && return mul!(reshape(w, (mi, no * k)), inner, U)
 
     # C .= A * U
     mul!(C1, inner, U)
@@ -313,6 +327,8 @@ function LinearAlgebra.mul!(
         v .= α * kron(B, A) * u + β * v
         V .= α * (A * U * B') + β * v
     """
+
+    outer isa IdentityOperator && return mul!(reshape(w, (mi, no * k)), inner, U, α, β)
 
     # C .= A * U
     mul!(C1, inner, U)
@@ -424,10 +440,7 @@ function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVe
 
     C1 = first(L.cache)
 
-    if outer isa IdentityOperator
-        copyto!(w, C1)
-        return w
-    elseif outer isa ScaledOperator
+    if outer isa ScaledOperator
         outer_mul!(w, outer.L, v)
         lmul!(outer.λ, w)
         return w
@@ -467,11 +480,7 @@ function outer_mul!(
     m, _ = size(L)
     k = size(v, 2)
 
-    if outer isa IdentityOperator
-        v = reshape(v, (m, k))
-        axpby!(α, v, β, w)
-        return w
-    elseif outer isa ScaledOperator
+    if outer isa ScaledOperator
         a = convert(Number, α * outer.λ)
         outer_mul!(w, outer.L, v, a, β)
         return w
