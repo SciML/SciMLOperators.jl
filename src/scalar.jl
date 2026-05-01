@@ -35,6 +35,7 @@ has_mul!(::AbstractSciMLScalarOperator) = true
 isconcrete(::AbstractSciMLScalarOperator) = true
 islinear(::AbstractSciMLScalarOperator) = true
 has_adjoint(::AbstractSciMLScalarOperator) = true
+has_concretization(::AbstractSciMLScalarOperator) = true
 
 Base.:*(α::AbstractSciMLScalarOperator, u::AbstractArray) = convert(Number, α) * u
 Base.:\(α::AbstractSciMLScalarOperator, u::AbstractArray) = convert(Number, α) \ u

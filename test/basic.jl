@@ -420,6 +420,29 @@ end
     @test ldiv!(rand(N), op, u) ≈ op \ u
 end
 
+@testset "has_concretization composites" begin
+    A = MatrixOperator(rand(N, N))
+    B = MatrixOperator(rand(N, N))
+    F = FunctionOperator(
+        (du, u, p, t) -> copyto!(du, u),
+        zeros(N),
+        zeros(N);
+        isinplace = true,
+        T = Float64,
+        islinear = true
+    )
+
+    @test has_concretization(A)
+    @test has_concretization(2A)
+    @test has_concretization(A + B)
+    @test has_concretization(A * B)
+    @test has_concretization(inv(A))
+    @test !has_concretization(F)
+    @test !has_concretization(F * A)
+    @test !has_concretization(A + F)
+    @test !ishermitian(F * A)
+end
+
 @testset "Adjoint, Transpose" begin
     for (
             op,

@@ -81,3 +81,4 @@ _unwrap_val(x) = x
 _unwrap_val(::Val{X}) where {X} = X
 
 has_concretization(::AbstractSciMLOperator) = false
+has_concretization(::Union{AbstractMatrix, UniformScaling, Factorization, Number}) = true

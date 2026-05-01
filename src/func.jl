@@ -765,6 +765,7 @@ end
 
 islinear(L::FunctionOperator) = L.traits.islinear
 isconvertible(L::FunctionOperator) = L.traits.isconvertible
+has_concretization(L::FunctionOperator) = isconvertible(L)
 isconstant(L::FunctionOperator) = L.traits.isconstant
 has_adjoint(L::FunctionOperator) = !(L.op_adjoint isa Nothing)
 has_mul(::FunctionOperator{iip}) where {iip} = true
