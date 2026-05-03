@@ -722,6 +722,11 @@ end
             I(m1 * m2), convert(AbstractMatrix, A1), convert(AbstractMatrix, A2)
         )
 
+        for op in (op1, op2, op3, op4, op5, op6, op7)
+            v = rand(size(op, 2), K)
+            @test convert(AbstractMatrix, op) * v ≈ op * v
+        end
+
     end
 end
 
