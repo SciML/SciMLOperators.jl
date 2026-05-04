@@ -110,6 +110,7 @@ for (op, LType, VType) in (
             L.L
         )
     )
+    @eval has_concretization(L::$LType) = has_concretization(L.L)
 
     # traits
     @eval Base.size(L::$LType) = size(L.L) |> reverse

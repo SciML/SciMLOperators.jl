@@ -465,6 +465,7 @@ for pred in (
         :isposdef,
     )
     @eval function LinearAlgebra.$pred(L::AbstractSciMLOperator)
+        has_concretization(L) || return false
         if !isconvertible(L)
             @warn """using convert-based fallback in $($pred)."""
         end

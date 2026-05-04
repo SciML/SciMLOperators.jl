@@ -447,6 +447,7 @@ function Base.convert(
 end
 
 Base.convert(::Type{AbstractMatrix}, L::InvertibleOperator) = convert(AbstractMatrix, L.L)
+has_concretization(L::InvertibleOperator) = has_concretization(L.L)
 
 # traits
 function Base.show(io::IO, L::InvertibleOperator)

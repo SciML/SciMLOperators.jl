@@ -15,6 +15,7 @@ function Base.one(L::AbstractSciMLOperator)
 end
 
 Base.convert(::Type{AbstractMatrix}, ii::IdentityOperator) = Diagonal(ones(Bool, ii.len))
+has_concretization(::IdentityOperator) = true
 
 # Copy method to avoid aliasing - IdentityOperator has no mutable fields, can return self
 Base.copy(L::IdentityOperator) = L
@@ -138,6 +139,7 @@ function Base.zero(L::AbstractSciMLOperator)
 end
 
 Base.convert(::Type{AbstractMatrix}, nn::NullOperator) = Diagonal(zeros(Bool, nn.len))
+has_concretization(::NullOperator) = true
 
 # Copy method to avoid aliasing - NullOperator has no mutable fields, can return self
 Base.copy(L::NullOperator) = L
@@ -303,6 +305,7 @@ end
 function Base.convert(::Type{AbstractMatrix}, L::ScaledOperator)
     return convert(Number, L.λ) * convert(AbstractMatrix, L.L)
 end
+has_concretization(L::ScaledOperator) = has_concretization(L.λ) & has_concretization(L.L)
 
 # traits
 function Base.show(io::IO, L::ScaledOperator{T}) where {T}
@@ -568,6 +571,7 @@ end
 function Base.convert(::Type{AbstractMatrix}, L::AddedOperator)
     return sum(op -> convert(AbstractMatrix, op), L.ops)
 end
+has_concretization(L::AddedOperator) = all(has_concretization, L.ops)
 
 # traits
 function Base.show(io::IO, L::AddedOperator)
@@ -808,6 +812,7 @@ end
 function Base.convert(::Type{AbstractMatrix}, L::ComposedOperator)
     return prod(op -> convert(AbstractMatrix, op), L.ops)
 end
+has_concretization(L::ComposedOperator) = all(has_concretization, L.ops)
 
 # traits
 function Base.show(io::IO, L::ComposedOperator)
@@ -1150,6 +1155,7 @@ Base.:/(A::AbstractSciMLOperator, B::AbstractSciMLOperator) = A * inv(B)
 function Base.convert(::Type{AbstractMatrix}, L::InvertedOperator)
     return inv(convert(AbstractMatrix, L.L))
 end
+has_concretization(L::InvertedOperator) = has_concretization(L.L)
 
 function Base.show(io::IO, L::InvertedOperator)
     print(io, "1 / ")
