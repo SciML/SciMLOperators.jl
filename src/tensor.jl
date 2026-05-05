@@ -413,6 +413,9 @@ end
 # helper functions
 const PERM = (2, 1, 3)
 
+_has_tensor_outer_mul_fast(outer) = false
+function _tensor_outer_mul_fast! end
+
 function outer_mul(L::TensorProductOperator, v::AbstractVecOrMat, C::AbstractVecOrMat)
     outer, inner = L.ops
 
@@ -465,6 +468,11 @@ function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVe
         return w
     end
 
+    if _has_tensor_outer_mul_fast(outer)
+        _tensor_outer_mul_fast!(w, outer, C1, mi, mo, no, k)
+        return w
+    end
+
     C2, C3 = L.cache[2:3]
 
     C1 = reshape(C1, (mi, no, k))
@@ -500,6 +508,11 @@ function outer_mul!(
         W = reshape(w, (mi, mo))
         C = reshape(v, (mi, no))
         mul!(transpose(W), outer, transpose(C), α, β)
+        return w
+    end
+
+    if _has_tensor_outer_mul_fast(outer)
+        _tensor_outer_mul_fast!(w, outer, v, mi, mo, no, k, α, β)
         return w
     end
 

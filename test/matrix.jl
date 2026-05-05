@@ -2,6 +2,7 @@ using SciMLOperators, LinearAlgebra
 using SparseArrays
 using Random
 using Test
+using LoopVectorization
 
 using SciMLOperators: InvertibleOperator, InvertedOperator, ⊗, AbstractSciMLOperator
 using FFTW
