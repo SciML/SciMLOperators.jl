@@ -151,6 +151,24 @@ end
     @test has_ldiv(op2)
     @test has_ldiv!(op2)
 
+    op1_no_inverse = FunctionOperator(f1, v; ifcache = false, islinear = true)
+    op2_no_inverse = FunctionOperator(f2, v, w; ifcache = false, islinear = true)
+
+    inverse_error(f) = try
+        f()
+        nothing
+    catch err
+        err
+    end
+
+    err = inverse_error(() -> op1_no_inverse \ v)
+    @test err isa ArgumentError
+    @test occursin("op_inverse", sprint(showerror, err))
+
+    err = inverse_error(() -> ldiv!(w, op2_no_inverse, v))
+    @test err isa ArgumentError
+    @test occursin("op_inverse", sprint(showerror, err))
+
     @test !iscached(op1)
     @test !iscached(op2)
     @test !op1.traits.has_mul5
