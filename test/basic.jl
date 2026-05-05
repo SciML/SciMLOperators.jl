@@ -141,6 +141,51 @@ end
     end
 end
 
+@testset "BlockDiagonalOperator" begin
+    A = rand(3, 2)
+    B = rand(4, 5)
+    L = BlockDiagonalOperator(MatrixOperator(A), MatrixOperator(B))
+    Lmat = [A zeros(3, 5); zeros(4, 2) B]
+    v = rand(7, K)
+    u = rand(7, K)
+    w = zeros(7, K)
+    p = nothing
+    t = 0
+    α = rand()
+    β = rand()
+
+    @test size(L) == (7, 7)
+    @test islinear(L)
+    @test isconstant(L)
+    @test convert(AbstractMatrix, L) ≈ Lmat
+    @test BlockDiagonalOperator(A, B) isa BlockDiagonalOperator
+
+    @test L * v ≈ Lmat * v
+    @test L(v, u, p, t) ≈ Lmat * v
+
+    mul!(w, L, v)
+    @test w ≈ Lmat * v
+
+    copy!(w, rand(7, K))
+    orig_w = copy(w)
+    mul!(w, L, v, α, β)
+    @test w ≈ α * Lmat * v + β * orig_w
+
+    copy!(w, zeros(7, K))
+    L(w, v, u, p, t)
+    @test w ≈ Lmat * v
+
+    copy!(w, rand(7, K))
+    orig_w = copy(w)
+    L(w, v, u, p, t, α, β)
+    @test w ≈ α * Lmat * v + β * orig_w
+
+    x = rand(7)
+    @test L * x ≈ Lmat * x
+    @test convert(AbstractMatrix, L') ≈ Lmat'
+    @test convert(AbstractMatrix, transpose(L)) ≈ transpose(Lmat)
+end
+
 @testset "Unary +/-" begin
     A = MatrixOperator(rand(N, N))
     v = rand(N, K)
