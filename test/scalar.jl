@@ -57,6 +57,11 @@ K = 12
     aa = ScalarOperator(a_scalar)
     @test axpy!(aa, X, Y) ≈ a_scalar * X + Z
 
+    expα = exp(α)
+    @test expα isa ScalarOperator
+    @test convert(Number, expα) ≈ exp(x)
+    @test expα * u ≈ exp(x) * u
+
     # Tests with the new interface
     v = copy(u)  # Action vector
     w = zeros(N, K)  # Output vector
@@ -120,6 +125,10 @@ end
     @test β * u ≈ u
     @inferred convert(Float32, β)
     @test convert(Number, β) ≈ true
+
+    β = exp(α + α)
+    @test β isa ScalarOperator
+    @test β(v, u, nothing, 0.0) ≈ exp(2x) * v
 
     # Test combination with other operators
     for op in (MatrixOperator(rand(N, N)), SciMLOperators.IdentityOperator(N))
@@ -261,4 +270,7 @@ end
     w_orig = copy(w_test)
     γ_added(w_test, v, u, p, t, c, d; dtgamma)
     @test w_test ≈ c * (dtgamma + p) * v + d * w_orig
+
+    δ = exp(γ)
+    @test δ(v, u, p, t; dtgamma) ≈ exp(dtgamma) * v
 end

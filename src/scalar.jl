@@ -215,6 +215,16 @@ Base.one(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(true)
 Base.zero(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(false)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
+function LinearAlgebra.exp(α::AbstractSciMLScalarOperator)
+    update_func = (
+        oldval, u, p, t;
+        kwargs...,
+    ) -> update_coefficients(α, u, p, t; kwargs...) |>
+        concretize |>
+        exp
+    return ScalarOperator(exp(concretize(α)); update_func = update_func, accepted_kwargs = NoKwargFilter())
+end
+
 Base.iszero(α::ScalarOperator) = iszero(α.val)
 
 getops(α::ScalarOperator) = (α.val,)
