@@ -206,6 +206,7 @@ include("left.jl")
 include("scalar.jl")
 include("matrix.jl")
 include("basic.jl")
+include("block.jl")
 include("batch.jl")
 include("func.jl")
 include("tensor.jl")
@@ -221,6 +222,7 @@ export
     AffineOperator,
     AddVector,
     FunctionOperator,
+    BlockDiagonalOperator,
     TensorProductOperator,
     WOperator,
     StaticWOperator
