@@ -128,31 +128,37 @@ $(TYPEDEF)
 Operator representing the null function `n(v) = 0 * v`
 """
 struct NullOperator <: AbstractSciMLOperator{Bool}
-    len::Int
+    M::Int
+    N::Int
 end
 
 # constructors
+NullOperator(N::Integer) = NullOperator(N, N)
+
 function Base.zero(L::AbstractSciMLOperator)
-    @assert issquare(L)
-    N = size(L, 1)
-    return NullOperator(N)
+    return NullOperator(size(L)...)
 end
 
-Base.convert(::Type{AbstractMatrix}, nn::NullOperator) = Diagonal(zeros(Bool, nn.len))
+function Base.convert(::Type{AbstractMatrix}, nn::NullOperator)
+    return nn.M == nn.N ? Diagonal(zeros(Bool, nn.N)) : zeros(Bool, size(nn))
+end
 has_concretization(::NullOperator) = true
 
 # Copy method to avoid aliasing - NullOperator has no mutable fields, can return self
 Base.copy(L::NullOperator) = L
 
 # traits
-Base.show(io::IO, nn::NullOperator) = print(io, "NullOperator($(nn.len))")
-Base.size(nn::NullOperator) = (nn.len, nn.len)
-Base.adjoint(A::NullOperator) = A
-Base.transpose(A::NullOperator) = A
+function Base.show(io::IO, nn::NullOperator)
+    return nn.M == nn.N ? print(io, "NullOperator($(nn.M))") :
+        print(io, "NullOperator($(nn.M), $(nn.N))")
+end
+Base.size(nn::NullOperator) = (nn.M, nn.N)
+Base.adjoint(A::NullOperator) = NullOperator(A.N, A.M)
+Base.transpose(A::NullOperator) = NullOperator(A.N, A.M)
 Base.conj(A::NullOperator) = A
 LinearAlgebra.opnorm(::NullOperator, p::Real = 2) = false
 for pred in (:issymmetric, :ishermitian)
-    @eval LinearAlgebra.$pred(::NullOperator) = true
+    @eval LinearAlgebra.$pred(nn::NullOperator) = issquare(nn)
 end
 LinearAlgebra.isposdef(::NullOperator) = false
 
@@ -164,10 +170,17 @@ has_adjoint(::NullOperator) = true
 has_mul!(::NullOperator) = true
 
 # operator application
-Base.:*(nn::NullOperator, v::AbstractVecOrMat) = (@assert size(v, 1) == nn.len; zero(v))
+function _null_output(nn::NullOperator, v::AbstractVecOrMat)
+    @assert size(v, 1) == nn.N
+    nn.M == nn.N && return zero(v)
+    return v isa AbstractMatrix ? zeros(eltype(v), nn.M, size(v, 2)) : zeros(eltype(v), nn.M)
+end
+
+Base.:*(nn::NullOperator, v::AbstractVecOrMat) = _null_output(nn, v)
 
 function LinearAlgebra.mul!(w::AbstractVecOrMat, nn::NullOperator, v::AbstractVecOrMat)
-    @assert size(v, 1) == size(w, 1) == nn.len
+    @assert size(v, 1) == nn.N
+    @assert size(w, 1) == nn.M
     return lmul!(false, w)
 end
 
@@ -178,19 +191,20 @@ function LinearAlgebra.mul!(
         α,
         β
     )
-    @assert size(v, 1) == size(w, 1) == nn.len
+    @assert size(v, 1) == nn.N
+    @assert size(w, 1) == nn.M
     return lmul!(β, w)
 end
 
 # Out-of-place: v is action vector, u is update vector
 function (nn::NullOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
-    @assert size(v, 1) == nn.len
-    return zero(v)
+    return _null_output(nn, v)
 end
 
 # In-place: w is destination, v is action vector, u is update vector
 function (nn::NullOperator)(w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...)
-    @assert size(v, 1) == nn.len
+    @assert size(v, 1) == nn.N
+    @assert size(w, 1) == nn.M
     lmul!(false, w)
     return w
 end
@@ -199,7 +213,8 @@ end
 function (nn::NullOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
     )
-    @assert size(v, 1) == nn.len
+    @assert size(v, 1) == nn.N
+    @assert size(w, 1) == nn.M
     lmul!(β, w)
     return w
 end
@@ -207,25 +222,25 @@ end
 # operator fusion, composition
 for op in (:*, :∘)
     @eval function Base.$op(nn::NullOperator, A::AbstractSciMLOperator)
-        @assert size(A, 1) == nn.len
-        return NullOperator(nn.len)
+        @assert size(A, 1) == nn.N
+        return NullOperator(nn.M, size(A, 2))
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, nn::NullOperator)
-        @assert size(A, 2) == nn.len
-        return NullOperator(nn.len)
+        @assert size(A, 2) == nn.M
+        return NullOperator(size(A, 1), nn.N)
     end
 end
 
 # operator addition, subtraction with NullOperator returns operator itself
 for op in (:+, :-)
     @eval function Base.$op(nn::NullOperator, A::AbstractSciMLOperator)
-        @assert size(A) == (nn.len, nn.len)
+        @assert size(A) == size(nn)
         return A
     end
 
     @eval function Base.$op(A::AbstractSciMLOperator, nn::NullOperator)
-        @assert size(A) == (nn.len, nn.len)
+        @assert size(A) == size(nn)
         return A
     end
 end
@@ -790,13 +805,13 @@ for op in (:*, :∘)
 
     # null operator
     @eval function Base.$op(nn::NullOperator, A::ComposedOperator)
-        @assert size(A, 1) == nn.len
-        return zero(A)
+        @assert size(A, 1) == nn.N
+        return NullOperator(nn.M, size(A, 2))
     end
 
     @eval function Base.$op(A::ComposedOperator, nn::NullOperator)
-        @assert size(A, 2) == nn.len
-        return zero(A)
+        @assert size(A, 2) == nn.M
+        return NullOperator(size(A, 1), nn.N)
     end
 
     # scalar operator

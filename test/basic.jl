@@ -82,6 +82,8 @@ end
 
 @testset "NullOperator" begin
     A = rand(N, N) |> MatrixOperator
+    B = rand(N + 3, N + 2) |> MatrixOperator
+    C = rand(N, N + 3) |> MatrixOperator
     u = rand(N, K)
     v = rand(N, K)
     w = zeros(N, K)
@@ -104,6 +106,7 @@ end
     @test iscached(Z)
     @test size(Z) == (N, N)
     @test Z' isa NullOperator
+    @test size(Z') == (N, N)
 
     @test Z * u ≈ zero(u)
 
@@ -139,6 +142,40 @@ end
         @test op(Z, A) isa MatrixOperator
         @test op(A, Z) isa MatrixOperator
     end
+
+    Zrect = NullOperator(N + 2, N)
+    urect = rand(N, K)
+    wrect = zeros(N + 2, K)
+
+    @test !issquare(Zrect)
+    @test !issymmetric(Zrect)
+    @test !ishermitian(Zrect)
+    @test size(Zrect) == (N + 2, N)
+    @test convert(AbstractMatrix, Zrect) == zeros(Bool, size(Zrect))
+    @test size(Zrect') == (N, N + 2)
+    @test size(transpose(Zrect)) == (N, N + 2)
+
+    @test Zrect * urect ≈ zero(wrect)
+    @test Zrect(urect, urect, p, t) ≈ zero(wrect)
+
+    copy!(wrect, ones(N + 2, K))
+    Zrect(wrect, urect, urect, p, t)
+    @test wrect ≈ zero(wrect)
+
+    copy!(wrect, rand(N + 2, K))
+    orig_wrect = copy(wrect)
+    Zrect(wrect, urect, urect, p, t, α, β)
+    @test wrect ≈ β * orig_wrect
+
+    @test mul!(wrect, Zrect, urect) ≈ zero(wrect)
+    copy!(wrect, rand(N + 2, K))
+    orig_wrect = copy(wrect)
+    @test mul!(wrect, Zrect, urect, α, β) ≈ β * orig_wrect
+
+    @test size(Zrect * C) == (N + 2, N + 3)
+    @test size(B * Zrect) == (N + 3, N)
+    @test size(Zrect ∘ C) == (N + 2, N + 3)
+    @test size(B ∘ Zrect) == (N + 3, N)
 end
 
 @testset "Unary +/-" begin
