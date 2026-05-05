@@ -196,6 +196,139 @@ has_ldiv!(L::TensorProductOperator) = reduce(&, has_ldiv!.(L.ops))
 
 factorize(L::TensorProductOperator) = TensorProductOperator(factorize.(L.ops)...)
 
+"""
+$(TYPEDEF)
+
+Lazy Kronecker sum operator.
+"""
+struct TensorSumOperator{T, O, P} <: AbstractSciMLOperator{T}
+    ops::O
+    products::P
+
+    function TensorSumOperator(
+            ops::NTuple{2, Union{AbstractMatrix, AbstractSciMLOperator}},
+            products::NTuple{2, AbstractSciMLOperator}
+        )
+        outer, inner = ops
+        @assert issquare(outer)
+        @assert issquare(inner)
+        T = reduce(Base.promote_eltype, ops)
+        return new{T, typeof(ops), typeof(products)}(ops, products)
+    end
+end
+
+function TensorSumOperator(
+        outer::Union{AbstractMatrix, AbstractSciMLOperator},
+        inner::Union{AbstractMatrix, AbstractSciMLOperator}
+    )
+    outer = outer isa AbstractMatrix ? MatrixOperator(outer) : outer
+    inner = inner isa AbstractMatrix ? MatrixOperator(inner) : inner
+    @assert issquare(outer)
+    @assert issquare(inner)
+    products = (
+        TensorProductOperator(outer, IdentityOperator(size(inner, 1))),
+        TensorProductOperator(IdentityOperator(size(outer, 1)), inner),
+    )
+    return TensorSumOperator((outer, inner), products)
+end
+
+"""
+$SIGNATURES
+
+Construct the lazy Kronecker sum `A ⊗ I + I ⊗ B`.
+"""
+kronsum(A::Union{AbstractMatrix, AbstractSciMLOperator}, B::Union{AbstractMatrix, AbstractSciMLOperator}) = TensorSumOperator(A, B)
+
+Base.convert(::Type{AbstractMatrix}, L::TensorSumOperator) = sum(convert.(AbstractMatrix, L.products))
+
+function Base.show(io::IO, L::TensorSumOperator)
+    print(io, "(")
+    show(io, L.ops[1])
+    print(io, " ⊕ ")
+    show(io, L.ops[2])
+    return print(io, ")")
+end
+
+Base.size(L::TensorSumOperator) = size(first(L.products))
+
+for op in (
+        :adjoint,
+        :transpose,
+    )
+    @eval Base.$op(L::TensorSumOperator) = TensorSumOperator($op.(L.ops)...)
+end
+Base.conj(L::TensorSumOperator) = TensorSumOperator(conj.(L.ops)...)
+
+function update_coefficients(L::TensorSumOperator, u, p, t; kwargs...)
+    ops = ()
+    for op in L.ops
+        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
+    end
+    return TensorSumOperator(ops...)
+end
+
+getops(L::TensorSumOperator) = L.products
+
+function Base.copy(L::TensorSumOperator)
+    return TensorSumOperator(map(copy, L.ops)...)
+end
+
+islinear(L::TensorSumOperator) = all(islinear, L.ops)
+isconvertible(::TensorSumOperator) = false
+has_concretization(L::TensorSumOperator) = all(has_concretization, L.ops)
+Base.iszero(L::TensorSumOperator) = all(iszero, L.ops)
+has_adjoint(L::TensorSumOperator) = all(has_adjoint, L.ops)
+has_mul(L::TensorSumOperator) = all(has_mul, L.ops)
+has_mul!(L::TensorSumOperator) = all(has_mul!, L.ops)
+
+function cache_internals(L::TensorSumOperator, v::AbstractVecOrMat)
+    products = map(op -> cache_operator(op, v), L.products)
+    return TensorSumOperator(L.ops, products)
+end
+
+function Base.:*(L::TensorSumOperator, v::AbstractVecOrMat)
+    return sum(op -> op * v, L.products)
+end
+
+function LinearAlgebra.mul!(w::AbstractVecOrMat, L::TensorSumOperator, v::AbstractVecOrMat)
+    mul!(w, L.products[1], v)
+    mul!(w, L.products[2], v, true, true)
+    return w
+end
+
+function LinearAlgebra.mul!(
+        w::AbstractVecOrMat,
+        L::TensorSumOperator,
+        v::AbstractVecOrMat,
+        α,
+        β
+    )
+    mul!(w, L.products[1], v, α, β)
+    mul!(w, L.products[2], v, α, true)
+    return w
+end
+
+function (L::TensorSumOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
+    L = update_coefficients(L, u, p, t; kwargs...)
+    return L * v
+end
+
+function (L::TensorSumOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
+    )
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L = cache_operator(L, v)
+    return mul!(w, L, v)
+end
+
+function (L::TensorSumOperator)(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
+    L = update_coefficients(L, u, p, t; kwargs...)
+    L = cache_operator(L, v)
+    return mul!(w, L, v, α, β)
+end
+
 # operator application
 function Base.:*(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops

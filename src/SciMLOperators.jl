@@ -224,6 +224,7 @@ export
     FunctionOperator,
     BlockDiagonalOperator,
     TensorProductOperator,
+    TensorSumOperator,
     WOperator,
     StaticWOperator
 
@@ -241,6 +242,7 @@ export update_coefficients!,
     has_mul!,
     has_ldiv,
     has_ldiv!,
-    has_concretization
+    has_concretization,
+    kronsum
 
 end # module
