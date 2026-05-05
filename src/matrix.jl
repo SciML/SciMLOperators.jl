@@ -379,6 +379,15 @@ function DiagonalOperator(
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
+function LinearAlgebra.exp(L::MatrixOperator{T, <:Diagonal}) where {T}
+    update_func = (
+        A, u, p, t;
+        kwargs...,
+    ) -> update_coefficients(L, u, p, t; kwargs...).A |>
+        exp
+    return MatrixOperator(exp(L.A); update_func = update_func, accepted_kwargs = NoKwargFilter())
+end
+
 function Base.show(io::IO, L::MatrixOperator{T, <:Diagonal}) where {T}
     n = length(L.A.diag)
     return print(io, "DiagonalOperator($n × $n)")

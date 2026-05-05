@@ -245,6 +245,11 @@ end
     orig_w = copy(w)
     D(w, v, u, p, t, α, β)
     @test w ≈ α * expected + β * orig_w
+
+    expD = exp(D)
+    @test expD isa MatrixOperator
+    @test expD.A isa Diagonal
+    @test expD(v, u, p, t) ≈ exp.(p * t) .* v
 end
 
 @testset "Batched Diagonal Operator" begin
