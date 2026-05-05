@@ -730,6 +730,66 @@ end
     end
 end
 
+@testset "TensorSumOperator" begin
+    A = rand(3, 3)
+    B = rand(4, 4)
+    α = rand()
+    β = rand()
+    p = nothing
+    t = 0.0
+
+    expected = kron(A, Matrix(I, 4, 4)) + kron(Matrix(I, 3, 3), B)
+    L = kronsum(MatrixOperator(A), MatrixOperator(B))
+    L_from_matrices = kronsum(A, B)
+
+    @test L isa TensorSumOperator{Float64}
+    @test L_from_matrices isa TensorSumOperator{Float64}
+    @test size(L) == size(expected)
+    @test islinear(L)
+    @test isconstant(L)
+    @test !iscached(L)
+    @test convert(AbstractMatrix, L) ≈ expected
+    @test convert(AbstractMatrix, L_from_matrices) ≈ expected
+
+    u = rand(size(L, 2), K)
+    v = copy(u)
+    w = zeros(size(L, 1), K)
+
+    @test L * v ≈ expected * v
+    @test L(v, u, p, t) ≈ expected * v
+
+    L = cache_operator(L, u)
+    @test iscached(L)
+
+    mul!(w, L, v)
+    @test w ≈ expected * v
+
+    copy!(w, rand(size(L, 1), K))
+    orig_w = copy(w)
+    mul!(w, L, v, α, β)
+    @test w ≈ α * expected * v + β * orig_w
+
+    copy!(w, zeros(size(L, 1), K))
+    L(w, v, u, p, t)
+    @test w ≈ expected * v
+
+    copy!(w, rand(size(L, 1), K))
+    orig_w = copy(w)
+    L(w, v, u, p, t, α, β)
+    @test w ≈ α * expected * v + β * orig_w
+
+    x = rand(size(L, 2))
+    @test L * x ≈ expected * x
+    @test convert(AbstractMatrix, L') ≈ expected'
+    @test convert(AbstractMatrix, transpose(L)) ≈ transpose(expected)
+    @test_throws AssertionError kronsum(rand(3, 4), B)
+
+    A_update = MatrixOperator(zeros(3, 3); update_func = (A, u, p, t) -> p[1] * Matrix(I, 3, 3))
+    B_update = MatrixOperator(zeros(4, 4); update_func = (B, u, p, t) -> p[2] * Matrix(I, 4, 4))
+    L_update = kronsum(A_update, B_update)
+    @test L_update(v, u, (2.0, 3.0), t) ≈ 5v
+end
+
 @testset "Sparse conversion tests" begin
     A = rand(2, 2)
     opA = MatrixOperator(A)
