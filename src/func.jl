@@ -773,6 +773,12 @@ has_mul!(::FunctionOperator{iip}) where {iip} = true
 has_ldiv(L::FunctionOperator{iip}) where {iip} = !(L.op_inverse isa Nothing)
 has_ldiv!(L::FunctionOperator{iip}) where {iip} = iip & !(L.op_inverse isa Nothing)
 
+function _assert_has_inverse(L::FunctionOperator)
+    has_ldiv(L) && return nothing
+    msg = "Cannot divide by FunctionOperator without an inverse. Provide `op_inverse` when constructing the operator."
+    throw(ArgumentError(msg))
+end
+
 function _sizecheck(L::FunctionOperator, v, w)
     sizes = L.traits.sizes
     if L.traits.batch
@@ -897,6 +903,7 @@ end
 
 function Base.:\(L::FunctionOperator{iip, true}, v::AbstractArray) where {iip}
     _sizecheck(L, nothing, v)
+    _assert_has_inverse(L)
     _, V, vec_output = _unvec(L, nothing, v)
 
     W = L.op_inverse(V, L.u, L.p, L.t; L.traits.kwargs...)
@@ -906,6 +913,7 @@ end
 
 function Base.:\(L::FunctionOperator{iip, false}, v::AbstractArray) where {iip}
     _sizecheck(L, nothing, v)
+    _assert_has_inverse(L)
     _, V, vec_output = _unvec(L, nothing, v)
 
     W, _ = L.cache
@@ -962,6 +970,7 @@ end
 
 function LinearAlgebra.ldiv!(w::AbstractArray, L::FunctionOperator{true}, v::AbstractArray)
     _sizecheck(L, v, w)
+    _assert_has_inverse(L)
     W, V, _ = _unvec(L, w, v)
 
     L.op_inverse(W, V, L.u, L.p, L.t; L.traits.kwargs...)
@@ -970,11 +979,11 @@ function LinearAlgebra.ldiv!(w::AbstractArray, L::FunctionOperator{true}, v::Abs
 end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{true}, v::AbstractArray)
-    W, _ = L.cache
-
     _sizecheck(L, nothing, v)
+    _assert_has_inverse(L)
     V, _, vec_output = _unvec(L, v, nothing)
 
+    W, _ = L.cache
     copy!(W, V)
     L.op_inverse(W, V, L.u, L.p, L.t; L.traits.kwargs...) # ldiv!(U, L, V)
 
@@ -984,6 +993,7 @@ end
 
 function LinearAlgebra.ldiv!(w::AbstractArray, L::FunctionOperator{false}, v::AbstractArray)
     _sizecheck(L, v, w)
+    _assert_has_inverse(L)
     W, V, _ = _unvec(L, w, v)
 
     W .= L.op_inverse(V, L.u, L.p, L.t; L.traits.kwargs...)
@@ -993,6 +1003,7 @@ end
 
 function LinearAlgebra.ldiv!(L::FunctionOperator{false}, v::AbstractArray)
     _sizecheck(L, nothing, v)
+    _assert_has_inverse(L)
     V, _, vec_output = _unvec(L, v, nothing)
 
     V .= L.op_inverse(V, L.u, L.p, L.t; L.traits.kwargs...) # ldiv!(W, L, V)
