@@ -424,9 +424,9 @@ end
     # T1, T2, T3: same wrapper (TensorProductOperator), different inner type params
     # T1 = Ao ⊗ Ai, T2 = Ao' ⊗ Ai, T3 = Ao ⊗ Ai'
     Ao = MatrixOperator(rand(m1, m1)); Ai = MatrixOperator(rand(m2, m2))
-    T1 = TensorProductOperator(Ao,  Ai)
+    T1 = TensorProductOperator(Ao, Ai)
     T2 = TensorProductOperator(Ao', Ai)
-    T3 = TensorProductOperator(Ao,  Ai')
+    T3 = TensorProductOperator(Ao, Ai')
 
     L = C1 + T1 + C2 + T2 + T3 + A1 + A2
     @test L isa AddedOperator
@@ -437,7 +437,7 @@ end
     L = cache_operator(L, u)
 
     # Correctness: the cached operator gives the right result
-    expected = C1 * u + T1 * u + C2 * u + T2 * u + T3 * u + A1 * u + A2 * u 
+    expected = C1 * u + T1 * u + C2 * u + T2 * u + T3 * u + A1 * u + A2 * u
     @test L * u ≈ expected
 
     # Cache sharing: same-wrapper sub-operators with compatible sizes share physical buffers
