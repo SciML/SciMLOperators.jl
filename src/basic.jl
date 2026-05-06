@@ -644,7 +644,6 @@ end
 islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
-LinearAlgebra.ishermitian(L::AddedOperator) = all(ishermitian, L.ops)
 
 @generated function cache_internals(L::AddedOperator, v::AbstractVecOrMat)
     ops_types = L.parameters[2].parameters
