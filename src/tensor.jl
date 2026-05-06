@@ -175,6 +175,7 @@ function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
 end
 
 getops(L::TensorProductOperator) = L.ops
+getcache(op::TensorProductOperator) = op.cache
 
 # Copy method to avoid aliasing
 function Base.copy(L::TensorProductOperator)
@@ -360,6 +361,29 @@ function Base.:\(L::TensorProductOperator, v::AbstractVecOrMat)
     V = outer_div(L, v, C)
 
     return v isa AbstractMatrix ? reshape(V, (n, k)) : reshape(V, (n,))
+end
+
+function _get_cache_shapes(L::TensorProductOperator, v::AbstractVecOrMat)
+    outer, inner = L.ops
+    outer isa IdentityOperator && return nothing
+
+    mi, ni = size(inner)
+    mo, no = size(outer)
+    k = size(v, 2)
+
+    s1 = (mi, no * k)
+    s2 = (no, mi, k)
+    s3 = (mo, mi * k)
+    s4 = (mo * mi, k)
+
+    if reduce(&, issquare.(L.ops))
+        return (s1, s2, s3, s4, s1, s2, s3)
+    else
+        s5 = (ni, mo * k)
+        s6 = (mo, ni, k)
+        s7 = (no, ni * k)
+        return (s1, s2, s3, s4, s5, s6, s7)
+    end
 end
 
 function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)

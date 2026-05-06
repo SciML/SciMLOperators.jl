@@ -408,6 +408,56 @@ end
     end
 end
 
+@testset "AddedOperator cache sharing (Composed, Tensor, Composed, Tensor, Tensor)" begin
+    using SciMLOperators: cache_operator_hinted
+
+    m1, m2 = 2, 4   # m1 * m2 == N
+
+    # C1 and C2: same wrapper (ComposedOperator), different inner type params
+    # C1 = A1*B1  → ops::Tuple{MatrixOperator, MatrixOperator}
+    # C2 = A2*B2' → ops::Tuple{MatrixOperator, AdjointOperator{…}}
+    A1 = MatrixOperator(rand(N, N)); B1 = MatrixOperator(rand(N, N))
+    A2 = MatrixOperator(rand(N, N)); B2 = MatrixOperator(rand(N, N))
+    C1 = A1 * B1
+    C2 = A2 * B2'
+
+    # T1, T2, T3: same wrapper (TensorProductOperator), different inner type params
+    # T1 = Ao ⊗ Ai, T2 = Ao' ⊗ Ai, T3 = Ao ⊗ Ai'
+    Ao = MatrixOperator(rand(m1, m1)); Ai = MatrixOperator(rand(m2, m2))
+    T1 = TensorProductOperator(Ao,  Ai)
+    T2 = TensorProductOperator(Ao', Ai)
+    T3 = TensorProductOperator(Ao,  Ai')
+
+    L = C1 + T1 + C2 + T2 + T3 + A1 + A2
+    @test L isa AddedOperator
+    @test length(L.ops) == 7
+
+    # Matrix input
+    u = rand(N, K)
+    L = cache_operator(L, u)
+
+    # Correctness: the cached operator gives the right result
+    expected = C1 * u + T1 * u + C2 * u + T2 * u + T3 * u + A1 * u + A2 * u 
+    @test L * u ≈ expected
+
+    # Cache sharing: same-wrapper sub-operators with compatible sizes share physical buffers
+    @test L.ops[3].cache === L.ops[1].cache   # C2 (A2*B2') reuses C1's cache (same wrapper)
+    @test L.ops[4].cache === L.ops[2].cache   # T2 (Ao'⊗Ai) reuses T1's cache (same wrapper)
+    @test L.ops[5].cache === L.ops[2].cache   # T3 (Ao⊗Ai') reuses T1's cache (same wrapper)
+
+    # Vector input
+    v = rand(N)
+    L = cache_operator(L, v)
+
+    expected = C1 * v + T1 * v + C2 * v + T2 * v + T3 * v + A1 * v + A2 * v
+    @test L * v ≈ expected
+
+    @test L.ops[3].cache === L.ops[1].cache
+    @test L.ops[4].cache === L.ops[2].cache
+    @test L.ops[5].cache === L.ops[2].cache
+end
+
+
 @testset "ComposedOperator" begin
     A = rand(N, N)
     B = rand(N, N)

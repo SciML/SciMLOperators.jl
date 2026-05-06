@@ -644,13 +644,30 @@ end
 islinear(L::AddedOperator) = all(islinear, getops(L))
 Base.iszero(L::AddedOperator) = all(iszero, getops(L))
 has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
+LinearAlgebra.ishermitian(L::AddedOperator) = all(ishermitian, L.ops)
 
 @generated function cache_internals(L::AddedOperator, v::AbstractVecOrMat)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
+
+    # If multiple sub-operators share the same outermost type constructor (wrapper), we can cache one of them and reuse the cache for the others. This is because operators with the same wrapper will have the same caching structure, so we can avoid redundant caching work. The `donor` tuple identifies which operator's cache to use for each sub-operator.
+
+    donor = ntuple(i -> findfirst(j -> ops_types[j].name.wrapper === ops_types[i].name.wrapper, 1:N), N)
+
+    # Unique variable names for each cached sub-operator
+    syms = ntuple(i -> Symbol(:op_, i), N)
+
+    # Emit cache_operator for donors, cache_operator_hinted for the rest
+    stmts = ntuple(N) do i
+        d = donor[i]
+        d == i ?
+            :($(syms[i]) = cache_operator(L.ops[$i], v)) :
+            :($(syms[i]) = cache_operator_hinted(L.ops[$i], getcache($(syms[d])), v))
+    end
+
     return quote
-        ops = Base.@ntuple $N i -> cache_operator(L.ops[i], v)
-        return AddedOperator(ops)
+        $(stmts...)
+        return AddedOperator(($(syms...),))
     end
 end
 
@@ -874,6 +891,7 @@ function update_coefficients(L::ComposedOperator, u, p, t; kwargs...)
 end
 
 getops(L::ComposedOperator) = L.ops
+getcache(op::ComposedOperator) = op.cache
 
 # Copy method to avoid aliasing
 function Base.copy(L::ComposedOperator)
@@ -937,6 +955,16 @@ end
         $(exprs...)
         v
     end
+end
+
+function _get_cache_shapes(L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.ops)
+    res = if v isa AbstractMatrix
+        ntuple(i -> (size(L.ops[i], 1), size(v, 2)), Val(N))
+    else
+        ntuple(i -> (size(L.ops[i], 1),), Val(N))
+    end
+    return res
 end
 
 @generated function cache_self(L::ComposedOperator, v::AbstractVecOrMat)
@@ -1199,6 +1227,7 @@ function update_coefficients(L::InvertedOperator, u, p, t; kwargs...)
 end
 
 getops(L::InvertedOperator) = (L.L,)
+getcache(op::InvertedOperator) = op.cache
 islinear(L::InvertedOperator) = islinear(L.L)
 isconvertible(::InvertedOperator) = false
 
@@ -1229,9 +1258,10 @@ function Base.copy(L::InvertedOperator)
     )
 end
 
+_get_cache_shapes(::InvertedOperator, v::AbstractVecOrMat) = size(v)
+
 function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
-    cache = zero(u)
-    @reset L.cache = cache
+    @reset L.cache = zero(u)
     return L
 end
 

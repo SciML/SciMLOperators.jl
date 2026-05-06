@@ -139,6 +139,15 @@ getops(L) = ()
 """
 $SIGNATURES
 
+Return the current cache held by `op`, or `nothing` if it holds none.
+New operator types get the safe `nothing` default automatically; override
+for types that store a shareable `.cache` field.
+"""
+getcache(::AbstractSciMLOperator) = nothing
+
+"""
+$SIGNATURES
+
 Checks whether `L` has preallocated caches for inplace evaluations.
 """
 function iscached(L::AbstractSciMLOperator)
@@ -178,6 +187,53 @@ end
 
 cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
+
+"""
+$SIGNATURES
+
+Return the expected cache shape specification for `L` given input `v`.
+Returns `nothing` if `L` requires no cache.
+The return value can be a single `NTuple{N,Int}` (single-array cache),
+a `Tuple` of such shapes (multi-array cache), or `nothing` for absent slots.
+"""
+_get_cache_shapes(::AbstractSciMLOperator, ::AbstractVecOrMat) = nothing
+
+"""
+$SIGNATURES
+
+Check whether `hint` is shape-compatible with `shapes` (as returned by `_get_cache_shapes`).
+Uses `zip` to avoid integer-indexed Tuple access. Reads only array metadata — safe on GPU.
+"""
+_cache_compatible(hint, ::Nothing) = false
+_cache_compatible(::Nothing, shapes) = false
+_cache_compatible(::Nothing, ::Nothing) = false
+_cache_compatible(hint::AbstractArray, shape::Tuple{Vararg{Int}}) = size(hint) == shape
+function _cache_compatible(hint::Tuple, shapes::Tuple)
+    length(hint) != length(shapes) && return false
+    return all(((h, s),) -> _cache_compatible(h, s), zip(hint, shapes))
+end
+
+"""
+$SIGNATURES
+
+Inject `new_cache` into `op` as its cache. Default uses `@reset op.cache = new_cache`.
+Override for operators that don't use the `.cache` field convention.
+"""
+update_cache(op::AbstractSciMLOperator, new_cache) = @reset op.cache = new_cache
+
+"""
+$SIGNATURES
+
+Like `cache_operator`, but tries to reuse `hint` (an existing cache from a compatible operator)
+instead of allocating new buffers. Falls back to `cache_operator` when `hint` is not compatible.
+"""
+function cache_operator_hinted(op::AbstractSciMLOperator, hint, v::AbstractVecOrMat)
+    if _cache_compatible(hint, _get_cache_shapes(op, v))
+        op = update_cache(op, hint)
+        return cache_internals(op, v)
+    end
+    return cache_operator(op, v)
+end
 
 ###
 # operator traits
