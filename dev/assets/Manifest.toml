@@ -435,10 +435,12 @@ uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 version = "1.18.0"
 
     [deps.SciMLOperators.extensions]
+    SciMLOperatorsLoopVectorizationExt = "LoopVectorization"
     SciMLOperatorsSparseArraysExt = "SparseArrays"
     SciMLOperatorsStaticArraysCoreExt = "StaticArraysCore"
 
     [deps.SciMLOperators.weakdeps]
+    LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
