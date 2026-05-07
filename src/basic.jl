@@ -252,7 +252,7 @@ $TYPEDEF
 
     (λ L)*(v) = λ * L(v)
 """
-struct ScaledOperator{
+mutable struct ScaledOperator{
         T,
         λType,
         LType,
@@ -340,10 +340,9 @@ Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real = 2) = abs(L.λ) * opnorm(L.L, p)
 
 function update_coefficients(L::ScaledOperator, u, p, t; kwargs...)
-    @reset L.L = update_coefficients(L.L, u, p, t; kwargs...)
-    @reset L.λ = update_coefficients(L.λ, u, p, t; kwargs...)
-
-    return L
+    λ = update_coefficients(L.λ, u, p, t; kwargs...)
+    L_inner = update_coefficients(L.L, u, p, t; kwargs...)
+    return ScaledOperator(λ, L_inner)
 end
 
 function update_coefficients!(L::ScaledOperator, u, p, t; kwargs...)
