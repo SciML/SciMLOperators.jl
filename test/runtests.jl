@@ -31,6 +31,9 @@ end
             @time @safetestset "Copy methods" begin
                 include("copy.jl")
             end
+            @time @safetestset "Adapt.jl" begin
+                include("adapt.jl")
+            end
         elseif GROUP == "All" || GROUP == "Downstream"
             activate_downstream_env()
             @time @safetestset "AllocCheck" begin

@@ -11,6 +11,8 @@ import ArrayInterface
 # MacroTools dependency removed - using explicit method forwarding instead
 import Accessors: @reset
 
+using Adapt
+
 # overload
 import Base: show
 import Base: zero, one, oneunit
@@ -211,6 +213,7 @@ include("batch.jl")
 include("func.jl")
 include("tensor.jl")
 include("woperator.jl")
+include("adapt.jl")
 
 export
     IdentityOperator,
