@@ -219,7 +219,7 @@ function Base.conj(α::ScalarOperator) # TODO - test
     return ScalarOperator(val; update_func = update_func, accepted_kwargs = NoKwargFilter())
 end
 
-function Base.conj(α::_UpdatedScalarOperator) # TODO - test
+function Base.conj(α::_UpdatedScalarOperator)
     val = conj(α.val)
     update_func = (
         oldval, u, p, t;

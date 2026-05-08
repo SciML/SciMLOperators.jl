@@ -43,6 +43,16 @@ end
         expected_grad = sum(ad_pmat * ad_v)
         @test only(Zygote.gradient(concretized_loss, p)) ≈ expected_grad
         @test only(Zygote.gradient(direct_loss, p)) ≈ expected_grad
+
+        updated_L = update_coefficients(L, ad_u, p, ad_t)
+        @test updated_L(ad_v, ad_u, p + 1, ad_t) ≈ ad_expected_scaled(p + 1)
+        @test_throws ArgumentError update_coefficients!(updated_L, ad_u, p + 1, ad_t)
+        updated_L(w, ad_v, ad_u, p + 1, ad_t)
+        @test w ≈ ad_expected_scaled(p + 1)
+
+        w .= 0.25
+        updated_L(w, ad_v, ad_u, p + 1, ad_t, 2.0, 0.5)
+        @test w ≈ 2 .* ad_expected_scaled(p + 1) .+ 0.125
     end
 
     @testset "MatrixOperator + ScalarOperator * MatrixOperator" begin
