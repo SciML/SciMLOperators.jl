@@ -24,7 +24,7 @@ SciMLOperatorsStaticArraysCoreExt = "StaticArraysCore"
 [compat]
 Accessors = "0.1.42"
 Adapt = "4"
-ArrayInterface = "7.19"
+ArrayInterface = "7.24"
 DocStringExtensions = "0.9.4"
 LinearAlgebra = "1.10"
 LoopVectorization = "0.12"
