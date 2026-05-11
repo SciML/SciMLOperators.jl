@@ -806,4 +806,9 @@ end
     opB_sparse = sparse(opB)
     @test opB_sparse ≈ B
     @test issparse(opB_sparse)
+
+    L = BlockDiagonalOperator(opA, opB, NullOperator(2, 3))
+    sL = sparse(L)
+    @test issparse(sL)
+    @test sL ≈ Matrix(L)
 end
