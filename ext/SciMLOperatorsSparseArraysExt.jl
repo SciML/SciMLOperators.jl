@@ -14,5 +14,12 @@ SparseArrays.sparse(L::SciMLOperators.IdentityOperator) = sparse(LinearAlgebra.I
 function SparseArrays.sparse(L::SciMLOperators.TensorProductOperator)
     return LinearAlgebra.kron(sparse.(L.ops)...)
 end
+function SparseArrays.sparse(L::SciMLOperators.BlockDiagonalOperator)
+    return SparseArrays.blockdiag(sparse.(L.ops)...)
+end
+function SparseArrays.sparse(L::SciMLOperators.NullOperator)
+    return SparseArrays.spzeros(eltype(L), size(L))
+end
+SparseArrays.sparse(L::SciMLOperators.TensorSumOperator) = sum(sparse, L.products)
 
 end
