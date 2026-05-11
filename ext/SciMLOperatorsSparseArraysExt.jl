@@ -20,5 +20,6 @@ end
 function SparseArrays.sparse(L::SciMLOperators.NullOperator)
     return SparseArrays.spzeros(eltype(L), size(L))
 end
+SparseArrays.sparse(L::SciMLOperators.TensorSumOperator) = sum(sparse, L.products)
 
 end

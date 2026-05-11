@@ -811,4 +811,10 @@ end
     sL = sparse(L)
     @test issparse(sL)
     @test sL ≈ Matrix(L)
+
+    # TensorSumOperator
+    Lkronsum = kronsum(opB, opB)
+    sLkronsum = sparse(Lkronsum)
+    @test issparse(sLkronsum)
+    @test sLkronsum ≈ Matrix(Lkronsum)
 end
