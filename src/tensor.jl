@@ -136,7 +136,7 @@ Base.kron(A::AbstractSciMLOperator, B::AbstractMatrix) = TensorProductOperator(A
 Base.kron(ops::AbstractSciMLOperator...) = TensorProductOperator(ops...)
 
 function Base.convert(::Type{AbstractMatrix}, L::TensorProductOperator)
-    return kron(convert.(AbstractMatrix, L.ops)...)
+    return kron(map(op -> convert(AbstractMatrix, op), L.ops)...)
 end
 
 #LinearAlgebra.opnorm(L::TensorProductOperator) = prod(opnorm, L.ops)
@@ -148,7 +148,7 @@ function Base.show(io::IO, L::TensorProductOperator)
     show(io, L.ops[2])
     return print(io, ")")
 end
-Base.size(L::TensorProductOperator) = reduce(.*, size.(L.ops))
+Base.size(L::TensorProductOperator) = mapreduce(size, .*, L.ops)
 
 for op in (
         :adjoint,
@@ -156,13 +156,13 @@ for op in (
     )
     @eval function Base.$op(L::TensorProductOperator)
         return TensorProductOperator(
-            $op.(L.ops)...;
+            map($op, L.ops)...;
             cache = issquare(L.ops[2]) ? L.cache : nothing
         )
     end
 end
 function Base.conj(L::TensorProductOperator)
-    return TensorProductOperator(conj.(L.ops)...; cache = L.cache)
+    return TensorProductOperator(map(conj, L.ops)...; cache = L.cache)
 end
 
 function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
@@ -184,17 +184,17 @@ function Base.copy(L::TensorProductOperator)
     )
 end
 
-islinear(L::TensorProductOperator) = reduce(&, islinear.(L.ops))
+islinear(L::TensorProductOperator) = mapreduce(islinear, &, L.ops)
 isconvertible(::TensorProductOperator) = false
 has_concretization(L::TensorProductOperator) = all(has_concretization, L.ops)
-Base.iszero(L::TensorProductOperator) = reduce(|, iszero.(L.ops))
-has_adjoint(L::TensorProductOperator) = reduce(&, has_adjoint.(L.ops))
-has_mul(L::TensorProductOperator) = reduce(&, has_mul.(L.ops))
-has_mul!(L::TensorProductOperator) = reduce(&, has_mul!.(L.ops))
-has_ldiv(L::TensorProductOperator) = reduce(&, has_ldiv.(L.ops))
-has_ldiv!(L::TensorProductOperator) = reduce(&, has_ldiv!.(L.ops))
+Base.iszero(L::TensorProductOperator) = mapreduce(iszero, |, L.ops)
+has_adjoint(L::TensorProductOperator) = mapreduce(has_adjoint, &, L.ops)
+has_mul(L::TensorProductOperator) = mapreduce(has_mul, &, L.ops)
+has_mul!(L::TensorProductOperator) = mapreduce(has_mul!, &, L.ops)
+has_ldiv(L::TensorProductOperator) = mapreduce(has_ldiv, &, L.ops)
+has_ldiv!(L::TensorProductOperator) = mapreduce(has_ldiv!, &, L.ops)
 
-factorize(L::TensorProductOperator) = TensorProductOperator(factorize.(L.ops)...)
+factorize(L::TensorProductOperator) = TensorProductOperator(map(factorize, L.ops)...)
 
 """
 $(TYPEDEF)
@@ -239,7 +239,7 @@ Construct the lazy Kronecker sum `A ⊗ I + I ⊗ B`.
 """
 kronsum(A::Union{AbstractMatrix, AbstractSciMLOperator}, B::Union{AbstractMatrix, AbstractSciMLOperator}) = TensorSumOperator(A, B)
 
-Base.convert(::Type{AbstractMatrix}, L::TensorSumOperator) = sum(convert.(AbstractMatrix, L.products))
+Base.convert(::Type{AbstractMatrix}, L::TensorSumOperator) = sum(map(op -> convert(AbstractMatrix, op), L.products))
 
 function Base.show(io::IO, L::TensorSumOperator)
     print(io, "(")
@@ -255,9 +255,9 @@ for op in (
         :adjoint,
         :transpose,
     )
-    @eval Base.$op(L::TensorSumOperator) = TensorSumOperator($op.(L.ops)...)
+    @eval Base.$op(L::TensorSumOperator) = TensorSumOperator(map($op, L.ops)...)
 end
-Base.conj(L::TensorSumOperator) = TensorSumOperator(conj.(L.ops)...)
+Base.conj(L::TensorSumOperator) = TensorSumOperator(map(conj, L.ops)...)
 
 function update_coefficients(L::TensorSumOperator, u, p, t; kwargs...)
     ops = ()
@@ -380,7 +380,7 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
     c4 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
 
     # 3 arg ldiv!
-    if reduce(&, issquare.(L.ops))
+    if mapreduce(issquare, &, L.ops)
         c5, c6, c7 = c1, c2, c3
     else
         c5 = lmul!(false, similar(v, (ni, mo * k))) # c5 = inner \ v
