@@ -340,10 +340,23 @@ Base.resize!(L::ScaledOperator, n::Integer) = (resize!(L.L, n); L)
 LinearAlgebra.opnorm(L::ScaledOperator, p::Real = 2) = abs(L.λ) * opnorm(L.L, p)
 
 function update_coefficients(L::ScaledOperator, u, p, t; kwargs...)
-    @reset L.L = update_coefficients(L.L, u, p, t; kwargs...)
-    @reset L.λ = update_coefficients(L.λ, u, p, t; kwargs...)
+    λ = _freeze_updated_scalar(update_coefficients(L.λ, u, p, t; kwargs...))
+    L_inner = update_coefficients(L.L, u, p, t; kwargs...)
+    return ScaledOperator(λ, L_inner)
+end
 
-    return L
+function _throw_updated_scaled_inplace()
+    throw(
+        ArgumentError(
+            "cannot update coefficients in-place after an out-of-place ScaledOperator update; call update_coefficients instead",
+        )
+    )
+end
+
+function update_coefficients!(
+        L::ScaledOperator{<:Any, <:_UpdatedScalarOperator, <:Any}, u, p, t; kwargs...
+    )
+    _throw_updated_scaled_inplace()
 end
 
 function update_coefficients!(L::ScaledOperator, u, p, t; kwargs...)
@@ -445,6 +458,13 @@ end
     return L.L(w, v, u, p, t, a, false; kwargs...)
 end
 
+@inline function (L::ScaledOperator{<:Any, <:_UpdatedScalarOperator, <:Any})(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
+    )
+    L = update_coefficients(L, u, p, t; kwargs...)
+    return mul!(w, L, v)
+end
+
 # In-place with scaling: w = α*(L*v) + β*w
 @inline function (L::ScaledOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
@@ -452,6 +472,13 @@ end
     update_coefficients!(L.λ, u, p, t; kwargs...)
     a = convert(Number, L.λ * α)
     return L.L(w, v, u, p, t, a, β; kwargs...)
+end
+
+@inline function (L::ScaledOperator{<:Any, <:_UpdatedScalarOperator, <:Any})(
+        w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
+    )
+    L = update_coefficients(L, u, p, t; kwargs...)
+    return mul!(w, L, v, α, β)
 end
 
 """

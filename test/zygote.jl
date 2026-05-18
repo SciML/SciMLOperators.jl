@@ -111,3 +111,17 @@ for (LType, L) in (
         end
     end
 end
+
+@testset "Zygote update_coefficients concretize scaled operator" begin
+    A1 = MatrixOperator([1.0 0.0; 0.0 1.0])
+    A2 = MatrixOperator([1.0 0.0; 0.0 0.0])
+    coeff = ScalarOperator(0.0, (a, u, p, t) -> p)
+    L = A1 + coeff * A2
+
+    operator_entry(p) = (update_coefficients(L, 0, p, 0) |> concretize)[1, 1]
+    matrix_entry(p) = ([1.0 0.0; 0.0 1.0] + p * [1.0 0.0; 0.0 0.0])[1, 1]
+
+    p = 1.0
+    @test operator_entry(p) == matrix_entry(p)
+    @test Zygote.gradient(operator_entry, p)[1] == Zygote.gradient(matrix_entry, p)[1]
+end

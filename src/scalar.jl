@@ -126,6 +126,15 @@ mutable struct ScalarOperator{T <: Number, F} <: AbstractSciMLScalarOperator{T}
     update_func::F
 end
 
+# Immutable snapshot used by out-of-place updates after ScalarOperator has evaluated its state.
+struct _UpdatedScalarOperator{T <: Number, F} <: AbstractSciMLScalarOperator{T}
+    val::T
+    update_func::F
+end
+
+_freeze_updated_scalar(α) = α
+_freeze_updated_scalar(α::ScalarOperator) = _UpdatedScalarOperator(α.val, α.update_func)
+
 """
 $SIGNATURES
 
@@ -186,6 +195,7 @@ end
 
 # constructors
 Base.convert(T::Type{<:Number}, α::ScalarOperator) = convert(T, α.val)
+Base.convert(T::Type{<:Number}, α::_UpdatedScalarOperator) = convert(T, α.val)
 Base.convert(::Type{ScalarOperator}, α::Number) = ScalarOperator(α)
 
 ScalarOperator(α::AbstractSciMLScalarOperator) = α
@@ -193,6 +203,7 @@ ScalarOperator(λ::UniformScaling) = ScalarOperator(λ.λ)
 
 # traits
 Base.show(io::IO, α::ScalarOperator) = print(io, "ScalarOperator($(α.val))")
+Base.show(io::IO, α::_UpdatedScalarOperator) = print(io, "ScalarOperator($(α.val))")
 function Base.conj(α::ScalarOperator) # TODO - test
     val = conj(α.val)
     update_func = (
@@ -208,12 +219,28 @@ function Base.conj(α::ScalarOperator) # TODO - test
     return ScalarOperator(val; update_func = update_func, accepted_kwargs = NoKwargFilter())
 end
 
+function Base.conj(α::_UpdatedScalarOperator)
+    val = conj(α.val)
+    update_func = (
+        oldval, u, p, t;
+        kwargs...,
+    ) -> α.update_func(
+        oldval |> conj,
+        u,
+        p,
+        t;
+        kwargs...
+    ) |> conj
+    return _UpdatedScalarOperator(val, update_func)
+end
+
 Base.one(::AbstractSciMLScalarOperator{T}) where {T} = ScalarOperator(one(T))
 Base.zero(::AbstractSciMLScalarOperator{T}) where {T} = ScalarOperator(zero(T))
 
 Base.one(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(true)
 Base.zero(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(false)
 Base.abs(α::ScalarOperator) = abs(α.val)
+Base.abs(α::_UpdatedScalarOperator) = abs(α.val)
 
 function LinearAlgebra.exp(α::AbstractSciMLScalarOperator)
     update_func = (
@@ -226,11 +253,16 @@ function LinearAlgebra.exp(α::AbstractSciMLScalarOperator)
 end
 
 Base.iszero(α::ScalarOperator) = iszero(α.val)
+Base.iszero(α::_UpdatedScalarOperator) = iszero(α.val)
 
 getops(α::ScalarOperator) = (α.val,)
+getops(α::_UpdatedScalarOperator) = (α.val,)
 isconstant(α::ScalarOperator) = update_func_isconstant(α.update_func)
+isconstant(α::_UpdatedScalarOperator) = update_func_isconstant(α.update_func)
 has_ldiv(α::ScalarOperator) = !iszero(α.val)
+has_ldiv(α::_UpdatedScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
+has_ldiv!(α::_UpdatedScalarOperator) = has_ldiv(α)
 
 function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     L.val = L.update_func(L.val, u, p, t; kwargs...)
@@ -241,9 +273,19 @@ function SciMLOperators.update_coefficients(L::ScalarOperator, u, p, t; kwargs..
     return ScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
 end
 
+function SciMLOperators.update_coefficients(
+        L::_UpdatedScalarOperator, u, p, t; kwargs...
+    )
+    return _UpdatedScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
+end
+
 # Copy method to avoid aliasing
 function Base.copy(L::ScalarOperator)
     return ScalarOperator(L.val, L.update_func)
+end
+
+function Base.copy(L::_UpdatedScalarOperator)
+    return _UpdatedScalarOperator(L.val, L.update_func)
 end
 
 # Add ScalarOperator specific implementations for the new interface
