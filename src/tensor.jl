@@ -175,6 +175,7 @@ function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
 end
 
 getops(L::TensorProductOperator) = L.ops
+getcache(op::TensorProductOperator) = op.cache
 
 # Copy method to avoid aliasing
 function Base.copy(L::TensorProductOperator)
@@ -362,30 +363,51 @@ function Base.:\(L::TensorProductOperator, v::AbstractVecOrMat)
     return v isa AbstractMatrix ? reshape(V, (n, k)) : reshape(V, (n,))
 end
 
-function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
+function _get_cache_shapes(L::TensorProductOperator, v::AbstractVecOrMat)
     outer, inner = L.ops
+    outer isa IdentityOperator && return nothing
 
     mi, ni = size(inner)
     mo, no = size(outer)
     k = size(v, 2)
 
-    is_outer_identity = outer isa IdentityOperator
+    s1 = (mi, no * k)
+    s2 = (no, mi, k)
+    s3 = (mo, mi * k)
+    s4 = (mo * mi, k)
 
-    # 3 arg mul!
-    c1 = is_outer_identity ? nothing : lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
-    c2 = is_outer_identity ? nothing : lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
-    c3 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
-
-    # 5 arg mul!
-    c4 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo * mi, k))) # cache v in 5 arg mul!
-
-    # 3 arg ldiv!
-    if mapreduce(issquare, &, L.ops)
-        c5, c6, c7 = c1, c2, c3
+    if reduce(&, issquare.(L.ops))
+        return (s1, s2, s3, s4, s1, s2, s3)
     else
-        c5 = lmul!(false, similar(v, (ni, mo * k))) # c5 = inner \ v
-        c6 = lmul!(false, similar(v, (mo, ni, k))) # permute (2, 1, 3)
-        c7 = lmul!(false, similar(v, (no, ni * k))) # c7 = outer \ c6
+        s5 = (ni, mo * k)
+        s6 = (mo, ni, k)
+        s7 = (no, ni * k)
+        return (s1, s2, s3, s4, s5, s6, s7)
+    end
+end
+
+function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
+    shapes = _get_cache_shapes(L, v)
+
+    # outer is IdentityOperator — no buffers needed
+    if isnothing(shapes)
+        @reset L.cache = (nothing, nothing, nothing, nothing, nothing, nothing, nothing)
+        return L
+    end
+
+    s1, s2, s3, s4, s5, s6, s7 = shapes
+
+    c1 = lmul!(false, similar(v, s1)) # inner * v  (3-arg mul!)
+    c2 = lmul!(false, similar(v, s2)) # permute (2,1,3)
+    c3 = lmul!(false, similar(v, s3)) # outer * c2
+    c4 = lmul!(false, similar(v, s4)) # copy of w for 5-arg mul!
+
+    if mapreduce(issquare, &, L.ops)
+        c5, c6, c7 = c1, c2, c3  # square case: ldiv! reuses mul! buffers
+    else
+        c5 = lmul!(false, similar(v, s5)) # inner \ v  (3-arg ldiv!)
+        c6 = lmul!(false, similar(v, s6)) # permute (2,1,3)
+        c7 = lmul!(false, similar(v, s7)) # outer \ c6
     end
 
     @reset L.cache = (c1, c2, c3, c4, c5, c6, c7)

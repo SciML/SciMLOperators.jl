@@ -648,9 +648,56 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 @generated function cache_internals(L::AddedOperator, v::AbstractVecOrMat)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
+
+    # Within each wrapper-type group, the op whose eltype equals promote_type(group eltypes)
+    # becomes the donor — all others in the group reuse its cache instead of allocating their own.
+    # If promote_type yields a new type that no op in the group has (e.g. Float64 + ComplexF32
+    # → ComplexF64), no op qualifies as donor and every op in that group caches independently.
+    # NOTE: the resulting cache aliasing (ops[i].cache === ops[j].cache) is safe only because
+    # AddedOperator's mul! evaluates sub-ops strictly serially. Any parallelism would require
+    # independent caches per sub-op.
+    wrappers = ntuple(i -> Base.typename(ops_types[i]).wrapper, N)
+
+    donor = ntuple(N) do i
+        idx_eltype = foldl(enumerate(wrappers); init = (i, wrappers[i])) do a, b
+            Ta = eltype(ops_types[a[1]])
+            Tb = eltype(ops_types[b[1]])
+            T = promote_type(Ta, Tb)
+            eltype_condition_a = Ta === T
+            eltype_condition_b = Tb === T
+
+            if b[2] !== wrappers[i] || !eltype_condition_b
+                return a
+            else
+                if eltype_condition_a && !eltype_condition_b
+                    return a
+                elseif eltype_condition_b && !eltype_condition_a
+                    return b
+                else
+                    return b
+                end
+            end
+        end
+
+        return idx_eltype[1]
+    end
+
+    # Unique variable names for each cached sub-operator
+    syms = ntuple(i -> Symbol(:op_, i), N)
+
+    # Emit donors first so their symbols are defined before any asker references them
+    donor_stmts = [
+        :($(syms[i]) = cache_operator(L.ops[$i], v)) for i in 1:N if donor[i] == i
+    ]
+    asker_stmts = [
+        :($(syms[i]) = cache_operator_hinted(L.ops[$i], getcache($(syms[donor[i]])), v))
+            for i in 1:N if donor[i] != i
+    ]
+
     return quote
-        ops = Base.@ntuple $N i -> cache_operator(L.ops[i], v)
-        return AddedOperator(ops)
+        $(donor_stmts...)
+        $(asker_stmts...)
+        return AddedOperator(($(syms...),))
     end
 end
 
@@ -874,6 +921,7 @@ function update_coefficients(L::ComposedOperator, u, p, t; kwargs...)
 end
 
 getops(L::ComposedOperator) = L.ops
+getcache(op::ComposedOperator) = op.cache
 
 # Copy method to avoid aliasing
 function Base.copy(L::ComposedOperator)
@@ -936,6 +984,17 @@ end
     return quote
         $(exprs...)
         v
+    end
+end
+
+function _get_cache_shapes(L::ComposedOperator, v::AbstractVecOrMat)
+    N = length(L.ops)
+    K = size(v, 2)
+
+    if v isa AbstractMatrix
+        return ntuple(i -> i < N ? (size(L.ops[i + 1], 1), K) : (size(v, 1), K), Val(N))
+    else
+        return ntuple(i -> i < N ? (size(L.ops[i + 1], 1),) : (size(v, 1),), Val(N))
     end
 end
 
@@ -1199,6 +1258,7 @@ function update_coefficients(L::InvertedOperator, u, p, t; kwargs...)
 end
 
 getops(L::InvertedOperator) = (L.L,)
+getcache(op::InvertedOperator) = op.cache
 islinear(L::InvertedOperator) = islinear(L.L)
 isconvertible(::InvertedOperator) = false
 
@@ -1229,9 +1289,10 @@ function Base.copy(L::InvertedOperator)
     )
 end
 
+_get_cache_shapes(::InvertedOperator, v::AbstractVecOrMat) = size(v)
+
 function cache_self(L::InvertedOperator, u::AbstractVecOrMat)
-    cache = zero(u)
-    @reset L.cache = cache
+    @reset L.cache = zero(u)
     return L
 end
 

@@ -139,6 +139,15 @@ getops(L) = ()
 """
 $SIGNATURES
 
+Return the current cache held by `op`, or `nothing` if it holds none.
+New operator types get the safe `nothing` default automatically; override
+for types that store a shareable `.cache` field.
+"""
+getcache(::AbstractSciMLOperator) = nothing
+
+"""
+$SIGNATURES
+
 Checks whether `L` has preallocated caches for inplace evaluations.
 """
 function iscached(L::AbstractSciMLOperator)
@@ -179,12 +188,64 @@ end
 cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 
+"""
+$SIGNATURES
+
+Return the expected cache shape specification for `L` given input `v`.
+Returns `nothing` if `L` requires no cache.
+The return value can be a single `NTuple{N,Int}` (single-array cache),
+a `Tuple` of such shapes (multi-array cache), or `nothing` for absent slots.
+"""
+_get_cache_shapes(::AbstractSciMLOperator, ::AbstractVecOrMat) = nothing
+
+"""
+$SIGNATURES
+
+Check whether `hint` is shape-compatible with `shapes` (as returned by `_get_cache_shapes`).
+Uses `zip` to avoid integer-indexed Tuple access. Reads only array metadata — safe on GPU.
+"""
+_cache_compatible(hint, ::Nothing, v::AbstractArray) = false
+_cache_compatible(::Nothing, shapes, v::AbstractArray) = false
+_cache_compatible(::Nothing, ::Nothing, v::AbstractArray) = false
+function _cache_compatible(hint::AbstractArray, shape::Tuple{Vararg{Int}}, v::AbstractArray)
+    # Check array device compatibility (CPU, GPU, etc.)
+    Base.typename(typeof(hint)).wrapper === Base.typename(typeof(v)).wrapper || return false
+    promote_type(eltype(v), eltype(hint)) === eltype(hint) || return false
+    return size(hint) == shape || return false
+end
+function _cache_compatible(hint::Tuple, shapes::Tuple, v::AbstractArray)
+    length(hint) != length(shapes) && return false
+    return all(((h, s),) -> _cache_compatible(h, s, v), zip(hint, shapes))
+end
+
+"""
+$SIGNATURES
+
+Inject `new_cache` into `op` as its cache. Default uses `@reset op.cache = new_cache`.
+Override for operators that don't use the `.cache` field convention.
+"""
+update_cache(op::AbstractSciMLOperator, new_cache) = @reset op.cache = new_cache
+
+"""
+$SIGNATURES
+
+Like `cache_operator`, but tries to reuse `hint` (an existing cache from a compatible operator)
+instead of allocating new buffers. Falls back to `cache_operator` when `hint` is not compatible.
+"""
+function cache_operator_hinted(op::AbstractSciMLOperator, hint, v::AbstractVecOrMat)
+    if _cache_compatible(hint, _get_cache_shapes(op, v), v)
+        op = update_cache(op, hint)
+        return cache_internals(op, v)
+    end
+    return cache_operator(op, v)
+end
+
 ###
 # operator traits
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
-Base.eltype(::Type{AbstractSciMLOperator{T}}) where {T} = T
+Base.eltype(::Type{<:AbstractSciMLOperator{T}}) where {T} = T
 Base.eltype(::AbstractSciMLOperator{T}) where {T} = T
 Base.promote_eltype(::AbstractSciMLOperator{<:T1}, ::AbstractSciMLOperator{<:T2}) where {T1, T2} = Base.promote_type(T1, T2)
 
