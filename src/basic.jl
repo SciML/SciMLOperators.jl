@@ -691,7 +691,7 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
     ]
     asker_stmts = [
         :($(syms[i]) = cache_operator_hinted(L.ops[$i], getcache($(syms[donor[i]])), v))
-        for i in 1:N if donor[i] != i
+            for i in 1:N if donor[i] != i
     ]
 
     return quote

@@ -435,7 +435,7 @@ end
     for input in (rand(N, K), rand(N))
         L = cache_operator(L, input)
         expected = C1 * input + T1 * input + C2 * input + T2 * input + T3 * input +
-                   A1 * input + A2 * input
+            A1 * input + A2 * input
 
         # Correctness: out-of-place (*) and in-place (mul!) paths
         @test L * input ≈ expected

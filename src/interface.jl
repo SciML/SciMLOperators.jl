@@ -211,7 +211,7 @@ function _cache_compatible(hint::AbstractArray, shape::Tuple{Vararg{Int}}, v::Ab
     # Check array device compatibility (CPU, GPU, etc.)
     Base.typename(typeof(hint)).wrapper === Base.typename(typeof(v)).wrapper || return false
     promote_type(eltype(v), eltype(hint)) === eltype(hint) || return false
-    size(hint) == shape || return false
+    return size(hint) == shape || return false
 end
 function _cache_compatible(hint::Tuple, shapes::Tuple, v::AbstractArray)
     length(hint) != length(shapes) && return false
