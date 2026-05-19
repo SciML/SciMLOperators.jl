@@ -591,6 +591,15 @@ function _cache_operator(L::FunctionOperator, u::AbstractArray)
 end
 
 function _get_cache_shapes(L::FunctionOperator, v::AbstractVecOrMat)
+    if L.traits.batch
+        M = size(L, 1)
+        if v isa AbstractMatrix
+            return (size(v), (M, size(v, 2)))
+        else
+            return (size(v), (M,))
+        end
+    end
+
     return (L.traits.sizes[1], L.traits.sizes[2])
 end
 

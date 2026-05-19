@@ -649,23 +649,54 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
 
-    # If multiple sub-operators share the same outermost type constructor (wrapper), we can cache one of them and reuse the cache for the others. This is because operators with the same wrapper will have the same caching structure, so we can avoid redundant caching work. The `donor` tuple identifies which operator's cache to use for each sub-operator.
+    # Within each wrapper-type group, the op whose eltype equals promote_type(group eltypes)
+    # becomes the donor — all others in the group reuse its cache instead of allocating their own.
+    # If promote_type yields a new type that no op in the group has (e.g. Float64 + ComplexF32
+    # → ComplexF64), no op qualifies as donor and every op in that group caches independently.
+    # NOTE: the resulting cache aliasing (ops[i].cache === ops[j].cache) is safe only because
+    # AddedOperator's mul! evaluates sub-ops strictly serially. Any parallelism would require
+    # independent caches per sub-op.
+    wrappers = ntuple(i -> Base.typename(ops_types[i]).wrapper, N)
 
-    donor = ntuple(i -> findfirst(j -> ops_types[j].name.wrapper === ops_types[i].name.wrapper, 1:N), N)
+    donor = ntuple(N) do i
+        idx_eltype = foldl(enumerate(wrappers); init = (i, wrappers[i])) do a, b
+            Ta = eltype(ops_types[a[1]])
+            Tb = eltype(ops_types[b[1]])
+            T = promote_type(Ta, Tb)
+            eltype_condition_a = Ta === T
+            eltype_condition_b = Tb === T
+
+            if b[2] !== wrappers[i] || !eltype_condition_b
+                return a
+            else
+                if eltype_condition_a && !eltype_condition_b
+                    return a
+                elseif eltype_condition_b && !eltype_condition_a
+                    return b
+                else
+                    return b
+                end
+            end
+        end
+
+        return idx_eltype[1]
+    end
 
     # Unique variable names for each cached sub-operator
     syms = ntuple(i -> Symbol(:op_, i), N)
 
-    # Emit cache_operator for donors, cache_operator_hinted for the rest
-    stmts = ntuple(N) do i
-        d = donor[i]
-        d == i ?
-            :($(syms[i]) = cache_operator(L.ops[$i], v)) :
-            :($(syms[i]) = cache_operator_hinted(L.ops[$i], getcache($(syms[d])), v))
-    end
+    # Emit donors first so their symbols are defined before any asker references them
+    donor_stmts = [
+        :($(syms[i]) = cache_operator(L.ops[$i], v)) for i in 1:N if donor[i] == i
+    ]
+    asker_stmts = [
+        :($(syms[i]) = cache_operator_hinted(L.ops[$i], getcache($(syms[donor[i]])), v))
+        for i in 1:N if donor[i] != i
+    ]
 
     return quote
-        $(stmts...)
+        $(donor_stmts...)
+        $(asker_stmts...)
         return AddedOperator(($(syms...),))
     end
 end
@@ -958,12 +989,13 @@ end
 
 function _get_cache_shapes(L::ComposedOperator, v::AbstractVecOrMat)
     N = length(L.ops)
-    res = if v isa AbstractMatrix
-        ntuple(i -> (size(L.ops[i], 1), size(v, 2)), Val(N))
+    K = size(v, 2)
+
+    if v isa AbstractMatrix
+        return ntuple(i -> i < N ? (size(L.ops[i + 1], 1), K) : (size(v, 1), K), Val(N))
     else
-        ntuple(i -> (size(L.ops[i], 1),), Val(N))
+        return ntuple(i -> i < N ? (size(L.ops[i + 1], 1),) : (size(v, 1),), Val(N))
     end
-    return res
 end
 
 @generated function cache_self(L::ComposedOperator, v::AbstractVecOrMat)

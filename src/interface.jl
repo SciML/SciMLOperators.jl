@@ -204,13 +204,18 @@ $SIGNATURES
 Check whether `hint` is shape-compatible with `shapes` (as returned by `_get_cache_shapes`).
 Uses `zip` to avoid integer-indexed Tuple access. Reads only array metadata — safe on GPU.
 """
-_cache_compatible(hint, ::Nothing) = false
-_cache_compatible(::Nothing, shapes) = false
-_cache_compatible(::Nothing, ::Nothing) = false
-_cache_compatible(hint::AbstractArray, shape::Tuple{Vararg{Int}}) = size(hint) == shape
-function _cache_compatible(hint::Tuple, shapes::Tuple)
+_cache_compatible(hint, ::Nothing, v::AbstractArray) = false
+_cache_compatible(::Nothing, shapes, v::AbstractArray) = false
+_cache_compatible(::Nothing, ::Nothing, v::AbstractArray) = false
+function _cache_compatible(hint::AbstractArray, shape::Tuple{Vararg{Int}}, v::AbstractArray)
+    # Check array device compatibility (CPU, GPU, etc.)
+    Base.typename(typeof(hint)).wrapper === Base.typename(typeof(v)).wrapper || return false
+    promote_type(eltype(v), eltype(hint)) === eltype(hint) || return false
+    size(hint) == shape || return false
+end
+function _cache_compatible(hint::Tuple, shapes::Tuple, v::AbstractArray)
     length(hint) != length(shapes) && return false
-    return all(((h, s),) -> _cache_compatible(h, s), zip(hint, shapes))
+    return all(((h, s),) -> _cache_compatible(h, s, v), zip(hint, shapes))
 end
 
 """
@@ -228,7 +233,7 @@ Like `cache_operator`, but tries to reuse `hint` (an existing cache from a compa
 instead of allocating new buffers. Falls back to `cache_operator` when `hint` is not compatible.
 """
 function cache_operator_hinted(op::AbstractSciMLOperator, hint, v::AbstractVecOrMat)
-    if _cache_compatible(hint, _get_cache_shapes(op, v))
+    if _cache_compatible(hint, _get_cache_shapes(op, v), v)
         op = update_cache(op, hint)
         return cache_internals(op, v)
     end
@@ -240,7 +245,7 @@ end
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
-Base.eltype(::Type{AbstractSciMLOperator{T}}) where {T} = T
+Base.eltype(::Type{<:AbstractSciMLOperator{T}}) where {T} = T
 Base.eltype(::AbstractSciMLOperator{T}) where {T} = T
 Base.promote_eltype(::AbstractSciMLOperator{<:T1}, ::AbstractSciMLOperator{<:T2}) where {T1, T2} = Base.promote_type(T1, T2)
 
