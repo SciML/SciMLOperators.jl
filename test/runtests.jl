@@ -28,6 +28,9 @@ end
             @time @safetestset "Zygote.jl" begin
                 include("zygote.jl")
             end
+            @time @safetestset "AD semantics" begin
+                include("ad_semantics.jl")
+            end
             @time @safetestset "Copy methods" begin
                 include("copy.jl")
             end
