@@ -424,7 +424,7 @@ version = "0.7.0"
 
 [[deps.SciMLOperators]]
 deps = ["Accessors", "Adapt", "ArrayInterface", "DocStringExtensions", "LinearAlgebra"]
-path = "/home/runner/work/SciMLOperators.jl/SciMLOperators.jl"
+path = "/home/chrisrackauckas/github-runners/demeter3-14/_work/SciMLOperators.jl/SciMLOperators.jl"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
 version = "1.22.0"
 
