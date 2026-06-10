@@ -34,10 +34,20 @@ end
             @time @safetestset "Adapt.jl" begin
                 include("adapt.jl")
             end
-        elseif GROUP == "All" || GROUP == "Downstream"
+        end
+
+        if GROUP == "All" || GROUP == "Downstream"
             activate_downstream_env()
             @time @safetestset "AllocCheck" begin
                 include("downstream/alloccheck.jl")
+            end
+        end
+
+        if GROUP == "QA"
+            Pkg.activate("qa")
+            Pkg.instantiate()
+            @time @safetestset "Quality Assurance" begin
+                include("qa/qa.jl")
             end
         end
     end
