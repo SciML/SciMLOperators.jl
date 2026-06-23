@@ -54,8 +54,9 @@ mutable struct WOperator{
     _func_cache::F           # cache used in `mul!`
     _concrete_form::C        # non-lazy form (matrix/number) of the operator
     jacvec::JV
+    lazy::Bool
 
-    function WOperator{IIP}(mass_matrix, gamma, J, u, jacvec = nothing) where {IIP}
+    function WOperator{IIP}(mass_matrix, gamma, J, u, jacvec = nothing, lazy::Bool = false) where {IIP}
         if J isa Union{Number, ScalarOperator}
             _concrete_form = -mass_matrix / gamma + convert(Number, J)
             _func_cache = nothing
@@ -72,12 +73,12 @@ mutable struct WOperator{
         JType = typeof(J)
         F = typeof(_func_cache)
         C = typeof(_concrete_form)
-        JV = typeof(jacvec)
+        JV = typeof(jacvec) 
         return new{IIP, T, MType, GType, JType, F, C, JV}(
-            mass_matrix, gamma, J,
-            _func_cache, _concrete_form, jacvec
+          mass_matrix, gamma, J, _func_cache, _concrete_form, jacvec, lazy
         )
     end
+
 
     function Base.copy(W::WOperator{IIP, T, MType, GType, JType, F, C, JV}) where {IIP, T, MType, GType, JType, F, C, JV}
         return new{IIP, T, MType, GType, JType, F, C, JV}(
