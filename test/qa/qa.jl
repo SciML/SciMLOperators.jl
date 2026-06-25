@@ -1,4 +1,4 @@
-using SciMLOperators, Aqua, JET, Test, ExplicitImports
+using SciMLOperators, JET, Test
 using SciMLTesting: run_qa
 # Load the weak-dependency triggers so the package extensions are loaded and
 # analyzed by the ExplicitImports checks below.
@@ -53,10 +53,6 @@ end
 # All tracked in https://github.com/SciML/SciMLOperators.jl/issues/392.
 run_qa(
     SciMLOperators;
-    Aqua = Aqua,
-    JET = JET,
-    jet = true,
-    ExplicitImports = ExplicitImports,
     explicit_imports = true,
     aqua_kwargs = (; ambiguities = false, unbound_args = false),
     jet_kwargs = (; target_defined_modules = true, broken = true),
