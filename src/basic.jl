@@ -389,7 +389,8 @@ for fact in (
         :lq, :lq!,
         :svd, :svd!,
     )
-    @eval LinearAlgebra.$fact(L::ScaledOperator, args...) = L.λ * fact(L.L, args...)
+    @eval LinearAlgebra.$fact(L::ScaledOperator, args...) = L.λ *
+        LinearAlgebra.$fact(L.L, args...)
 end
 
 # operator application, inversion
@@ -902,7 +903,7 @@ for fact in (
         :svd, :svd!,
     )
     @eval LinearAlgebra.$fact(L::ComposedOperator, args...) = prod(
-        op -> $fact(op, args...),
+        op -> LinearAlgebra.$fact(op, args...),
         reverse(L.ops)
     )
 end

@@ -3,23 +3,26 @@ $(README)
 """
 module SciMLOperators
 
-using DocStringExtensions
+using DocStringExtensions: DocStringExtensions, FIELDS, README, SIGNATURES, TYPEDEF
 
-using LinearAlgebra
+using LinearAlgebra: LinearAlgebra, Adjoint, Bidiagonal, Factorization, I,
+    Transpose, UniformScaling, axpby!, axpy!, ishermitian,
+    isposdef, issuccess, issymmetric, lu, opnorm
 
 import ArrayInterface
 # MacroTools dependency removed - using explicit method forwarding instead
 import Accessors: @reset
 
-using Adapt
+using Adapt: Adapt
 
 # overload
 import Base: show
-import Base: zero, one, oneunit
-import Base: +, -, *, /, \, ∘, ==, conj, exp, kron
+import Base: zero, one
+import Base: +, -, *, /, \, ==, conj, exp, kron
 import Base: iszero, inv, adjoint, transpose, size, convert
+import Base: Matrix
 import LinearAlgebra: mul!, ldiv!, lmul!, rmul!, factorize
-import LinearAlgebra: Matrix, Diagonal
+import LinearAlgebra: Diagonal
 
 # Used for downstream checking
 const isv1 = true
@@ -247,5 +250,22 @@ export update_coefficients!,
     has_ldiv!,
     has_concretization,
     kronsum
+
+# Documented (see docs/src/interface.md, docs/src/premade_operators.md) but
+# not exported: the core abstract types every downstream dispatches on and the
+# lazy-algebra result types. Declared public so downstream packages that
+# qualify these names pass ExplicitImports' public-API checks. The `:public`
+# expression head is only available on Julia >= 1.11, so guard the declaration.
+@static if VERSION >= v"1.11.0-DEV.469"
+    eval(
+        Expr(
+            :public,
+            :AbstractSciMLOperator, :AbstractSciMLScalarOperator,
+            :ScaledOperator, :AddedOperator, :ComposedOperator,
+            :InvertedOperator, :AdjointOperator, :TransposedOperator,
+            :AddedScalarOperator, :ComposedScalarOperator, :InvertedScalarOperator
+        )
+    )
+end
 
 end # module
