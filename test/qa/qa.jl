@@ -10,9 +10,6 @@ using LoopVectorization, SparseArrays, StaticArraysCore
 #     (no public equivalent)
 #   - `LinearAlgebra.{Adjoint,Transpose}Factorization` wrapper types used for
 #     adjoint/transpose factorization dispatch (no public name)
-#   - `Adapt.adapt_structure`, the documented-but-unmarked extension point we
-#     add methods to in src/adapt.jl
-#   - `ArrayInterface.{issingular,lu_instance}` (no public equivalent)
 #   - `Base.Broadcast.Broadcasted` / `StaticArraysCore.StaticArrayStyle` in
 #     the StaticArraysCore extension's `copyto!` signature
 #   - SciMLOperators' own private `_has_tensor_outer_mul_fast` /
@@ -21,25 +18,9 @@ using LoopVectorization, SparseArrays, StaticArraysCore
 qualified_access_ignore = (
     :var"@nexprs", :var"@ntuple", :promote_eltype,
     :AdjointFactorization, :TransposeFactorization,
-    :adapt_structure,
-    :issingular, :lu_instance,
     :Broadcasted, :StaticArrayStyle,
     :_has_tensor_outer_mul_fast, :_tensor_outer_mul_fast!,
 )
-if VERSION < v"1.11"
-    # `public` declarations are only effective on Julia >= 1.11, and several
-    # Base internals were only marked public in 1.11+. On older Julia:
-    #   - the lazy-algebra result types accessed by the SparseArrays
-    #     extension cannot be marked public here;
-    #   - `Base.@constprop`, `Base.@propagate_inbounds` and `Base.depwarn`
-    #     are not yet public (they are on >= 1.11).
-    # Ignore those only on the older Julia where they are unavoidable.
-    global qualified_access_ignore = (
-        qualified_access_ignore...,
-        :ScaledOperator, :AddedOperator, :ComposedOperator,
-        :var"@constprop", :var"@propagate_inbounds", :depwarn,
-    )
-end
 
 # `README` is a DocStringExtensions abbreviation used only in the module-level
 # docstring (`$(README)` at the top of src/SciMLOperators.jl). It is resolved
