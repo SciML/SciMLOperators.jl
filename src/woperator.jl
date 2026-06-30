@@ -123,8 +123,12 @@ end
 
 function Base.convert(::Type{AbstractMatrix}, W::WOperator{IIP}) where {IIP}
     if !IIP
-        # Allocating
-        W._concrete_form = -W.mass_matrix / W.gamma + convert(AbstractMatrix, W.J)
+        # Mirror the constructor: materialize a MatrixOperator mass matrix so the
+        # result type matches `_concrete_form` (otherwise this becomes an
+        # AddedOperator and the assignment back into the Matrix-typed slot fails).
+        mm = W.mass_matrix isa MatrixOperator ?
+            convert(AbstractMatrix, W.mass_matrix) : W.mass_matrix
+        W._concrete_form = -mm / W.gamma + convert(AbstractMatrix, W.J)
     end
     return W._concrete_form
 end
