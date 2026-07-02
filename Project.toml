@@ -1,6 +1,6 @@
 name = "SciMLOperators"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
-version = "1.22.1"
+version = "1.23.0"
 authors = ["Vedant Puri <vedantpuri@gmail.com>"]
 
 [deps]
