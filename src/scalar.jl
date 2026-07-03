@@ -215,7 +215,7 @@ Base.one(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(true)
 Base.zero(::Type{<:AbstractSciMLScalarOperator}) = ScalarOperator(false)
 Base.abs(α::ScalarOperator) = abs(α.val)
 
-function LinearAlgebra.exp(α::AbstractSciMLScalarOperator)
+function Base.exp(α::AbstractSciMLScalarOperator)
     update_func = (
         oldval, u, p, t;
         kwargs...,
@@ -237,7 +237,7 @@ function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     return nothing
 end
 
-function SciMLOperators.update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
+function update_coefficients(L::ScalarOperator, u, p, t; kwargs...)
     return ScalarOperator(L.update_func(L.val, u, p, t; kwargs...), L.update_func)
 end
 

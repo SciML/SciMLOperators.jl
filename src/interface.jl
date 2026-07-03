@@ -406,7 +406,7 @@ Base.ndims(L::AbstractSciMLOperator) = length(size(L))
 Base.isreal(L::AbstractSciMLOperator{T}) where {T} = T <: Real
 Base.Matrix(L::AbstractSciMLOperator) = Matrix(convert(AbstractMatrix, L))
 
-LinearAlgebra.exp(L::AbstractSciMLOperator, t) = exp(t * L)
+Base.exp(L::AbstractSciMLOperator, t) = exp(t * L)
 expmv(L::AbstractSciMLOperator, u, p, t) = exp(L, t) * u
 expmv!(v, L::AbstractSciMLOperator, u, p, t) = mul!(v, exp(L, t), u)
 
@@ -441,7 +441,7 @@ function Base.resize!(L::AbstractSciMLOperator, n::Integer)
     throw(MethodError(resize!, typeof.((L, n))))
 end
 
-LinearAlgebra.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
+Base.exp(L::AbstractSciMLOperator) = exp(Matrix(L))
 
 function LinearAlgebra.opnorm(L::AbstractSciMLOperator, p::Real = 2)
     if !isconvertible(L)

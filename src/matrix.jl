@@ -379,7 +379,7 @@ function DiagonalOperator(
 end
 LinearAlgebra.Diagonal(L::MatrixOperator) = MatrixOperator(Diagonal(L.A))
 
-function LinearAlgebra.exp(L::MatrixOperator{T, <:Diagonal}) where {T}
+function Base.exp(L::MatrixOperator{T, <:Diagonal}) where {T}
     update_func = (
         A, u, p, t;
         kwargs...,
@@ -437,14 +437,14 @@ for fact in (
         args...
     ) = InvertibleOperator(
         L,
-        $fact(convert(AbstractMatrix, L), args...)
+        LinearAlgebra.$fact(convert(AbstractMatrix, L), args...)
     )
     @eval LinearAlgebra.$fact(
         L::AbstractSciMLOperator;
         kwargs...
     ) = InvertibleOperator(
         L,
-        $fact(convert(AbstractMatrix, L); kwargs...)
+        LinearAlgebra.$fact(convert(AbstractMatrix, L); kwargs...)
     )
 end
 
