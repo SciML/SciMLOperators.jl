@@ -2,6 +2,7 @@
 
 ```@docs
 SciMLOperators.AbstractSciMLOperator
+SciMLOperators.AbstractSciMLScalarOperator
 ```
 
 ## Interface API Reference
