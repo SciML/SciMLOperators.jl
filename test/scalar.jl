@@ -8,6 +8,7 @@ using SciMLOperators: AbstractSciMLScalarOperator,
     ScaledOperator
 
 using LinearAlgebra, Random, Test
+using ArrayInterface
 
 Random.seed!(0)
 N = 8
@@ -30,6 +31,8 @@ K = 12
 
     @test size(α) == ()
     @test isconstant(α)
+    @test !ArrayInterface.issingular(α)
+    @test ArrayInterface.issingular(ScalarOperator(0.0))
 
     # Original lmul!/rmul! tests
     v = copy(u)
