@@ -231,6 +231,7 @@ getops(α::ScalarOperator) = (α.val,)
 isconstant(α::ScalarOperator) = update_func_isconstant(α.update_func)
 has_ldiv(α::ScalarOperator) = !iszero(α.val)
 has_ldiv!(α::ScalarOperator) = has_ldiv(α)
+ArrayInterface.issingular(α::ScalarOperator) = iszero(α.val)
 
 function update_coefficients!(L::ScalarOperator, u, p, t; kwargs...)
     L.val = L.update_func(L.val, u, p, t; kwargs...)
