@@ -1,5 +1,36 @@
 abstract type AbstractWOperator{T} <: AbstractSciMLOperator{T} end
 
+"""
+$(TYPEDEF)
+
+Small dense factorization helper for repeated solves with a fixed `W` matrix.
+
+# Arguments
+
+  - `W`: Concrete square matrix to solve against.
+  - `callinv`: Whether very small matrices may store `inv(W)` for direct
+    multiplication during `\\`.
+
+# Fields
+
+$(FIELDS)
+
+# Interface Rules
+
+`StaticWOperator` is a specialized helper for solver internals that need a
+fixed W-operator solve. It supports `Wstatic \\ v`; it does not participate in
+coefficient updates and should be reconstructed when the underlying matrix
+changes.
+
+# Examples
+
+```julia
+using SciMLOperators
+
+W = StaticWOperator([2.0 0.0; 0.0 4.0])
+W \\ [2.0, 8.0]
+```
+"""
 struct StaticWOperator{isinv, T, F} <: AbstractWOperator{T}
     W::T
     F::F
@@ -25,7 +56,9 @@ end
 Base.:\(W::StaticWOperator{isinv}, v::AbstractArray) where {isinv} = isinv ? W.W * v : W.F \ v
 
 """
-    WOperator(mass_matrix,gamma,J)
+$TYPEDEF
+
+    WOperator{IIP}(mass_matrix, gamma, J, u[, jacvec])
 
 A linear operator that represents the W matrix of an ODEProblem, defined as
 
@@ -33,11 +66,46 @@ A linear operator that represents the W matrix of an ODEProblem, defined as
 W = \\frac{1}{\\gamma}MM - J
 ```
 
-where `MM` is the mass matrix (a regular `AbstractMatrix` or a `UniformScaling`),
-`γ` is a real number, and `J` is the Jacobian operator (must be a `AbstractSciMLOperator`).
+where `MM` is the mass matrix, `γ` is a scalar, and `J` is the Jacobian
+operator.
 
-`WOperator` supports lazy `*` and `mul!` operations, the latter utilizing an
-internal cache (can be specified in the constructor; default to regular `Vector`).
+# Arguments
+
+  - `mass_matrix`: A matrix-like object, `UniformScaling`, or `MatrixOperator`
+    representing `MM`.
+  - `gamma`: Scalar coefficient in the W-operator definition.
+  - `J`: Jacobian represented as a number, matrix, or `AbstractSciMLOperator`.
+  - `u`: Prototype state used to allocate the internal multiplication cache.
+  - `jacvec`: Optional operator used for Jacobian-vector products in `mul!`.
+
+# Fields
+
+$(FIELDS)
+
+# Interface Rules
+
+`WOperator` is part of the public solver-developer interface used by implicit
+ODE solvers. It supports matrix-like `*`, `\\`, `mul!`, indexing, sizing, and
+concretization. Calling `update_coefficients!(W, u, p, t; gamma)` updates the
+Jacobian, mass matrix, optional Jacobian-vector operator, and stored `gamma`.
+Omitting `(u, p, t)` leaves those operators unchanged and only updates `gamma`
+when it is supplied.
+
+`IIP` controls whether conversion reuses the internally stored concrete form
+as an in-place operator. The public contract is the mathematical action of
+`W`; downstream code should not depend on `_func_cache` or `_concrete_form`.
+
+# Examples
+
+```julia
+using LinearAlgebra, SciMLOperators
+
+J = MatrixOperator([1.0 2.0; 3.0 4.0])
+W = WOperator{true}(I, 0.5, J, zeros(2))
+
+v = [1.0, 2.0]
+W * v == (Matrix(W) * v)
+```
 """
 mutable struct WOperator{
         IIP, T,

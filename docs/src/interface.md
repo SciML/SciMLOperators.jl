@@ -30,6 +30,7 @@ has_mul
 has_mul!
 has_ldiv
 has_ldiv!
+SciMLOperators.has_concretization
 ```
 
 ## Note About Affine Operators
