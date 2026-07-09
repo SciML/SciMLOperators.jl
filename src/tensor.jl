@@ -200,6 +200,41 @@ factorize(L::TensorProductOperator) = TensorProductOperator(map(factorize, L.ops
 $(TYPEDEF)
 
 Lazy Kronecker sum operator.
+
+# Arguments
+
+  - `outer`: A square matrix or `AbstractSciMLOperator` representing the first
+    term in `outer ⊗ I`.
+  - `inner`: A square matrix or `AbstractSciMLOperator` representing the second
+    term in `I ⊗ inner`.
+
+# Fields
+
+$(FIELDS)
+
+# Interface Rules
+
+`TensorSumOperator(outer, inner)` represents `outer ⊗ I + I ⊗ inner` without
+eagerly forming the Kronecker products. Both input operators must be square.
+The operator forwards state updates to `outer` and `inner`, and its cached
+application stores the two tensor-product terms needed by `mul!`.
+
+`isconvertible(::TensorSumOperator)` is `false` because eager fusion is not the
+default algebra path, but `has_concretization(L)` is `true` when both operands
+can be materialized.
+
+# Examples
+
+```julia
+using LinearAlgebra, SciMLOperators
+
+A = MatrixOperator([1.0 2.0; 3.0 4.0])
+B = MatrixOperator(Diagonal([5.0, 6.0, 7.0]))
+L = TensorSumOperator(A, B)
+
+v = ones(6)
+L * v == Matrix(L) * v
+```
 """
 struct TensorSumOperator{T, O, P} <: AbstractSciMLOperator{T}
     ops::O
@@ -236,6 +271,35 @@ end
 $SIGNATURES
 
 Construct the lazy Kronecker sum `A ⊗ I + I ⊗ B`.
+
+# Arguments
+
+  - `A`: A square matrix or `AbstractSciMLOperator`.
+  - `B`: A square matrix or `AbstractSciMLOperator`.
+
+# Returns
+
+A `TensorSumOperator` whose action is equivalent to
+`kron(A, I(size(B, 1))) + kron(I(size(A, 1)), B)`.
+
+# Interface Rules
+
+Both inputs must be square. Matrix inputs are wrapped in `MatrixOperator` so
+the returned object participates in the `AbstractSciMLOperator` update,
+caching, multiplication, and trait interfaces.
+
+# Examples
+
+```julia
+using LinearAlgebra, SciMLOperators
+
+A = [1.0 2.0; 3.0 4.0]
+B = Diagonal([5.0, 6.0, 7.0])
+L = kronsum(A, B)
+
+v = ones(6)
+L * v == Matrix(L) * v
+```
 """
 kronsum(A::Union{AbstractMatrix, AbstractSciMLOperator}, B::Union{AbstractMatrix, AbstractSciMLOperator}) = TensorSumOperator(A, B)
 

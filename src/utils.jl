@@ -80,5 +80,44 @@ isnothingfunc(f) = false
 _unwrap_val(x) = x
 _unwrap_val(::Val{X}) where {X} = X
 
+"""
+$SIGNATURES
+
+Return whether `L` can be materialized into a concrete scalar or matrix
+representation for fallback operations.
+
+# Arguments
+
+  - `L`: An operator-like object.
+
+# Returns
+
+`true` when `concretize(L)` is expected to succeed by calling
+`convert(AbstractMatrix, L)` or `convert(Number, L)`, and `false` otherwise.
+
+# Interface Rules
+
+Subtypes of `AbstractSciMLOperator` should define `has_concretization(L)` as
+`true` only when their current state can be materialized without changing the
+operator action. Composite operators should return `true` only when every
+component needed for the materialization also has concretization.
+
+This trait is intentionally separate from `isconvertible(L)`: an operator can
+have a correct concrete representation but avoid cheap eager fusion in generic
+algebra paths.
+
+# Examples
+
+```julia
+using SciMLOperators
+
+A = MatrixOperator([1.0 2.0; 3.0 4.0])
+has_concretization(A) # true
+
+F = FunctionOperator((y, x, u, p, t) -> copyto!(y, x), zeros(2), zeros(2);
+    isinplace = true, T = Float64, islinear = true)
+has_concretization(F) # false
+```
+"""
 has_concretization(::AbstractSciMLOperator) = false
 has_concretization(::Union{AbstractMatrix, UniformScaling, Factorization, Number}) = true

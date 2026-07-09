@@ -1,7 +1,38 @@
 """
 $(TYPEDEF)
 
-Lazy block diagonal operator.
+Lazy block diagonal operator built from `AbstractSciMLOperator` blocks.
+
+# Arguments
+
+  - `ops`: Operators or matrices to place on the block diagonal. Matrix
+    arguments are wrapped in `MatrixOperator`.
+
+# Fields
+
+$(FIELDS)
+
+# Interface Rules
+
+`BlockDiagonalOperator` applies each block to the corresponding slice of the
+input and concatenates the results. Its size is the sum of block row and
+column sizes. `update_coefficients[!]`, caching, and trait queries are
+forwarded to each block, so a block diagonal operator has concretization,
+in-place multiplication, or adjoint support only when the required component
+operators do.
+
+# Examples
+
+```julia
+using LinearAlgebra, SciMLOperators
+
+A = MatrixOperator([1.0 2.0; 3.0 4.0])
+B = MatrixOperator(Diagonal([5.0, 6.0, 7.0]))
+L = BlockDiagonalOperator(A, B)
+
+v = ones(5)
+L * v == Matrix(L) * v
+```
 """
 struct BlockDiagonalOperator{
         T,

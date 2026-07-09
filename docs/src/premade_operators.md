@@ -11,7 +11,12 @@ DiagonalOperator
 AffineOperator
 AddVector
 FunctionOperator
+BlockDiagonalOperator
 TensorProductOperator
+TensorSumOperator
+kronsum
+WOperator
+SciMLOperators.StaticWOperator
 ```
 
 ## Lazy Scalar Operator Combination
