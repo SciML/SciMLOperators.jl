@@ -1,4 +1,5 @@
 using SciMLOperators, LinearAlgebra, SparseArrays
+using ArrayInterface
 using Random
 
 using SciMLOperators: IdentityOperator,
@@ -39,6 +40,7 @@ K = 12
     @test size(Id) == (N, N)
     @test Id' isa IdentityOperator
     @test isconstant(Id)
+    @test !ArrayInterface.issingular(Id)
     @test_throws MethodError resize!(Id, N)
 
     for op in (*, \)

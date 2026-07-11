@@ -31,6 +31,7 @@ LinearAlgebra.opnorm(::IdentityOperator, p::Real = 2) = true
 for pred in (:issymmetric, :ishermitian, :isposdef)
     @eval LinearAlgebra.$pred(::IdentityOperator) = true
 end
+ArrayInterface.issingular(::IdentityOperator) = false
 
 getops(::IdentityOperator) = ()
 isconstant(::IdentityOperator) = true

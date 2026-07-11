@@ -1,5 +1,6 @@
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+ArrayInterface = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
@@ -12,6 +13,7 @@ Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
 Adapt = "4.5.2"
+ArrayInterface = "7.19"
 FFTW = "1.10.0"
 LoopVectorization = "0.12"
 SafeTestsets = "0.1.0"
