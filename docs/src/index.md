@@ -65,6 +65,10 @@ with downstream equation solvers. This necessitates the definition and use of
 an extended operator interface with all of these properties, hence the
 `AbstractSciMLOperator` interface.
 
+```@docs
+SciMLOperators
+```
+
 !!! warn
     
     This means that LinearMaps.jl is fundamentally lacking and is incompatible
