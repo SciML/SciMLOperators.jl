@@ -1,4 +1,4 @@
-using SciMLOperators, JET, Test
+using SciMLOperators, JET
 using SciMLTesting: run_qa
 # Load the weak-dependency triggers so the package extensions are loaded and
 # analyzed by the ExplicitImports checks below.
@@ -41,38 +41,5 @@ run_qa(
         no_stale_explicit_imports = (; ignore = (:README,)),
         all_qualified_accesses_are_public = (; ignore = qualified_access_ignore),
     ),
+    api_docs_kwargs = (; rendered = true),
 )
-
-@testset "Public API documentation coverage" begin
-    mod = SciMLOperators
-    doc_bindings = Set(keys(Base.Docs.meta(mod)))
-    public_names = setdiff(Symbol.(names(mod; all = false, imported = false)), (:SciMLOperators,))
-
-    missing_docstrings = Symbol[]
-    for name in public_names
-        binding = Base.Docs.Binding(mod, name)
-        binding in doc_bindings || push!(missing_docstrings, name)
-    end
-    @test isempty(missing_docstrings)
-
-    docs_src = joinpath(pkgdir(mod), "docs", "src")
-    docs_text = IOBuffer()
-    for (root, _, files) in walkdir(docs_src)
-        for file in files
-            endswith(file, ".md") || continue
-            write(docs_text, read(joinpath(root, file), String))
-            write(docs_text, '\n')
-        end
-    end
-    rendered_docs = String(take!(docs_text))
-    rendered_lines = Set(strip.(split(rendered_docs, '\n')))
-
-    missing_rendered_docs = Symbol[]
-    for name in public_names
-        name_text = String(name)
-        rendered = occursin("SciMLOperators.$name_text", rendered_docs) ||
-            name_text in rendered_lines
-        rendered || push!(missing_rendered_docs, name)
-    end
-    @test isempty(missing_rendered_docs)
-end
