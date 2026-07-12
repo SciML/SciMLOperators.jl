@@ -204,6 +204,12 @@ function Base.convert(::Type{Number}, W::WOperator)
     W._concrete_form = -W.mass_matrix / W.gamma + convert(Number, W.J)
     return W._concrete_form
 end
+# `convert(AbstractMatrix, W)` fuses `-M/γ` with `convert(AbstractMatrix, W.J)`, so `W` is
+# convertible exactly when both its mass matrix `M` and its Jacobian `W.J` are. A matrix-free
+# `W.J` (e.g. a Jacobian-vector-product operator) — or a matrix-free mass matrix — makes `W`
+# matrix-free too; without this the default `all(isconvertible, getops(W)) ==
+# all(isconvertible, ()) == true` would wrongly claim a matrix-free `W` is convertible.
+isconvertible(W::WOperator) = isconvertible(W.mass_matrix) && isconvertible(W.J)
 Base.size(W::WOperator) = size(W.J)
 Base.size(W::WOperator, d::Integer) = d <= 2 ? size(W)[d] : 1
 function Base.getindex(W::WOperator, i::Int)

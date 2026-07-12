@@ -52,3 +52,25 @@ Random.seed!(0)
     b = randn(n)
     @test W_mm \ b ≈ convert(AbstractMatrix, W_mm) \ b
 end
+
+@testset "WOperator isconvertible honesty" begin
+    n = 5
+    u = rand(n)
+    gamma = 0.1
+    Mmat = Matrix(1.0I, n, n)
+    concrete_J = MatrixOperator(rand(n, n))
+    # A matrix-free operator: only `mul!`, no `convert(AbstractMatrix, ·)`.
+    matfree(A) = FunctionOperator(
+        (w, v, p, t) -> mul!(w, A, v), zeros(n), zeros(n); islinear = true
+    )
+    matfree_J = matfree(rand(n, n))
+    matfree_M = matfree(Mmat)
+
+    @test isconvertible(matfree_J) == false
+    # `W` is convertible only when both the mass matrix and the Jacobian are; a matrix-free
+    # part on either side makes `W` matrix-free (previously `isconvertible(W)` was vacuously
+    # `true` because `getops(W) == ()`).
+    @test isconvertible(WOperator{true}(Mmat, gamma, concrete_J, u)) == true
+    @test isconvertible(WOperator{true}(Mmat, gamma, matfree_J, u)) == false
+    @test isconvertible(WOperator{true}(matfree_M, gamma, concrete_J, u)) == false
+end
