@@ -272,6 +272,10 @@ function Base.IndexStyle(::Type{<:MatrixOperator{T, AType}}) where {T, AType}
     return Base.IndexStyle(AType)
 end
 Base.copyto!(L::MatrixOperator, rhs) = (copyto!(L.A, rhs); L)
+# Unwrap a MatrixOperator `rhs` so the copy hits the underlying matrices' specialized
+# `copyto!` (e.g. sparse→sparse copies `nzval`/`rowval`/`colptr`) instead of the generic
+# element-wise fallback, which is O(n²) with sparse-index overhead.
+Base.copyto!(L::MatrixOperator, rhs::MatrixOperator) = (copyto!(L.A, rhs.A); L)
 
 Base.Broadcast.broadcastable(L::MatrixOperator) = L
 Base.ndims(::Type{<:MatrixOperator{T, AType}}) where {T, AType} = ndims(AType)
