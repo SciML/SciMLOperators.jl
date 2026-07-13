@@ -280,6 +280,7 @@ function Base.copy(L::MatrixOperator)
     return MatrixOperator(
         copy(L.A);
         update_func = L.update_func,
+        update_func! = L.update_func!,
         accepted_kwargs = NoKwargFilter()
     )
 end
