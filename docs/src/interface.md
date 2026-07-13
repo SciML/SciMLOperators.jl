@@ -12,6 +12,7 @@ update_coefficients
 update_coefficients!
 cache_operator
 concretize
+SciMLOperators.DEFAULT_UPDATE_FUNC
 ```
 
 ## Traits
@@ -31,6 +32,7 @@ has_mul!
 has_ldiv
 has_ldiv!
 SciMLOperators.has_concretization
+SciMLOperators.NoKwargFilter
 ```
 
 ## Note About Affine Operators

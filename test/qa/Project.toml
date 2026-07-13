@@ -8,14 +8,11 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[sources]
-SciMLOperators = {path = "../.."}
-
 [compat]
 JET = "0.9,0.10,0.11"
 LoopVectorization = "0.12"
 SafeTestsets = "0.0.1, 0.1, 1"
-SciMLTesting = "1.5"
+SciMLTesting = "2.2"
 SparseArrays = "1.10"
 StaticArraysCore = "1.4.4"
 Test = "1"

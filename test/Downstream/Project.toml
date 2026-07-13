@@ -7,10 +7,7 @@ SciMLTesting = "09d9d899-5365-40a9-917a-5f67fddea283"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[sources]
-SciMLOperators = {path = "../.."}
-
 [compat]
 SafeTestsets = "0.0.1, 0.1, 1"
-SciMLTesting = "1"
+SciMLTesting = "2.2"
 Test = "1"
