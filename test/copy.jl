@@ -15,6 +15,16 @@ using Test
         # Check that copy is not affected
         @test L_copy.A[1, 1] != 999.0
         @test L_copy.A != L.A
+
+        # `copy` must preserve `update_func!` — both its type (so the result is not a
+        # different concrete type that can't be assigned back into a typed slot) and its
+        # behavior (a copy of a state-dependent operator stays state-dependent).
+        @test typeof(L_copy) === typeof(L)
+        M = MatrixOperator(zeros(2, 2); update_func! = (B, u, p, t) -> (B[1, 1] = u[1]; B))
+        M_copy = copy(M)
+        @test typeof(M_copy) === typeof(M)
+        update_coefficients!(M_copy, [7.0], nothing, nothing)
+        @test M_copy.A[1, 1] == 7.0
     end
 
     # Test DiagonalOperator (which is a MatrixOperator with Diagonal matrix)
