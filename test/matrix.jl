@@ -818,3 +818,21 @@ end
     @test issparse(sLkronsum)
     @test sLkronsum ≈ Matrix(Lkronsum)
 end
+
+@testset "copyto! MatrixOperator <- MatrixOperator delegates to .A" begin
+    # A MatrixOperator rhs must be unwrapped so the copy hits the underlying matrices'
+    # specialized copyto! (sparse->sparse copies nzval/rowval/colptr) rather than the
+    # generic element-wise fallback.
+    for Amk in (() -> rand(6, 6), () -> sparse(Tridiagonal(rand(5), rand(6), rand(5))))
+        A = Amk()
+        src = MatrixOperator(copy(A))
+        dest = MatrixOperator(zero(A))
+        copyto!(dest, src)
+        @test dest.A == A
+        @test typeof(dest.A) === typeof(A)   # structure preserved (sparse stays sparse)
+    end
+    # plain-array rhs still works (existing method)
+    d = MatrixOperator(zeros(3, 3))
+    copyto!(d, [1.0 2 3; 4 5 6; 7 8 9])
+    @test d.A == [1.0 2 3; 4 5 6; 7 8 9]
+end
