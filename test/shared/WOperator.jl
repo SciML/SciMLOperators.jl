@@ -51,6 +51,22 @@ Random.seed!(0)
     # And `\` works end-to-end
     b = randn(n)
     @test W_mm \ b ≈ convert(AbstractMatrix, W_mm) \ b
+
+    # In-place WOperator with an operator-typed Jacobian: no external caller
+    # maintains _concrete_form (jacobian2W! only handles plain-matrix J), so
+    # convert must rebuild it with the current gamma. Regression test for the
+    # silently-stale form built at init with gamma = 0 (Inf diagonal), see
+    # SciML/OrdinaryDiffEq.jl#3933.
+    J_op = MatrixOperator(randn(n, n))
+    W_op = WOperator{true}(I(n), 0.0, J_op, randn(n))
+    update_coefficients!(W_op; gamma = 0.25)
+    @test convert(AbstractMatrix, W_op) ≈ -Matrix(1.0I, n, n) / 0.25 +
+        convert(AbstractMatrix, J_op)
+    @test all(isfinite, convert(AbstractMatrix, W_op))
+    # Rebuilt again after gamma changes
+    update_coefficients!(W_op; gamma = 0.5)
+    @test convert(AbstractMatrix, W_op) ≈ -Matrix(1.0I, n, n) / 0.5 +
+        convert(AbstractMatrix, J_op)
 end
 
 @testset "WOperator isconvertible honesty" begin
