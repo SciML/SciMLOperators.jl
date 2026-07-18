@@ -410,6 +410,77 @@ end
     end
 end
 
+@testset "AddedOperator cache sharing (Composed, Tensor, Composed, Tensor, Tensor)" begin
+    using SciMLOperators: cache_operator_hinted, _get_cache_shapes
+
+    m1, m2 = 2, 4   # m1 * m2 == N
+
+    # C1 and C2: same wrapper (ComposedOperator), different inner type params
+    # C1 = A1*B1  → ops::Tuple{MatrixOperator, MatrixOperator}
+    # C2 = A2*B2' → ops::Tuple{MatrixOperator, AdjointOperator{…}}
+    A1 = MatrixOperator(rand(N, N)); B1 = MatrixOperator(rand(N, N))
+    A2 = MatrixOperator(rand(N, N)); B2 = MatrixOperator(rand(N, N))
+    C1 = A1 * B1
+    C2 = A2 * B2'
+
+    # T1, T2, T3: same wrapper (TensorProductOperator), different inner type params
+    # T1 = Ao ⊗ Ai, T2 = Ao' ⊗ Ai, T3 = Ao ⊗ Ai'
+    Ao = MatrixOperator(rand(m1, m1)); Ai = MatrixOperator(rand(m2, m2))
+    T1 = TensorProductOperator(Ao, Ai)
+    T2 = TensorProductOperator(Ao', Ai)
+    T3 = TensorProductOperator(Ao, Ai')
+
+    L = C1 + T1 + C2 + T2 + T3 + A1 + A2
+    @test L isa AddedOperator
+    @test length(L.ops) == 7
+
+    for input in (rand(N, K), rand(N))
+        L = cache_operator(L, input)
+        expected = C1 * input + T1 * input + C2 * input + T2 * input + T3 * input +
+            A1 * input + A2 * input
+
+        # Correctness: out-of-place (*) and in-place (mul!) paths
+        @test L * input ≈ expected
+        w = similar(input)
+        mul!(w, L, input)
+        @test w ≈ expected
+
+        # Cache sharing: same-wrapper ops with compatible sizes share physical buffers
+        @test L.ops[3].cache === L.ops[1].cache   # C2 (A2*B2') reuses C1's cache
+        @test L.ops[4].cache === L.ops[2].cache   # T2 (Ao'⊗Ai) reuses T1's cache
+        @test L.ops[5].cache === L.ops[2].cache   # T3 (Ao⊗Ai') reuses T1's cache
+    end
+
+    # --- Mixed-eltype: Float64 + ComplexF64 ComposedOperators ---
+    # promote_type(Float64, ComplexF64) = ComplexF64 = eltype(Ac) → Ac is donor, Ar reuses its cache
+    Ar = MatrixOperator(rand(Float64, N, N)) * MatrixOperator(rand(Float64, N, N))
+    Ac = MatrixOperator(rand(ComplexF64, N, N)) * MatrixOperator(rand(ComplexF64, N, N))
+    v_real = rand(Float64, N)
+    Lcs = cache_operator(Ar + Ac, v_real)
+    @test Lcs.ops[1].cache === Lcs.ops[2].cache   # Ar reuses Ac's ComplexF64 cache
+    w_c = similar(v_real, ComplexF64)
+    mul!(w_c, Lcs, v_real)
+    @test w_c ≈ Ar * v_real + Ac * v_real
+
+    # --- No sharing: Float64 + ComplexF32 → promote_type = ComplexF64 (neither op's eltype) ---
+    Af32 = MatrixOperator(rand(ComplexF32, N, N)) * MatrixOperator(rand(ComplexF32, N, N))
+    Lf32s = cache_operator(Ar + Af32, rand(Float64, N))
+    @test Lf32s.ops[1].cache !== Lf32s.ops[2].cache   # independent caches
+
+    # --- Non-square ComposedOperator: _get_cache_shapes must match cache_self's allocation ---
+    M1, M2, M3 = 5, 3, 4
+    P = MatrixOperator(rand(M1, M2)); Q = MatrixOperator(rand(M2, M3))
+    PQc = cache_operator(P * Q, rand(M3))
+
+    @test _get_cache_shapes(PQc, rand(M3)) == ((M2,), (M3,))
+    @test map(size, PQc.cache) == ((M2,), (M3,))
+    v_ns = rand(M3)
+    w_ns = zeros(M1)
+    mul!(w_ns, PQc, v_ns)
+    @test w_ns ≈ P * (Q * v_ns)
+end
+
+
 @testset "ComposedOperator" begin
     A = rand(N, N)
     B = rand(N, N)
