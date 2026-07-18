@@ -190,10 +190,13 @@ function update_coefficients!(
 end
 
 function Base.convert(::Type{AbstractMatrix}, W::WOperator{IIP}) where {IIP}
-    if !IIP
+    if !IIP || W.J isa AbstractSciMLOperator
         # Mirror the constructor: materialize a MatrixOperator mass matrix so the
         # result type matches `_concrete_form` (otherwise this becomes an
         # AddedOperator and the assignment back into the Matrix-typed slot fails).
+        # The IIP case with a plain-matrix `J` is maintained externally via
+        # `jacobian2W!` writing into `_concrete_form`; when `J` is an operator no
+        # caller maintains it, so it must be rebuilt here with the current gamma.
         mm = W.mass_matrix isa MatrixOperator ?
             convert(AbstractMatrix, W.mass_matrix) : W.mass_matrix
         W._concrete_form = -mm / W.gamma + convert(AbstractMatrix, W.J)
