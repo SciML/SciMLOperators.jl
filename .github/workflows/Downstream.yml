@@ -13,15 +13,16 @@ jobs:
       matrix:
         julia-version: [1]
         package:
-          - {user: SciML, repo: SciMLBase.jl, group: InterfaceII}
-          - {user: SciML, repo: DiffEqBase.jl, group: InterfaceII}
-          - {user: SciML, repo: LinearSolve.jl, group: InterfaceII}
-          - {user: SciML, repo: OrdinaryDiffEq.jl, group: InterfaceII}
+          - {user: SciML, repo: SciMLBase.jl, subdir: "", group: Core}
+          - {user: SciML, repo: OrdinaryDiffEq.jl, subdir: lib/DiffEqBase, group: Core}
+          - {user: SciML, repo: LinearSolve.jl, subdir: "", group: Core}
+          - {user: SciML, repo: OrdinaryDiffEq.jl, subdir: "", group: InterfaceIII}
     uses: "SciML/.github/.github/workflows/downstream.yml@v1"
     with:
       julia-version: "${{ matrix.julia-version }}"
       julia-arch: "x64"
       owner: "${{ matrix.package.user }}"
       repo: "${{ matrix.package.repo }}"
+      subdir: "${{ matrix.package.subdir }}"
       group: "${{ matrix.package.group }}"
     secrets: "inherit"
