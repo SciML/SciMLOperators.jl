@@ -128,7 +128,18 @@ mutable struct WOperator{
             _concrete_form = -mass_matrix / gamma + convert(Number, J)
             _func_cache = nothing
         else
-            AJ = J isa MatrixOperator ? convert(AbstractMatrix, J) : J
+            # Materialize convertible operator Jacobians (not only MatrixOperator)
+            # so `_concrete_form` is Matrix-typed. Tensor-product graphs report
+            # `isconvertible == false` but still convert to AbstractMatrix; if we
+            # leave `_concrete_form` as AddedOperator, later convert assignment
+            # of a Matrix fails (OrdinaryDiffEq AMF fd2d regression).
+            AJ = J
+            if !(J isa AbstractMatrix)
+                try
+                    AJ = convert(AbstractMatrix, J)
+                catch
+                end
+            end
             mm = mass_matrix isa MatrixOperator ?
                 convert(AbstractMatrix, mass_matrix) : mass_matrix
             _concrete_form = -mm / gamma + AJ
@@ -192,14 +203,21 @@ end
 function Base.convert(::Type{AbstractMatrix}, W::WOperator{IIP}) where {IIP}
     if !IIP || W.J isa AbstractSciMLOperator
         # Mirror the constructor: materialize a MatrixOperator mass matrix so the
-        # result type matches `_concrete_form` (otherwise this becomes an
-        # AddedOperator and the assignment back into the Matrix-typed slot fails).
+        # result type matches `_concrete_form` when that slot is Matrix-typed.
         # The IIP case with a plain-matrix `J` is maintained externally via
         # `jacobian2W!` writing into `_concrete_form`; when `J` is an operator no
         # caller maintains it, so it must be rebuilt here with the current gamma.
+        # If construction left an operator-typed `_concrete_form` (e.g. an
+        # AddedOperator tensor-product graph that still converts to a Matrix),
+        # return a fresh matrix instead of assigning into the wrong slot.
         mm = W.mass_matrix isa MatrixOperator ?
             convert(AbstractMatrix, W.mass_matrix) : W.mass_matrix
-        W._concrete_form = -mm / W.gamma + convert(AbstractMatrix, W.J)
+        form = -mm / W.gamma + convert(AbstractMatrix, W.J)
+        if form isa typeof(W._concrete_form)
+            W._concrete_form = form
+            return W._concrete_form
+        end
+        return form
     end
     return W._concrete_form
 end
