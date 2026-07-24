@@ -67,6 +67,26 @@ Random.seed!(0)
     update_coefficients!(W_op; gamma = 0.5)
     @test convert(AbstractMatrix, W_op) ≈ -Matrix(1.0I, n, n) / 0.5 +
         convert(AbstractMatrix, J_op)
+
+    # AddedOperator / TensorProductOperator Jacobian (AMF-style). These graphs
+    # report isconvertible=false but still convert to AbstractMatrix. Constructor
+    # and convert must not leave/require an AddedOperator-typed _concrete_form
+    # slot that cannot accept the materialized Matrix (OrdinaryDiffEq AMF fd2d).
+    N = 4
+    h = 1 / (N + 1)
+    D = (1 / h^2) * Tridiagonal(ones(N - 1), -2 * ones(N), ones(N - 1))
+    D_op = MatrixOperator(D)
+    Jx = 0.1 * Base.kron(D_op, IdentityOperator(N))
+    Jy = 0.1 * Base.kron(IdentityOperator(N), D_op)
+    J_add = cache_operator(Jx + Jy, zeros(N^2))
+    @test !isconvertible(J_add)  # trait is intentionally false for tensor products
+    W_add = WOperator{true}(I, 1.0, J_add, randn(N^2))
+    update_coefficients!(W_add; gamma = 0.25)
+    M_add = convert(AbstractMatrix, W_add)
+    @test M_add isa AbstractMatrix
+    @test size(M_add) == (N^2, N^2)
+    @test all(isfinite, M_add)
+    @test M_add ≈ -Matrix(1.0I, N^2, N^2) / 0.25 + convert(AbstractMatrix, J_add)
 end
 
 @testset "WOperator isconvertible honesty" begin
