@@ -426,7 +426,37 @@ function Base.:\(L::TensorProductOperator, v::AbstractVecOrMat)
     return v isa AbstractMatrix ? reshape(V, (n, k)) : reshape(V, (n,))
 end
 
-function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
+# `c1` (3 and 5 arg `mul!`) and `c5` (3 arg `ldiv!`) are read for every input shape.
+function _cache_self_c1_c5(L::TensorProductOperator, v::AbstractVecOrMat)
+    outer, inner = L.ops
+
+    mi, ni = size(inner)
+    mo, no = size(outer)
+    k = size(v, 2)
+
+    c1 = outer isa IdentityOperator ? nothing : lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
+
+    if mapreduce(issquare, &, L.ops)
+        c5 = c1
+    else
+        c5 = lmul!(false, similar(v, (ni, mo * k))) # c5 = inner \ v
+    end
+
+    return c1, c5
+end
+
+# Cache slots 2, 3, 4, 6 and 7 are read only by the `k > 1` branches of `outer_mul!`
+# and `outer_div!` — every path that reaches them returns early when the input has a
+# single column. A vector input therefore only ever touches `c1` and `c5`, so the rest
+# are left unallocated: 4 buffers down to 1 for square factors, 7 down to 2 otherwise.
+function cache_self(L::TensorProductOperator, v::AbstractVector)
+    c1, c5 = _cache_self_c1_c5(L, v)
+
+    @reset L.cache = (c1, nothing, nothing, nothing, c5, nothing, nothing)
+    return L
+end
+
+function cache_self(L::TensorProductOperator, v::AbstractMatrix)
     outer, inner = L.ops
 
     mi, ni = size(inner)
@@ -435,8 +465,10 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
 
     is_outer_identity = outer isa IdentityOperator
 
+    # 3 and 5 arg mul!, 3 arg ldiv!
+    c1, c5 = _cache_self_c1_c5(L, v)
+
     # 3 arg mul!
-    c1 = is_outer_identity ? nothing : lmul!(false, similar(v, (mi, no * k))) # c1 = inner * v
     c2 = is_outer_identity ? nothing : lmul!(false, similar(v, (no, mi, k))) # permute (2, 1, 3)
     c3 = is_outer_identity ? nothing : lmul!(false, similar(v, (mo, mi * k))) # c3 = outer * c2
 
@@ -445,9 +477,8 @@ function cache_self(L::TensorProductOperator, v::AbstractVecOrMat)
 
     # 3 arg ldiv!
     if mapreduce(issquare, &, L.ops)
-        c5, c6, c7 = c1, c2, c3
+        c6, c7 = c2, c3
     else
-        c5 = lmul!(false, similar(v, (ni, mo * k))) # c5 = inner \ v
         c6 = lmul!(false, similar(v, (mo, ni, k))) # permute (2, 1, 3)
         c7 = lmul!(false, similar(v, (no, ni * k))) # c7 = outer \ c6
     end
