@@ -175,6 +175,8 @@ function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
 end
 
 getops(L::TensorProductOperator) = L.ops
+getcache(L::TensorProductOperator) = L.cache
+adopt_cache(L::TensorProductOperator, cache, v) = cache_internals(update_cache(L, cache), v)
 
 # Copy method to avoid aliasing
 function Base.copy(L::TensorProductOperator)

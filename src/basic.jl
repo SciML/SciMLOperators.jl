@@ -789,8 +789,23 @@ has_adjoint(L::AddedOperator) = all(has_adjoint, L.ops)
 @generated function cache_internals(L::AddedOperator, v::AbstractVecOrMat)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    cached = [:(cache_operator(L.ops[$i], v)) for i in 1:N]
-    return :(AddedOperator($(Expr(:tuple, cached...))))
+    syms = [Symbol(:op_, i) for i in 1:N]
+
+    # `mul!` applies the summands one after another, so no two of their caches are ever
+    # live at the same time and a summand can reuse the scratch of an earlier one. Only
+    # summands of the same concrete type can qualify — that is what pins their element
+    # types — so the candidates are picked out here, at compile time, and each summand
+    # tries them all before allocating anything of its own.
+    stmts = map(1:N) do i
+        donors = Expr(:tuple, syms[findall(j -> ops_types[j] === ops_types[i], 1:(i - 1))]...)
+        earlier = Expr(:tuple, syms[1:(i - 1)]...)
+        return :($(syms[i]) = _cache_summand(L.ops[$i], $donors, $earlier, v))
+    end
+
+    return quote
+        $(stmts...)
+        return AddedOperator($(Expr(:tuple, syms...)))
+    end
 end
 
 getindex(L::AddedOperator, i::Int) = sum(op -> op[i], L.ops)
@@ -1003,6 +1018,8 @@ function update_coefficients(L::ComposedOperator, u, p, t; kwargs...)
 end
 
 getops(L::ComposedOperator) = L.ops
+getcache(L::ComposedOperator) = L.cache
+adopt_cache(L::ComposedOperator, cache, v) = cache_internals(update_cache(L, cache), v)
 
 # Copy method to avoid aliasing
 function Base.copy(L::ComposedOperator)
@@ -1345,6 +1362,8 @@ function update_coefficients(L::InvertedOperator, u, p, t; kwargs...)
 end
 
 getops(L::InvertedOperator) = (L.L,)
+getcache(L::InvertedOperator) = L.cache
+adopt_cache(L::InvertedOperator, cache, v) = cache_internals(update_cache(L, cache), v)
 islinear(L::InvertedOperator) = islinear(L.L)
 isconvertible(::InvertedOperator) = false
 

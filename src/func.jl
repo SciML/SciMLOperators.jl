@@ -212,6 +212,17 @@ function set_cache(
     )
 end
 
+getcache(L::FunctionOperator) = L.cache
+# `cache` is a type parameter here, so it cannot be swapped with `@reset`.
+update_cache(L::FunctionOperator, new_cache) = set_cache(L, new_cache)
+
+# Deliberately no `adopt_cache` method: `cache_self` sizes its buffers from
+# `traits.sizes`, the input/output *array* shapes, which `size(L) == traits.size` does not
+# expose, so two same-typed operators of equal `size` can still need different buffers.
+# `cache_operator` also does batch-size fixup that skipping straight to `cache_internals`
+# would miss. `FunctionOperator` still shares via the post-hoc path in `_deduplicate_cache`,
+# which compares buffers that have actually been allocated.
+
 function input_eltype(
         ::FunctionOperator{
             iip, oop, mul5, T, F, Fa, Fi, Fai, Tr, U, P, Tt, C,

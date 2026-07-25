@@ -426,6 +426,58 @@ end
     end
 end
 
+@testset "AddedOperator cache sharing" begin
+    v = rand(N)
+    nbuf(cache) = length(unique(objectid, [b for b in cache if b !== nothing]))
+    nbuffers(L) = nbuf([b for op in L.ops for b in op.cache])
+
+    # Summands with interchangeable caches reuse one set of buffers.
+    C1 = MatrixOperator(rand(N, N)) * MatrixOperator(rand(N, N))
+    C2 = MatrixOperator(rand(N, N)) * MatrixOperator(rand(N, N))
+    L = cache_operator(C1 + C2, v)
+
+    @test nbuffers(L) == 2                          # 4 without sharing
+    @test L.ops[1].cache[1] !== L.ops[1].cache[2]   # slots live at once stay distinct
+    @test L * v ≈ C1 * v + C2 * v
+    @test mul!(zeros(N), L, v) ≈ C1 * v + C2 * v
+    @test (@inferred cache_operator(C1 + C2, v)) isa AddedOperator
+
+    # Setup allocates one cache, not one per summand: a summand takes an earlier one's
+    # buffers outright rather than allocating its own and discarding them. Without that,
+    # this grows by a full cache for every extra summand.
+    let n = 4096, vn = rand(n)
+        mk(M) = sum(
+            ntuple(
+                _ -> MatrixOperator(sprand(n, n, 1 / n)) * MatrixOperator(sprand(n, n, 1 / n)),
+                M
+            )
+        )
+        setup(M) = (Lm = mk(M); cache_operator(Lm, vn); @allocated cache_operator(Lm, vn))
+        @test setup(8) < 2 * setup(2)
+    end
+
+    # Caches whose slots differ in eltype are never interchanged, even though both
+    # summands are `ComposedOperator{ComplexF64}` of the same shape — `cache_self` takes
+    # each slot's eltype from the inner factor, not from the composite.
+    Ar = MatrixOperator(rand(N, N)) * MatrixOperator(rand(ComplexF64, N, N))
+    Ac = MatrixOperator(rand(ComplexF64, N, N)) * MatrixOperator(rand(N, N))
+    Lm = cache_operator(Ar + Ac, v)
+
+    @test eltype(Ar) === eltype(Ac) === ComplexF64
+    @test eltype(Lm.ops[1].cache[1]) === ComplexF64
+    @test eltype(Lm.ops[2].cache[1]) === Float64
+
+    # A square TensorProductOperator aliases cache slot 5 onto slot 1; sharing keeps it.
+    T = TensorProductOperator(MatrixOperator(rand(2, 2)), MatrixOperator(rand(4, 4)))
+    vt = rand(8)
+    Lt = cache_operator(T + T, vt)
+
+    @test Lt.ops[2].cache[1] === Lt.ops[1].cache[1]
+    @test Lt.ops[2].cache[1] === Lt.ops[2].cache[5]
+    @test nbuffers(Lt) == nbuf(cache_operator(T, vt).cache)   # two summands, one set
+    @test mul!(zeros(8), Lt, vt) ≈ 2 * (T * vt)
+end
+
 @testset "ComposedOperator" begin
     A = rand(N, N)
     B = rand(N, N)
