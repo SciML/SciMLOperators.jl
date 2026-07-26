@@ -199,7 +199,11 @@ function Base.convert(::Type{AbstractMatrix}, W::WOperator{IIP}) where {IIP}
         # caller maintains it, so it must be rebuilt here with the current gamma.
         mm = W.mass_matrix isa MatrixOperator ?
             convert(AbstractMatrix, W.mass_matrix) : W.mass_matrix
-        W._concrete_form = -mm / W.gamma + convert(AbstractMatrix, W.J)
+        concrete_form = -mm / W.gamma + convert(AbstractMatrix, W.J)
+        # Operator arithmetic can make `_concrete_form` lazy even though its
+        # concretization is a matrix, so the rebuilt value may not fit its field type.
+        W.J isa AbstractSciMLOperator && return concrete_form
+        W._concrete_form = concrete_form
     end
     return W._concrete_form
 end

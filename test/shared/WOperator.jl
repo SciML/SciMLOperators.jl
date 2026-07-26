@@ -67,6 +67,15 @@ Random.seed!(0)
     update_coefficients!(W_op; gamma = 0.5)
     @test convert(AbstractMatrix, W_op) ≈ -Matrix(1.0I, n, n) / 0.5 +
         convert(AbstractMatrix, J_op)
+
+    J_sum = MatrixOperator(randn(n, n)) + MatrixOperator(randn(n, n))
+    W_sum = WOperator{true}(I, 0.0, J_sum, randn(n))
+    update_coefficients!(W_sum; gamma = 0.25)
+    @test convert(AbstractMatrix, W_sum) ≈ -Matrix(1.0I, n, n) / 0.25 +
+        convert(AbstractMatrix, J_sum)
+    update_coefficients!(W_sum; gamma = 0.5)
+    @test convert(AbstractMatrix, W_sum) ≈ -Matrix(1.0I, n, n) / 0.5 +
+        convert(AbstractMatrix, J_sum)
 end
 
 @testset "WOperator isconvertible honesty" begin
