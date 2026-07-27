@@ -23,13 +23,33 @@ are not provided.
 
 $(UPDATE_COEFFS_WARNING)
 
-# Interface
+# Arguments
+
+  - `A::AbstractMatrix`: Matrix used for the current operator action.
+
+# Keyword Arguments
+
+  - `update_func`: Out-of-place update with signature
+    `update_func(A, u, p, t; kwargs...) -> new_A`.
+  - `update_func!`: In-place update with signature
+    `update_func!(A, u, p, t; kwargs...)`.
+  - `accepted_kwargs`: `Val` tuple of keyword names forwarded to the update function.
+
+# Fields
+
+  - `A`: Current matrix state.
+  - `update_func`: Out-of-place matrix update function.
+  - `update_func!`: In-place matrix update function.
+
+# Interface Rules
 
 Lazy matrix algebra is defined for `AbstractSciMLOperator`s. The Interface
 supports lazy addition, subtraction, multiplication, inversion,
-adjoints, transposes.
+adjoints, and transposes. An update function must preserve the dimensions and
+mathematical meaning of `A`; use `FunctionOperator` when the action itself is
+nonlinear in the input vector.
 
-# Example
+# Examples
 
 Out-of-place update and usage
 
@@ -358,7 +378,25 @@ are not provided.
 
 $(UPDATE_COEFFS_WARNING)
 
-# Example
+# Arguments
+
+  - `diag::AbstractVector`: Diagonal entries of the operator.
+
+# Keyword Arguments
+
+  - `update_func`: Out-of-place update with signature
+    `update_func(diag, u, p, t; kwargs...) -> new_diag`.
+  - `update_func!`: In-place update with signature
+    `update_func!(diag, u, p, t; kwargs...)`.
+  - `accepted_kwargs`: `Val` tuple of keyword names forwarded to the update function.
+
+# Interface Rules
+
+Updates must preserve the diagonal's leading dimension. For multidimensional
+`diag`, the operator acts elementwise while reporting a matrix size based on
+its leading dimension.
+
+# Examples
 """
 function DiagonalOperator(
         diag::AbstractVector;
@@ -398,17 +436,30 @@ function Base.show(io::IO, L::MatrixOperator{T, <:Diagonal}) where {T}
     return print(io, "DiagonalOperator($n × $n)")
 end
 
-const AdjointFact = isdefined(LinearAlgebra, :AdjointFactorization) ?
-    LinearAlgebra.AdjointFactorization : Adjoint
-const TransposeFact = isdefined(LinearAlgebra, :TransposeFactorization) ?
-    LinearAlgebra.TransposeFactorization : Transpose
-
 """
 $SIGNATURES
 
-Stores an operator and its factorization (or inverse operator).
-Supports left division and `ldiv!` via `F`, and operator evaluation
-via `L`.
+    InvertibleOperator(L, F)
+
+Pair an operator with a factorization or inverse object used for division.
+
+# Arguments
+
+  - `L`: Original operator used for multiplication and updates.
+  - `F`: Factorization or inverse supporting `\\` or `ldiv!`.
+
+# Fields
+
+  - `L`: Wrapped operator.
+  - `F`: Factorization or inverse representation.
+
+# Interface Rules
+
+Constructors such as `factorize`, `lu`, and `qr` create this wrapper for
+concretizable operators. `L` and `F` must represent the same current action;
+after a state update, extension code is responsible for keeping both current.
+Use `ldiv!` or `\\` for the inverse action rather than assuming `F` is a
+public field contract.
 """
 struct InvertibleOperator{T, LT, FT} <: AbstractSciMLOperator{T}
     L::LT
@@ -477,7 +528,7 @@ Base.transpose(L::InvertibleOperator) = InvertibleOperator(transpose(L.L), trans
 Base.adjoint(L::InvertibleOperator) = InvertibleOperator(L.L', L.F')
 Base.conj(L::InvertibleOperator) = InvertibleOperator(conj(L.L), conj(L.F))
 Base.resize!(L::InvertibleOperator, n::Integer) = (resize!(L.L, n); resize!(L.F, n); L)
-LinearAlgebra.opnorm(L::InvertibleOperator{T}, p = 2) where {T} = one(T) / opnorm(L.F)
+LinearAlgebra.opnorm(L::InvertibleOperator{T}, p::Real = 2) where {T} = one(T) / opnorm(L.F, p)
 LinearAlgebra.issuccess(L::InvertibleOperator) = issuccess(L.F)
 
 function update_coefficients(L::InvertibleOperator, u, p, t; kwargs...)
@@ -601,7 +652,33 @@ Plain tuples like `(:dtgamma,)` are deprecated but still supported.
 `kwargs` cannot be passed down to `update_func[!]` if `accepted_kwargs`
 are not provided.
 
-# Example
+# Arguments
+
+  - `A`: Matrix or SciML operator applied to the action vector.
+  - `B`: Matrix or SciML operator applied to the additive term.
+  - `b::AbstractArray`: Additive input to `B`.
+
+# Keyword Arguments
+
+  - `update_func`: Out-of-place update for `b`.
+  - `update_func!`: In-place update for `b`.
+  - `accepted_kwargs`: `Val` tuple of keyword names forwarded to the update function.
+
+# Fields
+
+  - `A`: Linear action component.
+  - `B`: Additive-term action component.
+  - `b`: Current additive input.
+  - `update_func`: Out-of-place update for `b`.
+  - `update_func!`: In-place update for `b`.
+
+# Interface Rules
+
+`AffineOperator` is not linear and cannot generally be converted to an
+`AbstractMatrix`. Updates must preserve compatible dimensions for `A`, `B`,
+and `b`; caching must preserve the affine action.
+
+# Examples
 
 ```
 v = rand(4)
@@ -614,7 +691,7 @@ B = MatrixOperator(rand(4, 4))
 
 vec_update_func = (b, u, p, t) -> p .* u * t
 L = AffineOperator(A, B, zeros(4); update_func = vec_update_func)
-L = cache_operator(M, v)
+L = cache_operator(L, v)
 
 # update L and evaluate
 w = L(v, u, p, t) # == A * v + B * (p .* u * t)
@@ -671,9 +748,25 @@ end
 """
 $SIGNATURES
 
-Represents the affine operation `w = I * v + I * b`. The update functions,
-`update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
-documentation of `AffineOperator` for more details.
+Construct the affine operation `v + b` as an `AffineOperator`.
+
+# Arguments
+
+  - `b::AbstractVecOrMat`: Additive term.
+
+# Keyword Arguments
+
+  - `update_func`: Out-of-place update for `b` with signature
+    `update_func(b, u, p, t; kwargs...) -> new_b`.
+  - `update_func!`: In-place update for `b` with signature
+    `update_func!(b, u, p, t; kwargs...)`.
+  - `accepted_kwargs`: `Val` tuple of forwarded update keyword names.
+
+# Interface Rules
+
+This is shorthand for `AffineOperator(I, I, b; kwargs...)`. The term `b` must
+have a leading dimension compatible with the action vector. See
+[`AffineOperator`](@ref) for update and caching rules.
 """
 function AddVector(
         b::AbstractVecOrMat;
@@ -695,9 +788,24 @@ end
 """
 $SIGNATURES
 
-Represents the affine operation `w = I * v + B * b`. The update functions,
-`update_func[!]` update the state of `AbstractVecOrMat ` `b`. See
-documentation of `AffineOperator` for more details.
+Construct the affine operation `v + B * b` as an `AffineOperator`.
+
+# Arguments
+
+  - `B`: Matrix or SciML operator acting on the additive term.
+  - `b::AbstractVecOrMat`: Additive input to `B`.
+
+# Keyword Arguments
+
+  - `update_func`: Out-of-place update for `b`.
+  - `update_func!`: In-place update for `b`.
+  - `accepted_kwargs`: `Val` tuple of forwarded update keyword names.
+
+# Interface Rules
+
+`B * b` must have the same leading dimension as the action vector. This is
+shorthand for `AffineOperator(I, B, b; kwargs...)`; see [`AffineOperator`](@ref)
+for the update and caching contract.
 """
 function AddVector(
         B, b::AbstractVecOrMat;

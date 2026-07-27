@@ -54,6 +54,23 @@ end
 
 """
 $TYPEDEF
+    AdjointOperator(L)
+
+Lazy adjoint wrapper for an `AbstractSciMLOperator`.
+
+# Arguments
+
+  - `L::AbstractSciMLOperator`: Operator to adjoint.
+
+# Fields
+
+  - `L`: Wrapped operator.
+
+# Interface Rules
+
+Construct through `adjoint(L)` or `L'`. The wrapper delegates updates and
+matrix-like application to the adjoint action of `L`; it is valid only when
+`has_adjoint(L)` is true.
 """
 struct AdjointOperator{T, LType} <: AbstractSciMLOperator{T}
     L::LType
@@ -65,6 +82,23 @@ end
 
 """
 $TYPEDEF
+    TransposedOperator(L)
+
+Lazy transpose wrapper for an `AbstractSciMLOperator`.
+
+# Arguments
+
+  - `L::AbstractSciMLOperator`: Operator to transpose.
+
+# Fields
+
+  - `L`: Wrapped operator.
+
+# Interface Rules
+
+Construct through `transpose(L)`. The wrapper delegates updates and
+matrix-like application to the transpose action of `L`; complex operators
+must distinguish this from `adjoint(L)`.
 """
 struct TransposedOperator{T, LType} <: AbstractSciMLOperator{T}
     L::LType

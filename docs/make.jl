@@ -9,8 +9,7 @@ makedocs(
     sitename = "SciMLOperators.jl",
     authors = "Vedant Puri, Alex Jones, Chris Rackauckas",
     modules = [SciMLOperators],
-    clean = true, doctest = false, linkcheck = true,
-    warnonly = [:docs_block, :missing_docs, :cross_references, :linkcheck],
+    clean = true, linkcheck = true,
     format = Documenter.HTML(
         assets = ["assets/favicon.ico"],
         canonical = "https://docs.sciml.ai/SciMLOperators/stable"
