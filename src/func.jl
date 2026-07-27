@@ -235,7 +235,7 @@ $(SIGNATURES)
 
 Wrap callable object `op` within an `AbstractSciMLOperator`.
 
-## Mathematical Description
+# Mathematical Description
 
 ```julia
 L = FunctionOperator(op, v, w; kwargs...)
@@ -244,7 +244,7 @@ L = FunctionOperator(op, v, w; kwargs...)
 where ``w = L(u,p,t)*v`` is done matrix-free given the function
 definition ``w = op(v,u,p,t)``.
 
-## Arguments
+# Arguments
 
 `op` is assumed to have signature
 
@@ -268,23 +268,24 @@ determining operator traits such as `eltype`, `size`, and for
 preallocating cache. If `output` array is not provided, the output
 is assumed to be of the same type and share as the input.
 
-## Keyword Arguments
+# Keyword Arguments
 
-Keyword arguments are used to pass in the adjoint evaluation function,
-`op_adjoint`, the inverse function, `op_inverse`, and the adjoint-inverse
-function `adjoint_inverse`. All are assumed to have the same calling signature and
-below traits.
+  - `op_adjoint`, `op_inverse`, `op_adjoint_inverse`: Optional adjoint,
+    inverse, and adjoint-inverse actions. Each must follow the same callable
+    contract as `op`.
+  - `u`, `p`, `t`: Prototypes for state, parameters, and time passed to `op`.
+  - `accepted_kwargs`: `Val` tuple of keyword names forwarded to callable actions.
 
-## Traits
+# Trait Keyword Arguments
 
-Keyword arguments are used to set operator traits, which are assumed to be
-uniform across `op`, `op_adjoint`, `op_inverse`, `op_adjoint_inverse`.
+Trait keyword arguments must be truthful and uniform across `op`, `op_adjoint`,
+`op_inverse`, and `op_adjoint_inverse` when those actions are supplied.
 
   - `u` - Prototype of the state struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `u` is set to `nothing` if no value is provided.
   - `p` - Prototype of parameter struct passed to the operator during evaluation, i.e. `L(u, p, t)`. `p` is set to `nothing` if no value is provided.
   - `t` - Protype of scalar time variable passed to the operator during evaluation. `t` is set to `zero(T)` if no value is provided.
   - `accepted_kwargs` - `Val` of a `Tuple` of `Symbol`s for zero-allocation kwarg filtering. Corresponds to the keyword arguments accepted by `op*`, and `update_coefficients[!]`. For example, if `op` accepts kwarg `scale`, as in `op(u, p, t; scale)`, then `accepted_kwargs = Val((:scale,))`. Plain tuples like `(:scale,)` are deprecated but still supported.
-  - `T` - `eltype` of the operator. If no value is provided, the constructor inferrs the value from types of `input`, and `output`
+  - `T` - `eltype` of the operator. If no value is provided, the constructor infers the value from types of `input`, and `output`
   - `isinplace` - `true` if the operator can be used is a mutating way with in-place allocations. This trait is inferred if no value is provided.
   - `outofplace` - `true` if the operator can be used is a non-mutating way with in-place allocations. This trait is inferred if no value is provided.
   - `has_mul5` - `true` if the operator provides a five-argument `mul!` via the signature `op(v, u, p, t, α, β; <accepted_kwargs>)`. This trait is inferred if no value is provided.
@@ -307,7 +308,7 @@ function FunctionOperator(
         op_inverse = nothing,
         op_adjoint_inverse = nothing, u = nothing, p = nothing,
         t::Union{Number, Nothing} = nothing,
-        accepted_kwargs::Union{Nothing, Val, NTuple{N, Symbol}} = nothing,
+        accepted_kwargs::Union{Nothing, Val, Tuple{Vararg{Symbol}}} = nothing,
 
         # traits
         T::Union{Type{<:Number}, Nothing} = nothing,
@@ -326,7 +327,7 @@ function FunctionOperator(
         ishermitian::Union{Bool, Val} = Val(false),
         isposdef::Bool = false,
         kwargs...
-    ) where {N}
+    )
 
     # establish types
 
@@ -740,7 +741,7 @@ function Base.resize!(L::FunctionOperator, n::Integer)
     return L
 end
 
-function LinearAlgebra.opnorm(L::FunctionOperator, p)
+function LinearAlgebra.opnorm(L::FunctionOperator, p::Real = 2)
     L.traits.opnorm === nothing && error(
         """
         M.opnorm is nothing, please define opnorm as a function that takes one

@@ -1,9 +1,11 @@
 """
-$(README)
+SciMLOperators provides a common interface and lazy algebra for matrix-like,
+matrix-free, state-dependent, and time-dependent operators used throughout
+the SciML ecosystem.
 """
 module SciMLOperators
 
-using DocStringExtensions: DocStringExtensions, FIELDS, README, SIGNATURES, TYPEDEF
+using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Bidiagonal, Factorization, I,
     Transpose, UniformScaling, axpby!, axpy!, ishermitian,
@@ -45,7 +47,13 @@ w = L(u,p,t)[v]
 
 where `L[v]` is the operator application of ``L`` on the vector ``v``.
 
-## Interface
+## Construction and Extension Rules
+
+`AbstractSciMLOperator` is an interface, not a concrete constructor. New
+operator types should subtype it with the scalar element type `T` and must
+preserve their mathematical action when they participate in lazy algebra.
+
+## Required Interface
 
 An `AbstractSciMLOperator` can be called like a function in the following ways:
 
@@ -86,6 +94,13 @@ must implement `cache_self(L, v)` for their own caches, `cache_internals(L, v)`
 for child-operator caches, or both. `cache_operator(L, v)` calls these hooks
 and downstream solvers may call it before repeated `mul!` evaluations.
 
+## Caching Rules
+
+`cache_operator(L, v)` may return either `L` or a cached replacement. A
+subtype that advertises `has_mul!(L) == true` must ensure the cached result is
+ready for repeated `mul!` calls with compatible vectors. Cache hooks may not
+change the mathematical action, dimensions, or trait values of the operator.
+
 ## Trait Rules
 
 Trait functions such as `isconstant`, `islinear`, `isconvertible`,
@@ -102,7 +117,15 @@ required to keep `L` current. `islinear(L)` means the action is linear in
 the vector being multiplied; state dependence on `(u, p, t)` is still allowed
 for a linear operator.
 
-## Overloaded Actions
+## Keyword Arguments
+
+When an operator accepts keywords during updates, its constructor must record
+the accepted names with `accepted_kwargs`. Composite operators forward only
+those accepted keywords to each component. Extension authors must therefore
+accept `(u, p, t; kwargs...)` consistently in every update and application
+method they advertise.
+
+## Standard Actions
 
 The behavior of a `SciMLOperator` is
 indistinguishable from an `AbstractMatrix`. These operators can be
@@ -232,12 +255,22 @@ M(v, u, p, t; scale = 1.0) != zero(N)
 abstract type AbstractSciMLOperator{T} end
 
 """
-$(TYPEDEF)
+    AbstractSciMLScalarOperator{T} <: AbstractSciMLOperator{T}
 
-An `AbstractSciMLScalarOperator` represents a linear scaling operation
-that may be applied to `Number`, `AbstractVecOrMat` subtypes. Addition,
-multiplication, division of `AbstractSciMLScalarOperator`s is defined
-lazily so operator state may be updated.
+Abstract interface for a scalar-valued linear scaling operator.
+
+# Interface Rules
+
+Subtypes must provide `convert(Number, operator)` for their current scalar
+value. They may implement state updates through `update_coefficients` and
+`update_coefficients!` using the same `(u, p, t; kwargs...)` contract as
+[`AbstractSciMLOperator`](@ref). Scalar operators act on numbers and arrays,
+and their addition, multiplication, division, and inversion remain lazy so
+that later updates affect the composed expression.
+
+Use `ScalarOperator` to construct a concrete scalar operator. Custom scalar
+operator types should only claim traits such as `has_ldiv` when the converted
+scalar has the corresponding operation for the current state.
 """
 abstract type AbstractSciMLScalarOperator{T} <: AbstractSciMLOperator{T} end
 
@@ -300,7 +333,8 @@ export update_coefficients!,
             :AbstractSciMLOperator, :AbstractSciMLScalarOperator,
             :ScaledOperator, :AddedOperator, :ComposedOperator,
             :InvertedOperator, :AdjointOperator, :TransposedOperator,
-            :AddedScalarOperator, :ComposedScalarOperator, :InvertedScalarOperator
+            :AddedScalarOperator, :ComposedScalarOperator, :InvertedScalarOperator,
+            :has_tensor_outer_mul_fast, :tensor_outer_mul_fast!
         )
     )
 end

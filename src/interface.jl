@@ -48,19 +48,20 @@ using SciMLOperators
 mat_update_func = (A, u, p, t; scale = 1.0) -> p * p' * scale * t
 
 M = MatrixOperator(zeros(4,4); update_func = mat_update_func,
-                   accepted_kwargs = (:state,))
+                   accepted_kwargs = Val((:scale,)))
 
 L = M + IdentityOperator(4)
 
 u = rand(4)
 p = rand(4)
 t = 1.0
+v = rand(4)
 
 # Update the operator to `(u,p,t)` and apply it to `v`
 L = update_coefficients(L, u, p, t; scale = 2.0)
 result = L * v
 
-# Or use the interface which separrates the update from the application
+# Or use the interface which separates the update from the application
 result = L(v, u, p, t; scale = 2.0)
 ```
 """
@@ -84,7 +85,7 @@ $(UPDATE_COEFFS_WARNING)
 using SciMLOperators
 
 _A = rand(4, 4)
-mat_update_func! = (L, u, p, t; scale = 1.0) -> copy!(A, _A)
+mat_update_func! = (A, u, p, t; scale = 1.0) -> copy!(A, _A)
 
 M = MatrixOperator(zeros(4,4); update_func! = mat_update_func!)
 
@@ -93,6 +94,7 @@ L = M + IdentityOperator(4)
 u = rand(4)
 p = rand(4)
 t = 1.0
+v = rand(4)
 
 update_coefficients!(L, u, p, t)
 L * v
@@ -186,7 +188,8 @@ cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
 Base.eltype(::Type{AbstractSciMLOperator{T}}) where {T} = T
 Base.eltype(::AbstractSciMLOperator{T}) where {T} = T
-Base.promote_eltype(::AbstractSciMLOperator{<:T1}, ::AbstractSciMLOperator{<:T2}) where {T1, T2} = Base.promote_type(T1, T2)
+
+_promote_operator_eltype(A, B) = promote_type(eltype(A), eltype(B))
 
 Base.oneunit(L::AbstractSciMLOperator) = one(L)
 Base.oneunit(LType::Type{<:AbstractSciMLOperator}) = one(LType)

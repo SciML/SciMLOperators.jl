@@ -35,6 +35,13 @@ SciMLOperators.has_concretization
 SciMLOperators.NoKwargFilter
 ```
 
+## Developer Extension Hooks
+
+```@docs
+SciMLOperators.has_tensor_outer_mul_fast
+SciMLOperators.tensor_outer_mul_fast!
+```
+
 ## Note About Affine Operators
 
 Affine operators are operators that have the action `Q*x = A*x + b`. These operators have

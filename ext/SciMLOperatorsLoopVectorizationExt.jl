@@ -5,9 +5,9 @@ import SciMLOperators
 
 const StridedMatrixOperator = SciMLOperators.MatrixOperator{<:Any, <:StridedMatrix}
 
-SciMLOperators._has_tensor_outer_mul_fast(::StridedMatrixOperator) = true
+SciMLOperators.has_tensor_outer_mul_fast(::StridedMatrixOperator) = true
 
-function SciMLOperators._tensor_outer_mul_fast!(
+function SciMLOperators.tensor_outer_mul_fast!(
         w, outer::StridedMatrixOperator, C, mi::Int, mo::Int, no::Int, k::Int
     )
     A = outer.A
@@ -25,7 +25,7 @@ function SciMLOperators._tensor_outer_mul_fast!(
     return w
 end
 
-function SciMLOperators._tensor_outer_mul_fast!(
+function SciMLOperators.tensor_outer_mul_fast!(
         w, outer::StridedMatrixOperator, C, mi::Int, mo::Int, no::Int, k::Int, α, β
     )
     A = outer.A

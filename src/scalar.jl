@@ -144,12 +144,29 @@ are not provided.
 
 $(UPDATE_COEFFS_WARNING)
 
-# Interface
+# Arguments
+
+  - `val::Number`: Current scalar value.
+
+# Keyword Arguments
+
+  - `update_func`: Out-of-place update with signature
+    `update_func(oldval, u, p, t; kwargs...) -> newval`.
+  - `accepted_kwargs`: `Val` tuple of keyword names forwarded to `update_func`.
+
+# Fields
+
+  - `val`: Current scalar value.
+  - `update_func`: Out-of-place scalar update function.
+
+# Interface Rules
 
 Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`s. The
-interface supports lazy addition, subtraction, multiplication and division.
+interface supports lazy addition, subtraction, multiplication, and division.
+Updates must return a number with the intended scalar action; in-place scalar
+updates are not supported because numbers are immutable.
 
-# Example
+# Examples
 
 ```
 v = rand(4)
@@ -266,7 +283,23 @@ end
 """
 $TYPEDEF
 
-Lazy addition of `AbstractSciMLScalarOperator`s
+    AddedScalarOperator(α, β, ...)
+
+Lazy sum of scalar operators.
+
+# Arguments
+
+  - `α, β, ...`: One or more `AbstractSciMLScalarOperator`s.
+
+# Fields
+
+  - `ops`: Tuple of component scalar operators.
+
+# Interface Rules
+
+Construct through scalar addition. The current scalar value is the sum of the
+updated component values, so updates and division traits are evaluated
+componentwise.
 """
 struct AddedScalarOperator{T, O} <: AbstractSciMLScalarOperator{T}
     ops::O
@@ -370,14 +403,30 @@ has_ldiv!(α::AddedScalarOperator) = has_ldiv(α)
 """
 $TYPEDEF
 
-Lazy multiplication of `AbstractSciMLScalarOperator`s
+    ComposedScalarOperator(α, β, ...)
+
+Lazy product of scalar operators.
+
+# Arguments
+
+  - `α, β, ...`: One or more `AbstractSciMLScalarOperator`s.
+
+# Fields
+
+  - `ops`: Tuple of component scalar operators.
+
+# Interface Rules
+
+Construct through scalar multiplication or composition. Updates are forwarded
+to every component and the converted scalar is their product. Division is
+available only when every component supports it in the current state.
 """
 struct ComposedScalarOperator{T, O} <: AbstractSciMLScalarOperator{T}
     ops::O
 
     function ComposedScalarOperator(ops::NTuple{N, AbstractSciMLScalarOperator}) where {N}
         @assert !isempty(ops)
-        T = reduce(Base.promote_eltype, ops)
+        T = reduce(_promote_operator_eltype, ops)
         return new{T, typeof(ops)}(ops)
     end
 end
@@ -466,18 +515,14 @@ Base.:-(α::AbstractSciMLScalarOperator{T}) where {T} = (-one(T)) * α
 
 @generated function update_coefficients(L::ComposedScalarOperator, u, p, t; kwargs...)
     N = length(L.parameters[2].parameters)
-    return quote
-        ops = Base.@ntuple $N i -> update_coefficients(L.ops[i], u, p, t; kwargs...)
-        ComposedScalarOperator(ops)
-    end
+    updates = [:(update_coefficients(L.ops[$i], u, p, t; kwargs...)) for i in 1:N]
+    return :(ComposedScalarOperator($(Expr(:tuple, updates...))))
 end
 
 @generated function update_coefficients!(L::ComposedScalarOperator, u, p, t; kwargs...)
     N = length(L.parameters[2].parameters)
-    return quote
-        Base.@nexprs $N i -> update_coefficients!(L.ops[i], u, p, t; kwargs...)
-        nothing
-    end
+    updates = [:(update_coefficients!(L.ops[$i], u, p, t; kwargs...)) for i in 1:N]
+    return Expr(:block, updates..., :(nothing))
 end
 
 function (α::ComposedScalarOperator)(v::AbstractArray, u, p, t; kwargs...)
@@ -510,7 +555,22 @@ has_ldiv!(α::ComposedScalarOperator) = all(has_ldiv!, α.ops)
 """
 $TYPEDEF
 
-Lazy inverse of `AbstractSciMLScalarOperator`s
+    InvertedScalarOperator(α)
+
+Lazy reciprocal of a scalar operator.
+
+# Arguments
+
+  - `α::AbstractSciMLScalarOperator`: Scalar operator to invert.
+
+# Fields
+
+  - `λ`: Wrapped scalar operator.
+
+# Interface Rules
+
+Construct through `inv(α)`. The current scalar value must be nonzero whenever
+the reciprocal is evaluated; updates are forwarded to `λ` before conversion.
 """
 struct InvertedScalarOperator{T, λType} <: AbstractSciMLScalarOperator{T}
     λ::λType

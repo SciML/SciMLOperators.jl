@@ -68,7 +68,7 @@ struct TensorProductOperator{T, O, C} <: AbstractSciMLOperator{T}
             },
             cache::Union{Tuple, Nothing}
         )
-        T = reduce(Base.promote_eltype, ops)
+        T = reduce(_promote_operator_eltype, ops)
 
         return new{
             T,
@@ -247,7 +247,7 @@ struct TensorSumOperator{T, O, P} <: AbstractSciMLOperator{T}
         outer, inner = ops
         @assert issquare(outer)
         @assert issquare(inner)
-        T = reduce(Base.promote_eltype, ops)
+        T = reduce(_promote_operator_eltype, ops)
         return new{T, typeof(ops), typeof(products)}(ops, products)
     end
 end
@@ -610,8 +610,48 @@ end
 # helper functions
 const PERM = (2, 1, 3)
 
-_has_tensor_outer_mul_fast(outer) = false
-function _tensor_outer_mul_fast! end
+"""
+    has_tensor_outer_mul_fast(outer) -> Bool
+
+Return whether `outer` provides the specialized
+[`tensor_outer_mul_fast!`](@ref) contract used by batched
+`TensorProductOperator` multiplication.
+
+# Developer API
+
+This hook is for extension authors implementing an allocation-free fast path
+for an `outer` operator type. Return `true` only when the corresponding
+`tensor_outer_mul_fast!` methods are defined for both the unscaled and scaled
+call signatures. End users should rely on `mul!` or `TensorProductOperator`
+instead of calling or extending this hook directly.
+"""
+has_tensor_outer_mul_fast(outer) = false
+
+"""
+    tensor_outer_mul_fast!(w, outer, C, mi, mo, no, k[, α, β]) -> w
+
+Write the batched outer multiplication used by `TensorProductOperator` into
+`w` without allocating intermediate arrays.
+
+# Arguments
+
+  - `w`: destination with `mi * mo` rows and `k` columns.
+  - `outer`: operator of size `(mo, no)`.
+  - `C`: cached intermediate data with `mi * no` rows and `k` columns.
+  - `mi`, `mo`, `no`, `k`: dimensions derived from the tensor-product factors
+    and the batch size.
+  - `α`, `β`: optional scaling coefficients; the scaled method must compute
+    `w = α * outer_product + β * w`.
+
+# Developer API
+
+Only implement this hook together with
+[`has_tensor_outer_mul_fast`](@ref) returning `true` for the same `outer`
+type. Implement both call signatures, preserve the stated destination shape,
+and return `w`. This contract exists for package extensions; ordinary callers
+should use `mul!` on the enclosing `TensorProductOperator`.
+"""
+function tensor_outer_mul_fast! end
 
 function outer_mul(L::TensorProductOperator, v::AbstractVecOrMat, C::AbstractVecOrMat)
     outer, inner = L.ops
@@ -665,8 +705,8 @@ function outer_mul!(w::AbstractVecOrMat, L::TensorProductOperator, v::AbstractVe
         return w
     end
 
-    if _has_tensor_outer_mul_fast(outer)
-        _tensor_outer_mul_fast!(w, outer, C1, mi, mo, no, k)
+    if has_tensor_outer_mul_fast(outer)
+        tensor_outer_mul_fast!(w, outer, C1, mi, mo, no, k)
         return w
     end
 
@@ -708,8 +748,8 @@ function outer_mul!(
         return w
     end
 
-    if _has_tensor_outer_mul_fast(outer)
-        _tensor_outer_mul_fast!(w, outer, v, mi, mo, no, k, α, β)
+    if has_tensor_outer_mul_fast(outer)
+        tensor_outer_mul_fast!(w, outer, v, mi, mo, no, k, α, β)
         return w
     end
 
