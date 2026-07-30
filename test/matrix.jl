@@ -165,6 +165,17 @@ end
     L(w, v, u, p, t, α, β)
     @test w ≈ α * (A * v) + β * orig_w
 
+    # update_coefficients! with only an out-of-place update_func (#409)
+    Loop = MatrixOperator(zeros(N, N); update_func = (A, u, p, t) -> p * p')
+    update_coefficients!(Loop, u, p, t)
+    @test convert(AbstractMatrix, Loop) ≈ p * p'
+
+    # immutable storage cannot be updated in place through an out-of-place func
+    Limm = MatrixOperator(
+        reshape(1.0:(N * N), N, N); update_func = (A, u, p, t) -> p * p'
+    )
+    @test_throws ArgumentError update_coefficients!(Limm, u, p, t)
+
     A = [
         -2.0 1 0 0 0
         1 -2 1 0 0
@@ -329,6 +340,19 @@ end
     copy!(w, zeros(N, K))
     D(w, v, u, p, t)
     @test w ≈ expected
+
+    # update_coefficients! with only an out-of-place update_func (#409)
+    Doop = DiagonalOperator(zeros(N, K); update_func = (diag, u, p, t) -> p * t)
+    update_coefficients!(Doop, u, p, t)
+    copy!(w, zeros(N, K))
+    mul!(w, Doop, v)
+    @test w ≈ (p * t) .* v
+
+    # immutable storage cannot be updated in place through an out-of-place func
+    Dimm = DiagonalOperator(
+        reshape(1.0:(N * K), N, K); update_func = (diag, u, p, t) -> p * t
+    )
+    @test_throws ArgumentError update_coefficients!(Dimm, u, p, t)
 end
 
 @testset "AffineOperator" begin

@@ -244,7 +244,14 @@ function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     if !isnothingfunc(L.update_func!)
         L.update_func!(L.A, u, p, t; kwargs...)
     elseif !isnothingfunc(L.update_func)
-        L.A = L.update_func(L.A, u, p, t; kwargs...)
+        if !ArrayInterface.ismutable(L.A)
+            msg = """`update_coefficients!` cannot update a `MatrixOperator` holding
+            an immutable matrix ($(typeof(L.A))) through an out-of-place
+            `update_func`. Use `update_coefficients(L, u, p, t)` instead, or
+            construct the operator with a mutating `update_func!`."""
+            throw(ArgumentError(msg))
+        end
+        copyto!(L.A, L.update_func(L.A, u, p, t; kwargs...))
     end
     return nothing
 end

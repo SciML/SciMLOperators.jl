@@ -112,7 +112,14 @@ function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
     if !isnothingfunc(L.update_func!)
         L.update_func!(L.diag, u, p, t; kwargs...)
     elseif !isnothingfunc(L.update_func)
-        L.diag = L.update_func(L.diag, u, p, t; kwargs...)
+        if !ArrayInterface.ismutable(L.diag)
+            msg = """`update_coefficients!` cannot update a `BatchedDiagonalOperator`
+            holding an immutable diagonal ($(typeof(L.diag))) through an
+            out-of-place `update_func`. Use `update_coefficients(L, u, p, t)`
+            instead, or construct the operator with a mutating `update_func!`."""
+            throw(ArgumentError(msg))
+        end
+        copyto!(L.diag, L.update_func(L.diag, u, p, t; kwargs...))
     end
     return nothing
 end
