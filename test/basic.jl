@@ -17,6 +17,22 @@ Random.seed!(0)
 N = 8
 K = 12
 
+@testset "eltype on operator types" begin
+    # `eltype` must work on the type, not just on an instance: the previous
+    # `::Type{AbstractSciMLOperator{T}}` signature matched only the abstract type
+    # itself, so concrete operator types fell through to `Base.eltype(::Type) = Any`.
+    Ar = MatrixOperator(rand(N, N))
+    Ac = MatrixOperator(rand(ComplexF64, N, N))
+
+    for op in (Ar, Ac, ScalarOperator(rand()), IdentityOperator(N), Ar + Ac, Ar * Ar)
+        @test eltype(typeof(op)) === eltype(op)
+        @test eltype(typeof(op)) !== Any
+    end
+
+    @test eltype(typeof(Ar)) === Float64
+    @test eltype(typeof(Ar + Ac)) === ComplexF64
+end
+
 @testset "IdentityOperator" begin
     A = rand(N, N) |> MatrixOperator
     u = rand(N, K)

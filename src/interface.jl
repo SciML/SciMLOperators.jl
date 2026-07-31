@@ -186,7 +186,7 @@ cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 ###
 
 Base.size(A::AbstractSciMLOperator, d::Integer) = d <= 2 ? size(A)[d] : 1
-Base.eltype(::Type{AbstractSciMLOperator{T}}) where {T} = T
+Base.eltype(::Type{<:AbstractSciMLOperator{T}}) where {T} = T
 Base.eltype(::AbstractSciMLOperator{T}) where {T} = T
 
 _promote_operator_eltype(A, B) = promote_type(eltype(A), eltype(B))
