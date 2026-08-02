@@ -334,7 +334,8 @@ export update_coefficients!,
             :ScaledOperator, :AddedOperator, :ComposedOperator,
             :InvertedOperator, :AdjointOperator, :TransposedOperator,
             :AddedScalarOperator, :ComposedScalarOperator, :InvertedScalarOperator,
-            :has_tensor_outer_mul_fast, :tensor_outer_mul_fast!
+            :has_tensor_outer_mul_fast, :tensor_outer_mul_fast!,
+            :getcache, :update_cache, :adopt_cache
         )
     )
 end

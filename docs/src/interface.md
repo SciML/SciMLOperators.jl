@@ -50,6 +50,17 @@ one. An operator type takes part by defining `getcache`, and can additionally av
 allocating a cache it would only discard by defining `adopt_cache`. Both default to
 declining, so a type that defines neither behaves exactly as it did before.
 
+A wrapper holding no scratch of its own, such as `ScaledOperator`, forwards all three hooks
+to the operator it wraps, so `2A + 3B` and `A - B` share as `A + B` does. A new wrapper of
+that kind should do the same.
+
+!!! warning "Concurrency"
+    
+    Applying a cached operator from several tasks at once was never safe, because they
+    would write to the same scratch. Once its summands share scratch they are not
+    independently safe either, so code that hand-parallelizes over the `ops` of an
+    `AddedOperator` needs its own uncached copies.
+
 ```@docs
 SciMLOperators.getcache
 SciMLOperators.update_cache

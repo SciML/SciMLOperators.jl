@@ -193,6 +193,20 @@ earlier one whose cache has the identical type and identically sized slots, so o
 this for operators where two such caches really are interchangeable — including which
 slots deliberately alias each other. The `nothing` default keeps a type out of it entirely.
 
+Two further conditions come with defining it. The first is on the operator's own
+`cache_self`: it must treat the buffers it is handed as a template to `similar`, `zero` or
+`reshape` and never retain a reference to them, since the whole point is that those buffers
+may afterwards be replaced by an earlier summand's. Every `cache_self` in this package does.
+The second is on the caller: applying the summands of an `AddedOperator` concurrently, by
+hand, is no longer safe once they share scratch — a cached operator was never safe to apply
+concurrently, but now its summands are not independently safe either.
+
+A wrapper that holds no scratch of its own — `ScaledOperator`, `AdjointOperator`,
+`TransposedOperator` — is transparent to all of this and forwards `getcache`,
+[`update_cache`](@ref) and [`adopt_cache`](@ref) to the operator it wraps. A new wrapper of
+that kind should do the same; without it the operator underneath drops out of sharing even
+though its cache would have qualified.
+
 See also [`adopt_cache`](@ref), which additionally spares the operator from allocating a
 cache it would only discard.
 """
@@ -210,8 +224,22 @@ update_cache(op::AbstractSciMLOperator, new_cache) = @reset op.cache = new_cache
 # are left to check. Anything else is conservatively treated as not interchangeable.
 _slots_match(a::AbstractArray, b::AbstractArray) = size(a) == size(b)
 _slots_match(::Nothing, ::Nothing) = true
-_slots_match(a::Tuple, b::Tuple) = all(map(_slots_match, a, b))
+function _slots_match(a::NTuple{N, Any}, b::NTuple{N, Any}) where {N}
+    return all(map(_slots_match, a, b)) && _aliasing_matches(a, b)
+end
 _slots_match(a, b) = false
+
+# Which slots deliberately point at the same buffer is part of the layout, not an accident
+# of it: `TensorProductOperator` folds two of its slots into one exactly when both factors
+# are square. Comparing the pattern keeps an operator that needs distinct buffers from ever
+# being handed a cache that shares one, instead of relying on the sizes to give it away.
+function _aliasing_matches(a::NTuple{N, Any}, b::NTuple{N, Any}) where {N}
+    return all(
+        ntuple(Val(N)) do i
+            all(ntuple(j -> (a[i] === a[j]) === (b[i] === b[j]), Val(N)))
+        end
+    )
+end
 
 # Having the same cache type is settled at compile time; only the sizes cost anything at
 # run time. Caches of differing type take the second method and are never interchanged.
@@ -246,6 +274,9 @@ Return `op` set up for in-place use with `v` using `cache` — the cache of an o
 already established as interchangeable with it — instead of allocating buffers of its own.
 Return `nothing` to decline, in which case `op` is cached the ordinary way and then offered
 the same cache after the fact, which costs an allocation that is immediately discarded.
+What comes back must report `cache` as its own — [`getcache`](@ref) on it is checked against
+what was handed over, and anything else is treated as having declined, since an
+implementation that quietly allocated instead would otherwise skip the ordinary path too.
 
 Declining is the default, because there is no implementation that is correct for every
 operator: one that follows the `cache_self`/`cache_internals` split opts in with
@@ -298,7 +329,13 @@ function _try_adopt(op, donors::Tuple, v)
 
     if cache !== nothing && _shape_signature(op) == _shape_signature(donor)
         adopted = adopt_cache(op, cache, v)
-        adopted === nothing || return adopted
+        # An `adopt_cache` that comes back reporting something other than the cache it was
+        # handed did not use it — it allocated buffers of its own, and taking it at its word
+        # would skip the post-hoc path as well and leave the summand sharing nothing. Take
+        # the ordinary route instead, where `_deduplicate_cache` still gets its turn.
+        if adopted !== nothing && getcache(adopted) === cache
+            return adopted
+        end
     end
 
     return _try_adopt(op, Base.tail(donors), v)

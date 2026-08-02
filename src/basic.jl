@@ -477,6 +477,22 @@ function cache_internals(L::ScaledOperator, v::AbstractVecOrMat)
     return L
 end
 
+# A scaling holds no scratch of its own, so it is transparent to the sharing described in
+# `getcache`: the cache one field down is exactly as interchangeable as one held directly.
+# Forwarding matters more than it looks — `A - B` lowers to `AddedOperator(A, -B)` with
+# `-B` a `ScaledOperator`, so without this the commonest sum of all shares nothing.
+getcache(L::ScaledOperator) = getcache(L.L)
+update_cache(L::ScaledOperator, new_cache) = @reset L.L = update_cache(L.L, new_cache)
+
+function adopt_cache(L::ScaledOperator, cache, v)
+    inner = adopt_cache(L.L, cache, v)
+    inner === nothing && return nothing
+
+    @reset L.L = inner
+    @reset L.λ = cache_operator(L.λ, v)
+    return L
+end
+
 # getindex
 Base.getindex(L::ScaledOperator, i::Int) = L.coeff * L.L[i]
 Base.getindex(L::ScaledOperator, I::Vararg{Int, N}) where {N} = L.λ * L.L[I...]

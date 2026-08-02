@@ -429,7 +429,9 @@ end
 @testset "AddedOperator cache sharing" begin
     v = rand(N)
     nbuf(cache) = length(unique(objectid, [b for b in cache if b !== nothing]))
-    nbuffers(L) = nbuf([b for op in L.ops for b in op.cache])
+    # `getcache`, not `op.cache`: a wrapper such as `ScaledOperator` has no cache field and
+    # reports the one belonging to the operator it wraps.
+    nbuffers(L) = nbuf([b for op in L.ops for b in SciMLOperators.getcache(op)])
 
     # Summands with interchangeable caches reuse one set of buffers.
     C1 = MatrixOperator(rand(N, N)) * MatrixOperator(rand(N, N))
@@ -476,6 +478,39 @@ end
     @test Lt.ops[2].cache[1] === Lt.ops[2].cache[5]
     @test nbuffers(Lt) == nbuf(cache_operator(T, vt).cache)   # two summands, one set
     @test mul!(zeros(8), Lt, vt) ≈ 2 * (T * vt)
+
+    # A wrapper holding no scratch of its own reports and replaces the cache of the operator
+    # it wraps. `A - B` lowers to `AddedOperator(A, -B)` with `-B` a `ScaledOperator`, so
+    # without this the commonest sum of all would share nothing.
+    @test nbuffers(cache_operator(2.0 * C1 + 3.0 * C2, v)) == 2   # 4 without forwarding
+    @test nbuffers(cache_operator(C1 - C2, v)) == 2               # 4 without forwarding
+    @test mul!(zeros(N), cache_operator(C1 - C2, v), v) ≈ C1 * v - C2 * v
+
+    let C = cache_operator(C1, v)
+        @test SciMLOperators.getcache(AdjointOperator(C)) === SciMLOperators.getcache(C)
+    end
+
+    # A tensor product whose factors are themselves composite shares as one with plain
+    # factors does. Its `cache_internals` used to re-run `cache_self` whenever any factor
+    # was uncached — the state `cache_operator` calls it in — discarding a donated cache.
+    Tc() = TensorProductOperator(
+        MatrixOperator(rand(2, 2)) * MatrixOperator(rand(2, 2)),
+        MatrixOperator(rand(4, 4)) * MatrixOperator(rand(4, 4))
+    )
+    T1, T2 = Tc(), Tc()
+    Lc = cache_operator(T1 + T2, vt)
+
+    @test Lc.ops[1].cache[1] === Lc.ops[2].cache[1]
+    @test mul!(zeros(8), Lc, vt) ≈ T1 * vt + T2 * vt
+
+    # Which slots alias each other is part of the layout, so a cache that folds two slots
+    # into one buffer is not interchangeable with one that keeps them apart, even when
+    # every slot matches in type and size.
+    let a = rand(4), b = rand(4)
+        @test SciMLOperators._slots_match((a, a), (b, b))
+        @test !SciMLOperators._slots_match((a, a), (rand(4), rand(4)))
+        @test !SciMLOperators._slots_match((a, b), (b, b))
+    end
 end
 
 @testset "ComposedOperator" begin

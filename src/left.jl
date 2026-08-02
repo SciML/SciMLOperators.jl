@@ -175,6 +175,18 @@ for (op, LType, VType) in (
         return L
     end
 
+    # Like `ScaledOperator`, these wrappers hold no scratch of their own and so are
+    # transparent to the sharing described in `getcache`. The reshape is the same one
+    # `cache_internals` above does: what the wrapper is applied to is not what the operator
+    # it wraps is applied to.
+    @eval getcache(L::$LType) = getcache(L.L)
+    @eval update_cache(L::$LType, new_cache) = @reset L.L = update_cache(L.L, new_cache)
+
+    @eval function adopt_cache(L::$LType, cache, u::AbstractVecOrMat)
+        inner = adopt_cache(L.L, cache, reshape(u, size(L, 1)))
+        return inner === nothing ? nothing : (@reset L.L = inner)
+    end
+
     # operator application
     @eval Base.:*(u::$VType, L::$LType) = $op(L.L * u.parent)
     @eval Base.:/(u::$VType, L::$LType) = $op(L.L \ u.parent)
