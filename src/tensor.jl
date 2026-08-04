@@ -175,6 +175,8 @@ function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
 end
 
 getops(L::TensorProductOperator) = L.ops
+getcache(L::TensorProductOperator) = L.cache
+adopt_cache(L::TensorProductOperator, cache, v) = cache_internals(update_cache(L, cache), v)
 
 # Copy method to avoid aliasing
 function Base.copy(L::TensorProductOperator)
@@ -488,7 +490,11 @@ function cache_self(L::TensorProductOperator, v::AbstractMatrix)
 end
 
 function cache_internals(L::TensorProductOperator, v::AbstractVecOrMat)
-    if !iscached(L)
+    # Only this operator's own buffers are in question here — `iscached` is recursive, so
+    # testing it would re-run `cache_self` and throw away a perfectly good cache whenever a
+    # factor happens to be uncached, which is exactly the state `cache_operator` calls this
+    # in. `ComposedOperator` guards the same way.
+    if isnothing(L.cache)
         L = cache_self(L, v)
     end
 

@@ -426,6 +426,93 @@ end
     end
 end
 
+@testset "AddedOperator cache sharing" begin
+    v = rand(N)
+    nbuf(cache) = length(unique(objectid, [b for b in cache if b !== nothing]))
+    # `getcache`, not `op.cache`: a wrapper such as `ScaledOperator` has no cache field and
+    # reports the one belonging to the operator it wraps.
+    nbuffers(L) = nbuf([b for op in L.ops for b in SciMLOperators.getcache(op)])
+
+    # Summands with interchangeable caches reuse one set of buffers.
+    C1 = MatrixOperator(rand(N, N)) * MatrixOperator(rand(N, N))
+    C2 = MatrixOperator(rand(N, N)) * MatrixOperator(rand(N, N))
+    L = cache_operator(C1 + C2, v)
+
+    @test nbuffers(L) == 2                          # 4 without sharing
+    @test L.ops[1].cache[1] !== L.ops[1].cache[2]   # slots live at once stay distinct
+    @test L * v ≈ C1 * v + C2 * v
+    @test mul!(zeros(N), L, v) ≈ C1 * v + C2 * v
+    @test (@inferred cache_operator(C1 + C2, v)) isa AddedOperator
+
+    # Setup allocates one cache, not one per summand: a summand takes an earlier one's
+    # buffers outright rather than allocating its own and discarding them. Without that,
+    # this grows by a full cache for every extra summand.
+    let n = 4096, vn = rand(n)
+        mk(M) = sum(
+            ntuple(
+                _ -> MatrixOperator(sprand(n, n, 1 / n)) * MatrixOperator(sprand(n, n, 1 / n)),
+                M
+            )
+        )
+        setup(M) = (Lm = mk(M); cache_operator(Lm, vn); @allocated cache_operator(Lm, vn))
+        @test setup(8) < 2 * setup(2)
+    end
+
+    # Caches whose slots differ in eltype are never interchanged, even though both
+    # summands are `ComposedOperator{ComplexF64}` of the same shape — `cache_self` takes
+    # each slot's eltype from the inner factor, not from the composite.
+    Ar = MatrixOperator(rand(N, N)) * MatrixOperator(rand(ComplexF64, N, N))
+    Ac = MatrixOperator(rand(ComplexF64, N, N)) * MatrixOperator(rand(N, N))
+    Lm = cache_operator(Ar + Ac, v)
+
+    @test eltype(Ar) === eltype(Ac) === ComplexF64
+    @test eltype(Lm.ops[1].cache[1]) === ComplexF64
+    @test eltype(Lm.ops[2].cache[1]) === Float64
+
+    # A square TensorProductOperator aliases cache slot 5 onto slot 1; sharing keeps it.
+    T = TensorProductOperator(MatrixOperator(rand(2, 2)), MatrixOperator(rand(4, 4)))
+    vt = rand(8)
+    Lt = cache_operator(T + T, vt)
+
+    @test Lt.ops[2].cache[1] === Lt.ops[1].cache[1]
+    @test Lt.ops[2].cache[1] === Lt.ops[2].cache[5]
+    @test nbuffers(Lt) == nbuf(cache_operator(T, vt).cache)   # two summands, one set
+    @test mul!(zeros(8), Lt, vt) ≈ 2 * (T * vt)
+
+    # A wrapper holding no scratch of its own reports and replaces the cache of the operator
+    # it wraps. `A - B` lowers to `AddedOperator(A, -B)` with `-B` a `ScaledOperator`, so
+    # without this the commonest sum of all would share nothing.
+    @test nbuffers(cache_operator(2.0 * C1 + 3.0 * C2, v)) == 2   # 4 without forwarding
+    @test nbuffers(cache_operator(C1 - C2, v)) == 2               # 4 without forwarding
+    @test mul!(zeros(N), cache_operator(C1 - C2, v), v) ≈ C1 * v - C2 * v
+
+    let C = cache_operator(C1, v)
+        @test SciMLOperators.getcache(AdjointOperator(C)) === SciMLOperators.getcache(C)
+    end
+
+    # A tensor product whose factors are themselves composite shares as one with plain
+    # factors does. Its `cache_internals` used to re-run `cache_self` whenever any factor
+    # was uncached — the state `cache_operator` calls it in — discarding a donated cache.
+    Tc() = TensorProductOperator(
+        MatrixOperator(rand(2, 2)) * MatrixOperator(rand(2, 2)),
+        MatrixOperator(rand(4, 4)) * MatrixOperator(rand(4, 4))
+    )
+    T1, T2 = Tc(), Tc()
+    Lc = cache_operator(T1 + T2, vt)
+
+    @test Lc.ops[1].cache[1] === Lc.ops[2].cache[1]
+    @test mul!(zeros(8), Lc, vt) ≈ T1 * vt + T2 * vt
+
+    # Which slots alias each other is part of the layout, so a cache that folds two slots
+    # into one buffer is not interchangeable with one that keeps them apart, even when
+    # every slot matches in type and size.
+    let a = rand(4), b = rand(4)
+        @test SciMLOperators._slots_match((a, a), (b, b))
+        @test !SciMLOperators._slots_match((a, a), (rand(4), rand(4)))
+        @test !SciMLOperators._slots_match((a, b), (b, b))
+    end
+end
+
 @testset "ComposedOperator" begin
     A = rand(N, N)
     B = rand(N, N)

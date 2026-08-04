@@ -181,6 +181,166 @@ end
 cache_self(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 cache_internals(L::AbstractSciMLOperator, ::AbstractVecOrMat) = L
 
+"""
+$SIGNATURES
+
+Return the cache held by `op`, or `nothing` when it holds none.
+
+Defining this method opts `op`'s type into the scratch sharing `AddedOperator` does
+between its summands, which is sound because `mul!` applies them strictly serially and no
+two of their caches are ever live at once. A summand may then be given the cache of an
+earlier one whose cache has the identical type and identically sized slots, so only define
+this for operators where two such caches really are interchangeable — including which
+slots deliberately alias each other. The `nothing` default keeps a type out of it entirely.
+
+Two further conditions come with defining it. The first is on the operator's own
+`cache_self`: it must treat the buffers it is handed as a template to `similar`, `zero` or
+`reshape` and never retain a reference to them, since the whole point is that those buffers
+may afterwards be replaced by an earlier summand's. Every `cache_self` in this package does.
+The second is on the caller: applying the summands of an `AddedOperator` concurrently, by
+hand, is no longer safe once they share scratch — a cached operator was never safe to apply
+concurrently, but now its summands are not independently safe either.
+
+A wrapper that holds no scratch of its own — `ScaledOperator`, `AdjointOperator`,
+`TransposedOperator` — is transparent to all of this and forwards `getcache`,
+[`update_cache`](@ref) and [`adopt_cache`](@ref) to the operator it wraps. A new wrapper of
+that kind should do the same; without it the operator underneath drops out of sharing even
+though its cache would have qualified.
+
+See also [`adopt_cache`](@ref), which additionally spares the operator from allocating a
+cache it would only discard.
+"""
+getcache(::AbstractSciMLOperator) = nothing
+
+"""
+$SIGNATURES
+
+Replace `op`'s cache with `new_cache`. Only ever called with a `new_cache` of exactly
+the same type as the one it replaces, so `op`'s type is unchanged.
+"""
+update_cache(op::AbstractSciMLOperator, new_cache) = @reset op.cache = new_cache
+
+# Identical cache types already pin element type, layout and device, so only the extents
+# are left to check. Anything else is conservatively treated as not interchangeable.
+_slots_match(a::AbstractArray, b::AbstractArray) = size(a) == size(b)
+_slots_match(::Nothing, ::Nothing) = true
+function _slots_match(a::NTuple{N, Any}, b::NTuple{N, Any}) where {N}
+    return all(map(_slots_match, a, b)) && _aliasing_matches(a, b)
+end
+_slots_match(a, b) = false
+
+# Which slots deliberately point at the same buffer is part of the layout, not an accident
+# of it: `TensorProductOperator` folds two of its slots into one exactly when both factors
+# are square. Comparing the pattern keeps an operator that needs distinct buffers from ever
+# being handed a cache that shares one, instead of relying on the sizes to give it away.
+function _aliasing_matches(a::NTuple{N, Any}, b::NTuple{N, Any}) where {N}
+    return all(
+        ntuple(Val(N)) do i
+            all(ntuple(j -> (a[i] === a[j]) === (b[i] === b[j]), Val(N)))
+        end
+    )
+end
+
+# Having the same cache type is settled at compile time; only the sizes cost anything at
+# run time. Caches of differing type take the second method and are never interchanged.
+function _swap_cache(op, mine::C, theirs::C) where {C}
+    return _slots_match(mine, theirs) ? update_cache(op, theirs) : nothing
+end
+_swap_cache(op, mine, theirs) = nothing
+
+# Point an *already cached* `op` at an interchangeable cache held by one of the `earlier`
+# summands, so its own buffers can be collected. Leaves `op` alone when nothing matches.
+#
+# This does not make `op` work — `cache_operator` already did that — it makes it smaller.
+# Nothing here describes what a cache ought to look like: the buffers being compared have
+# already been allocated, so there is no second description of the layout that could drift
+# out of sync with `cache_self`.
+_deduplicate_cache(op, ::Tuple{}) = op
+
+function _deduplicate_cache(op, earlier::Tuple)
+    mine = getcache(op)
+    mine === nothing && return op
+
+    swapped = _swap_cache(op, mine, getcache(first(earlier)))
+    swapped === nothing || return swapped
+
+    return _deduplicate_cache(op, Base.tail(earlier))
+end
+
+"""
+$SIGNATURES
+
+Return `op` set up for in-place use with `v` using `cache` — the cache of an operator
+already established as interchangeable with it — instead of allocating buffers of its own.
+Return `nothing` to decline, in which case `op` is cached the ordinary way and then offered
+the same cache after the fact, which costs an allocation that is immediately discarded.
+What comes back must report `cache` as its own — [`getcache`](@ref) on it is checked against
+what was handed over, and anything else is treated as having declined, since an
+implementation that quietly allocated instead would otherwise skip the ordinary path too.
+
+Declining is the default, because there is no implementation that is correct for every
+operator: one that follows the `cache_self`/`cache_internals` split opts in with
+
+    adopt_cache(op::MyOperator, cache, v) = cache_internals(update_cache(op, cache), v)
+
+whereas one that defines its own `cache_operator` must instead do whatever that does, minus
+the allocation — the line above would silently skip its internal caching entirely.
+
+Defining this asks more of an operator than [`getcache`](@ref) alone. `getcache` only
+claims that two caches of the same type with the same slot sizes are interchangeable, and
+that is checked against buffers that already exist. This additionally claims that what
+`cache_self` builds is a function of the operator's type, its operands' sizes and `v`, since
+that is what the caller compares before any buffer exists. Leave it undefined when the cache
+depends on anything else — `FunctionOperator` does, because it sizes buffers from
+`traits.sizes`, which `size` does not expose.
+"""
+adopt_cache(::AbstractSciMLOperator, cache, v) = nothing
+
+# Everything `cache_self` may read: the operator's own size and, recursively, its operands'.
+# `adopt_cache`'s contract is that a cache layout follows from the operator's type together
+# with these, so equal types and equal signatures mean interchangeable caches.
+_shape_signature(x) = ()
+_shape_signature(x::AbstractArray) = size(x)
+_shape_signature(L::AbstractSciMLOperator) = (size(L), map(_shape_signature, getops(L)))
+
+# Cache `op`, taking the buffers of one of the `donors` outright when they are
+# interchangeable, so that nothing is allocated only to be thrown away.
+#
+# Every donor already shares `op`'s concrete type — the caller settles that at compile time,
+# which pins every element type — so only their shape signatures are compared here. The two
+# checks are not redundant: `M(8, 8) * M(8, 8)` and `M(8, 16) * M(16, 8)` have identical
+# types and identical overall size while needing different cache layouts.
+#
+# Falls back to caching `op` normally and deduplicating afterwards. That happens when no
+# donor fits, and for any type that has not opted into `adopt_cache`.
+function _cache_summand(op, donors::Tuple, earlier::Tuple, v)
+    adopted = _try_adopt(op, donors, v)
+    adopted === nothing || return adopted
+
+    return _deduplicate_cache(cache_operator(op, v), earlier)
+end
+
+# Walk the same-typed candidates in order, taking the first whose sizes also line up.
+_try_adopt(op, ::Tuple{}, v) = nothing
+
+function _try_adopt(op, donors::Tuple, v)
+    donor = first(donors)
+    cache = getcache(donor)
+
+    if cache !== nothing && _shape_signature(op) == _shape_signature(donor)
+        adopted = adopt_cache(op, cache, v)
+        # An `adopt_cache` that comes back reporting something other than the cache it was
+        # handed did not use it — it allocated buffers of its own, and taking it at its word
+        # would skip the post-hoc path as well and leave the summand sharing nothing. Take
+        # the ordinary route instead, where `_deduplicate_cache` still gets its turn.
+        if adopted !== nothing && getcache(adopted) === cache
+            return adopted
+        end
+    end
+
+    return _try_adopt(op, Base.tail(donors), v)
+end
+
 ###
 # operator traits
 ###
