@@ -6,6 +6,7 @@ the SciML ecosystem.
 module SciMLOperators
 
 using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF
+using SciMLPublic: @public
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Bidiagonal, Factorization, I,
     Transpose, UniformScaling, axpby!, axpy!, ishermitian,
@@ -321,23 +322,13 @@ export update_coefficients!,
     has_concretization,
     kronsum
 
-# Documented (see docs/src/interface.md, docs/src/premade_operators.md) but
-# not exported: the core abstract types every downstream dispatches on and the
-# lazy-algebra result types. Declared public so downstream packages that
-# qualify these names pass ExplicitImports' public-API checks. The `:public`
-# expression head is only available on Julia >= 1.11, so guard the declaration.
-@static if VERSION >= v"1.11.0-DEV.469"
-    eval(
-        Expr(
-            :public,
-            :AbstractSciMLOperator, :AbstractSciMLScalarOperator,
-            :ScaledOperator, :AddedOperator, :ComposedOperator,
-            :InvertedOperator, :AdjointOperator, :TransposedOperator,
-            :AddedScalarOperator, :ComposedScalarOperator, :InvertedScalarOperator,
-            :has_tensor_outer_mul_fast, :tensor_outer_mul_fast!,
-            :getcache, :update_cache, :adopt_cache
-        )
-    )
-end
+# Documented but not exported: core abstract types, lazy-algebra result types,
+# and developer extension hooks used through qualified access downstream.
+@public AbstractSciMLOperator, AbstractSciMLScalarOperator,
+    ScaledOperator, AddedOperator, ComposedOperator,
+    InvertedOperator, AdjointOperator, TransposedOperator,
+    AddedScalarOperator, ComposedScalarOperator, InvertedScalarOperator,
+    has_tensor_outer_mul_fast, tensor_outer_mul_fast!,
+    getcache, update_cache, adopt_cache
 
 end # module

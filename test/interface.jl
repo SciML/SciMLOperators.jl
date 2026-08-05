@@ -1,5 +1,45 @@
 using LinearAlgebra, SciMLOperators, Test
 
+@testset "Documented public operator API" begin
+    owner_public_names = (
+        :AbstractSciMLOperator,
+        :AbstractSciMLScalarOperator,
+        :ScaledOperator,
+        :AddedOperator,
+        :ComposedOperator,
+        :InvertedOperator,
+        :AdjointOperator,
+        :TransposedOperator,
+        :AddedScalarOperator,
+        :ComposedScalarOperator,
+        :InvertedScalarOperator,
+        :has_tensor_outer_mul_fast,
+        :tensor_outer_mul_fast!,
+        :getcache,
+        :update_cache,
+        :adopt_cache,
+    )
+
+    for name in owner_public_names
+        @test isdefined(SciMLOperators, name)
+        @test !Base.isexported(SciMLOperators, name)
+        @static if isdefined(Base, :ispublic)
+            @test Base.ispublic(SciMLOperators, name)
+        end
+
+        @static if isdefined(Base.Docs, :hasdoc)
+            @test Base.Docs.hasdoc(SciMLOperators, name)
+        else
+            doc = sprint(
+                show,
+                MIME"text/plain"(),
+                Base.Docs.doc(Base.Docs.Binding(SciMLOperators, name)),
+            )
+            @test !occursin("No documentation found", doc)
+        end
+    end
+end
+
 mutable struct GenericDiagonalOperator{T} <: SciMLOperators.AbstractSciMLOperator{T}
     diagonal::Vector{T}
     scale::T
