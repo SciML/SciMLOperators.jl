@@ -303,7 +303,10 @@ export
     TensorProductOperator,
     TensorSumOperator,
     WOperator,
-    StaticWOperator
+    StaticWOperator,
+    jacobian_stale,
+    mark_jacobian_updated!,
+    mark_jacobian_current!
 
 export update_coefficients!,
     update_coefficients, isconstant,

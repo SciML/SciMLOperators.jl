@@ -122,6 +122,11 @@ mutable struct WOperator{
     _func_cache::F           # cache used in `mul!`
     _concrete_form::C        # non-lazy form (matrix/number) of the operator
     jacvec::JV
+    # Set by `mark_jacobian_updated!` whenever `J`'s contents change, cleared by the
+    # consumer via `mark_jacobian_current!`. A solver that caches a factorization of `J`
+    # across steps needs to tell a new `gamma` from a new Jacobian; `gamma` it can compare
+    # directly, but an in-place write to `J` is otherwise invisible. See `jacobian_stale`.
+    jac_stale::Bool
 
     function WOperator{IIP}(mass_matrix, gamma, J, u, jacvec = nothing) where {IIP}
         if J isa Union{Number, ScalarOperator}
@@ -143,7 +148,8 @@ mutable struct WOperator{
         JV = typeof(jacvec)
         return new{IIP, T, MType, GType, JType, F, C, JV}(
             mass_matrix, gamma, J,
-            _func_cache, _concrete_form, jacvec
+            # Starts stale: nobody has factorized this Jacobian yet.
+            _func_cache, _concrete_form, jacvec, true
         )
     end
 
@@ -154,11 +160,59 @@ mutable struct WOperator{
             W.J,
             copy(W._func_cache),
             copy(W._concrete_form),
-            W.jacvec
+            W.jacvec,
+            W.jac_stale
         )
     end
 end
 Base.eltype(W::WOperator) = eltype(W.J)
+
+"""
+    jacobian_stale(W) -> Bool
+
+Whether `W`'s Jacobian has changed since a consumer last declared its factorization
+current. Conservatively `true` for anything that does not track it, so a caller that
+cannot ask simply refactorizes.
+
+A solver caching a factorization of `W.J` across steps reads this: `false` means only
+`gamma` can have moved, and the cached factorization is still usable.
+"""
+jacobian_stale(W::WOperator) = W.jac_stale
+jacobian_stale(::Any) = true
+
+"""
+    mark_jacobian_updated!(W) -> W
+
+Announce that the contents of `W`'s Jacobian have changed, invalidating any factorization
+of it a solver may be holding. A no-op for anything that does not track a Jacobian, so it
+is safe to call unconditionally.
+
+Changing `gamma` is a *different* event and needs no announcement — it is visible in the
+field. This is only for an in-place write to `J`, which is not.
+"""
+mark_jacobian_updated!(A) = A
+function mark_jacobian_updated!(W::WOperator)
+    W.jac_stale = true
+    return W
+end
+
+"""
+    mark_jacobian_current!(W) -> W
+
+Declare that the caller's factorization of `W.J` is up to date, clearing the flag
+[`mark_jacobian_updated!`](@ref) set. A no-op off the type.
+
+!!! warning "One consumer per operator"
+    This is a single shared flag, not a per-consumer generation count. Two solvers caching
+    factorizations of the same `W` will race: whichever clears first hides the event from
+    the other, which then reuses a stale factorization. Give each consumer its own
+    `WOperator` if you need more than one.
+"""
+mark_jacobian_current!(A) = A
+function mark_jacobian_current!(W::WOperator)
+    W.jac_stale = false
+    return W
+end
 
 # In WOperator update_coefficients!, accept both missing u/p/t and missing gamma and don't update them in that case.
 # This helps support partial updating logic used with Newton solvers.
