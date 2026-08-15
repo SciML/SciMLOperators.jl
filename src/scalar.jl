@@ -181,6 +181,8 @@ throw.
 # Examples
 
 ```
+using SciMLOperators
+
 v = rand(4)
 u = rand(4)
 w = zeros(4)

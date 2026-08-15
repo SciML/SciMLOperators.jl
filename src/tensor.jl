@@ -54,7 +54,7 @@ A_op = MatrixOperator(A)
 B_op = MatrixOperator(B)
 
 # Create tensor product operator
-T = A_op ⊗ B_op
+T = SciMLOperators.⊗(A_op, B_op)
 
 # Apply to a vector using the new interface
 v = rand(3*4)    # Action vector

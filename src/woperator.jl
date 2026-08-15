@@ -56,7 +56,7 @@ factorization for nonsquare or singular input.
 # Examples
 
 ```julia
-using SciMLOperators
+using LinearAlgebra, SciMLOperators
 
 W = StaticWOperator([2.0 0.0; 0.0 4.0])
 W \\ [2.0, 8.0]
@@ -260,7 +260,7 @@ give each consumer its own operator or track its own generation.
 # Examples
 
 ```julia
-using SciMLOperators
+using LinearAlgebra, SciMLOperators
 
 W = WOperator{true}(I, 0.5, [1.0 0.0; 0.0 2.0], zeros(2))
 jacobian_stale(W) # true until the consumer has initialized its cache
@@ -297,6 +297,8 @@ as a field. This function does not refactorize or otherwise update a cache.
 # Examples
 
 ```julia
+using LinearAlgebra, SciMLOperators
+
 J = [1.0 0.0; 0.0 2.0]
 W = WOperator{true}(I, 0.5, J, zeros(2))
 mark_jacobian_current!(W)
@@ -334,6 +336,8 @@ reduction. Calling it does not inspect `J` and does not refresh any cache.
 # Examples
 
 ```julia
+using LinearAlgebra, SciMLOperators
+
 W = WOperator{true}(I, 0.5, [1.0 0.0; 0.0 2.0], zeros(2))
 mark_jacobian_current!(W)
 @assert !jacobian_stale(W)

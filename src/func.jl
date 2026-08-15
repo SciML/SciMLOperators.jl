@@ -319,9 +319,9 @@ traits are inferred from `input`, `output`, and the trait keyword arguments.
 
 # Errors
 
-Construction throws when the input and output prototypes have incompatible
-dimensions, when a requested batch layout is invalid, or when the callable
-does not satisfy the selected in-place/out-of-place contract.
+Construction validates the input/output prototype dimensions and requested
+batch layout. Application or cache initialization can throw when the
+callable does not satisfy the selected in-place/out-of-place contract.
 """
 function FunctionOperator(
         op,
