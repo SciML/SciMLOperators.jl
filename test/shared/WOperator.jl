@@ -116,3 +116,38 @@ end
     @test isconvertible(WOperator{true}(Mmat, gamma, matfree_J, u)) == false
     @test isconvertible(WOperator{true}(matfree_M, gamma, concrete_J, u)) == false
 end
+
+@testset "Jacobian generation counter" begin
+    n = 6
+    J = rand(n, n)
+    u = rand(n)
+    W = WOperator{true}(I, 0.25, J, u)
+
+    # A new gamma is visible in the field; an in-place write to J is not, which is the
+    # whole reason the counter exists.
+    @test jacobian_version(W) == 0
+    update_coefficients!(W; gamma = 0.5)
+    @test jacobian_version(W) == 0
+
+    J .= rand(n, n)
+    @test mark_jacobian_updated!(W) === W
+    @test jacobian_version(W) == 1
+    mark_jacobian_updated!(W)
+    @test jacobian_version(W) == 2
+
+    @test jacobian_version(copy(W)) == 2
+
+    # For the in-place, plain-matrix case `_concrete_form` is maintained by the owner
+    # (OrdinaryDiffEq's `jacobian2W!`), so `Matrix(W)` is deliberately stale after an
+    # in-place write to `J` — which is the invisibility the counter exists to cover.
+    @test !(Matrix(W) ≈ J - Matrix(I(n)) / 0.5)
+    # Rebuilt from the current gamma and J, it agrees again.
+    Wop = WOperator{true}(I, 0.5, MatrixOperator(J), u)
+    @test Matrix(Wop) ≈ J - Matrix(I(n)) / 0.5
+
+    # Safe to call unconditionally on anything.
+    A = rand(2, 2)
+    @test mark_jacobian_updated!(A) === A
+    @test jacobian_version(A) == 0
+    @test jacobian_version(nothing) == 0
+end

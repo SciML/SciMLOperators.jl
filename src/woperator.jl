@@ -122,6 +122,11 @@ mutable struct WOperator{
     _func_cache::F           # cache used in `mul!`
     _concrete_form::C        # non-lazy form (matrix/number) of the operator
     jacvec::JV
+    # Bumped by `mark_jacobian_updated!` whenever `J`'s contents change. A solver that
+    # caches a factorization of `J` across steps needs to tell a new `gamma` from a new
+    # Jacobian; `gamma` it can compare directly, but an in-place write to `J` is otherwise
+    # invisible. See `jacobian_version`.
+    jac_version::Int
 
     function WOperator{IIP}(mass_matrix, gamma, J, u, jacvec = nothing) where {IIP}
         if J isa Union{Number, ScalarOperator}
@@ -143,7 +148,7 @@ mutable struct WOperator{
         JV = typeof(jacvec)
         return new{IIP, T, MType, GType, JType, F, C, JV}(
             mass_matrix, gamma, J,
-            _func_cache, _concrete_form, jacvec
+            _func_cache, _concrete_form, jacvec, 0
         )
     end
 
@@ -154,11 +159,41 @@ mutable struct WOperator{
             W.J,
             copy(W._func_cache),
             copy(W._concrete_form),
-            W.jacvec
+            W.jacvec,
+            W.jac_version
         )
     end
 end
 Base.eltype(W::WOperator) = eltype(W.J)
+
+"""
+    jacobian_version(W) -> Int
+
+How many times `W`'s Jacobian has been announced as changed. Returned unchanged by
+[`mark_jacobian_updated!`](@ref) for anything that does not track it.
+
+A solver caching a factorization of `W.J` across steps compares this against the version
+it factorized: equal means only `gamma` can have moved, and the cached factorization is
+still usable.
+"""
+jacobian_version(W::WOperator) = W.jac_version
+jacobian_version(::Any) = 0
+
+"""
+    mark_jacobian_updated!(W) -> W
+
+Announce that the contents of `W`'s Jacobian have changed, invalidating any factorization
+of it a solver may be holding. A no-op for anything that does not track a Jacobian, so it
+is safe to call unconditionally.
+
+Changing `gamma` is a *different* event and needs no announcement — it is visible in the
+field. This is only for an in-place write to `J`, which is not.
+"""
+mark_jacobian_updated!(A) = A
+function mark_jacobian_updated!(W::WOperator)
+    W.jac_version += 1
+    return W
+end
 
 # In WOperator update_coefficients!, accept both missing u/p/t and missing gamma and don't update them in that case.
 # This helps support partial updating logic used with Newton solvers.
