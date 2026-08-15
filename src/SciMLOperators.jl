@@ -33,9 +33,15 @@ const isv1 = true
 """
 $(TYPEDEF)
 
-Subtypes of `AbstractSciMLOperator` represent linear, nonlinear,
-time-dependent operators acting on vectors, or matrix column-vectors.
-A lazy operator algebra is also defined for `AbstractSciMLOperator`s.
+`AbstractSciMLOperator` is the extension point for matrix-like and
+matrix-free operators. A subtype represents an operator ``L(u,p,t)`` whose
+action on an array ``v`` is written ``L(u,p,t)v``. The subtype may be
+constant, state-dependent, or time-dependent, and may be composed with other
+SciML operators through the lazy algebra.
+
+This is an interface type, not a constructor. The concrete type should be
+public only when users are expected to construct or extend it; otherwise use
+the qualified developer-facing API documented in this section.
 
 ## Mathematical Notation
 
@@ -55,6 +61,18 @@ operator types should subtype it with the scalar element type `T` and must
 preserve their mathematical action when they participate in lazy algebra.
 
 ## Required Interface
+
+A concrete subtype must implement `size(L) -> (m, n)`, `*(L, v)`, and
+`mul!(w, L, v)`. The returned action has leading size `m` for an input whose
+leading size is `n`, and the in-place method must return `w` after writing the
+result. The scaling form `mul!(w, L, v, α, β)` is required when
+`has_mul!(L) == true`; it must compute ``w \\leftarrow α(Lv) + βw``.
+
+`has_mul(L)`, `has_mul!(L)`, `has_ldiv(L)`, and `has_ldiv!(L)` are promises,
+not capability probes: return `true` only when the corresponding operation is
+valid for all compatible inputs. `convert(AbstractMatrix, L)` is optional and
+should be defined only when `isconvertible(L) == true`; its result must have
+the same size and action as `L` in its current state.
 
 An `AbstractSciMLOperator` can be called like a function in the following ways:
 
@@ -86,9 +104,17 @@ application paths:
 
 If the operator state depends on `(u, p, t)` or accepted keyword arguments,
 the subtype must implement `update_coefficients` for out-of-place state
-updates or `update_coefficients!` for in-place state updates. Composite
-operators assume these update methods may be called recursively on every
-operator returned by `getops(L)`.
+updates or `update_coefficients!` for in-place state updates. The out-of-place
+form returns a new operator and leaves `L` unchanged; the in-place form
+returns `nothing`. Composite operators assume these update methods may be
+called recursively on every operator returned by `getops(L)`.
+
+The positional arguments are forwarded unchanged through a composite
+operator. `u` is the state supplied by the caller and is not necessarily the
+same shape as the action vector `v`; an operator whose action is nonlinear in
+`v` should generally use `FunctionOperator` and report `islinear(L) == false`.
+For a constant leaf, the default update is a no-op. A stateful leaf must
+override `isconstant` rather than inheriting the empty-child default.
 
 Subtypes that need preallocated work arrays for allocation-free application
 must implement `cache_self(L, v)` for their own caches, `cache_internals(L, v)`
@@ -101,6 +127,13 @@ and downstream solvers may call it before repeated `mul!` evaluations.
 subtype that advertises `has_mul!(L) == true` must ensure the cached result is
 ready for repeated `mul!` calls with compatible vectors. Cache hooks may not
 change the mathematical action, dimensions, or trait values of the operator.
+A cached operator's scratch is mutable and is not safe to use concurrently
+unless the subtype explicitly provides that guarantee.
+
+Composite types expose their children through the developer-facing `getops`
+method. A new composite must forward state updates, caching, and traits to
+every child that contributes to its action. The public action must remain
+unchanged by flattening, caching, or updating the composition.
 
 ## Trait Rules
 
@@ -121,10 +154,12 @@ for a linear operator.
 ## Keyword Arguments
 
 When an operator accepts keywords during updates, its constructor must record
-the accepted names with `accepted_kwargs`. Composite operators forward only
-those accepted keywords to each component. Extension authors must therefore
-accept `(u, p, t; kwargs...)` consistently in every update and application
-method they advertise.
+the accepted names with `accepted_kwargs`, normally as
+`Val((:name1, :name2))`. Composite operators forward only those accepted
+keywords to each component. Extension authors must therefore accept
+`(u, p, t; kwargs...)` consistently in every update and application method
+they advertise. An unlisted keyword must not be silently passed to a leaf
+update function.
 
 ## Standard Actions
 
@@ -144,10 +179,14 @@ SciMLOperator can also be applied to `AbstractMatrix` subtypes where
 operator-evaluation is done column-wise.
 
 ```julia
+using LinearAlgebra, SciMLOperators
+
+N = 4
 K = 10
+L = MatrixOperator(Matrix(I, N, N))
 u_mat = rand(N, K)
 
-v_mat = F(u_mat, p, t) # == mul!(v_mat, F, u_mat)
+v_mat = L(u_mat, nothing, nothing, 0.0)
 size(v_mat) == (N, K) # true
 ```
 
@@ -168,30 +207,34 @@ or out-of-place, i.e. in a non-mutating, `Zygote`-compatible way.
 For example,
 
 ```julia
-u = rand(N)
-p = rand(N)
+using LinearAlgebra, SciMLOperators
+
+n = 4
+v = rand(n)
+u = rand(n)
+p = rand(n)
 t = rand()
 
 # out-of-place update
 mat_update_func = (A, u, p, t) -> t * (p * u')
 sca_update_func = (a, u, p, t) -> t * sum(p)
 
-M = MatrixOperator(zero(N, N); update_func = mat_update_func)
-α = ScalarOperator(zero(Float64); update_func = sca_update_func)
+M = MatrixOperator(zeros(n, n); update_func = mat_update_func)
+α = ScalarOperator(0.0; update_func = sca_update_func)
 
 L = α * M
 L = cache_operator(L, v)
 
 # L is initialized with zero state
-L * v == zeros(N) # true
+L * v == zeros(n) # true
 
 # update operator state with `(u, p, t)`
 L = update_coefficients(L, u, p, t)
 # and multiply
-L * v != zeros(N) # true
+L * v != zeros(n) # true
 
 # updates state and evaluates L*v at (u, p, t)
-L(v, u, p, t) != zeros(N) # true
+L(v, u, p, t) != zeros(n) # true
 ```
 
 The out-of-place evaluation function `L(v, u, p, t)` calls
@@ -207,34 +250,34 @@ followed by `mul!`. The in-place update behavior works the same way,
 with a few `<!>`s appended here and there. For example,
 
 ```julia
-w = rand(N)
-v = rand(N)
-u = rand(N)
-p = rand(N)
+using LinearAlgebra, SciMLOperators
+
+n = 4
+w = rand(n)
+v = rand(n)
+u = rand(n)
+p = rand(n)
 t = rand()
 
 # in-place update
-_A = rand(N, N)
-_d = rand(N)
+_A = rand(n, n)
 mat_update_func! = (A, u, p, t) -> (copy!(A, _A); lmul!(t, A); nothing)
-diag_update_func! = (diag, u, p, t) -> copy!(diag, N)
 
-M = MatrixOperator(zero(N, N); update_func! = mat_update_func!)
-D = DiagonalOperator(zero(N); update_func! = diag_update_func!)
+M = MatrixOperator(zeros(n, n); update_func! = mat_update_func!)
 
-L = D * M
+L = M
 L = cache_operator(L, v)
 
 # L is initialized with zero state
-L * v == zeros(N) # true
+L * v == zeros(n) # true
 
 # update L in-place
 update_coefficients!(L, v, p, t)
 # and multiply
-mul!(w, v, u, p, t) != zero(N) # true
+mul!(w, L, v) != zeros(n) # true
 
 # updates L in-place, and evaluates w=L*v at (u, p, t)
-L(w, v, u, p, t) != zero(N) # true
+L(w, v, u, p, t) != zeros(n) # true
 ```
 
 The update behavior makes this package flexible enough to be used
@@ -244,13 +287,20 @@ prefer to pass in state information via other arguments. For that
 reason, we allow update functions with arbitrary keyword arguments.
 
 ```julia
+using SciMLOperators
+
+n = 4
+v = rand(n)
+u = rand(n)
+p = rand(n)
+t = 0.0
 mat_update_func = (A, u, p, t; scale = 0.0) -> scale * (p * u')
 
-M = MatrixOperator(zero(N, N); update_func = mat_update_func,
-    accepted_kwargs = (:state,))
+M = MatrixOperator(zeros(n, n); update_func = mat_update_func,
+    accepted_kwargs = Val((:scale,)))
 
-M(v, u, p, t) == zeros(N) # true
-M(v, u, p, t; scale = 1.0) != zero(N)
+M(v, u, p, t) == zeros(n) # true
+M(v, u, p, t; scale = 1.0) != zeros(n)
 ```
 """
 abstract type AbstractSciMLOperator{T} end
@@ -263,11 +313,35 @@ Abstract interface for a scalar-valued linear scaling operator.
 # Interface Rules
 
 Subtypes must provide `convert(Number, operator)` for their current scalar
-value. They may implement state updates through `update_coefficients` and
-`update_coefficients!` using the same `(u, p, t; kwargs...)` contract as
-[`AbstractSciMLOperator`](@ref). Scalar operators act on numbers and arrays,
-and their addition, multiplication, division, and inversion remain lazy so
-that later updates affect the composed expression.
+value and `eltype` through the type parameter `T`. Scalar application to an
+array must preserve the array shape. If the subtype is stateful, its update
+methods use the same `(u, p, t; kwargs...)` contract as
+[`AbstractSciMLOperator`](@ref): the out-of-place form returns a new scalar
+operator, while the in-place form mutates the operator and returns `nothing`.
+
+`islinear` describes linearity in the array being scaled. `has_ldiv` and
+`has_ldiv!` may be true only when the current scalar value is invertible.
+Scalar addition, multiplication, division, and inversion remain lazy so that
+later updates affect the composed expression. Use `ScalarOperator` when a
+premade implementation is sufficient.
+
+# Examples
+
+```julia
+using SciMLOperators
+
+struct MutableScale <: AbstractSciMLScalarOperator{Float64}
+    value::Float64
+end
+
+Base.convert(::Type{Number}, L::MutableScale) = L.value
+Base.:*(L::MutableScale, v::AbstractArray) = L.value .* v
+SciMLOperators.islinear(::MutableScale) = true
+
+L = MutableScale(2.0)
+L * [3.0, 4.0]
+concretize(L) == 2.0
+```
 
 Use `ScalarOperator` to construct a concrete scalar operator. Custom scalar
 operator types should only claim traits such as `has_ldiv` when the converted

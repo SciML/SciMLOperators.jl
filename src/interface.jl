@@ -9,6 +9,18 @@ $SIGNATURES
 
 The default update function for `AbstractSciMLOperator`s, a no-op that
 leaves the operator state unchanged.
+
+# Arguments
+
+  - `A`: Current operator state.
+  - `u`: State or update vector supplied by the caller.
+  - `p`: Parameter object supplied by the caller.
+  - `t`: Time or other scalar update value.
+
+# Returns
+
+The unchanged value `A`. The positional update arguments are accepted so this
+function can be used wherever an operator update function is expected.
 """
 DEFAULT_UPDATE_FUNC(A, u, p, t) = A
 
@@ -40,7 +52,23 @@ This method is out-of-place, i.e. fully non-mutating and `Zygote`-compatible.
 
 $(UPDATE_COEFFS_WARNING)
 
-# Example
+# Arguments
+
+  - `L`: Operator whose state should be updated.
+  - `u`: State or update vector supplied to the operator.
+  - `p`: Parameter object supplied to the operator.
+  - `t`: Time or other scalar update value.
+
+# Keyword Arguments
+
+  - `kwargs...`: Keywords accepted by the operator's update function and
+    recorded by its `accepted_kwargs` constructor option.
+
+# Returns
+
+A new operator representing the updated state. `L` is not mutated.
+
+# Examples
 
 ```
 using SciMLOperators
@@ -79,7 +107,23 @@ corresponding to the symbols provided to the operator via kwarg
 
 $(UPDATE_COEFFS_WARNING)
 
-# Example
+# Arguments
+
+  - `L`: Operator whose state should be updated.
+  - `u`: State or update vector supplied to the operator.
+  - `p`: Parameter object supplied to the operator.
+  - `t`: Time or other scalar update value.
+
+# Keyword Arguments
+
+  - `kwargs...`: Keywords accepted by the operator's mutating update function
+    and recorded by its `accepted_kwargs` constructor option.
+
+# Returns
+
+`nothing`. The operator `L` is mutated in place.
+
+# Examples
 
 ```
 using SciMLOperators
@@ -142,6 +186,15 @@ getops(L) = ()
 $SIGNATURES
 
 Checks whether `L` has preallocated caches for inplace evaluations.
+
+# Arguments
+
+  - `L`: Operator to inspect. For a composite, all child caches are checked.
+
+# Returns
+
+`true` when the operator and every child needed for in-place evaluation has a
+usable cache, otherwise `false`.
 """
 function iscached(L::AbstractSciMLOperator)
     has_cache = hasfield(typeof(L), :cache) # TODO - confirm this is static
@@ -169,6 +222,23 @@ iscached(
 $SIGNATURES
 
 Allocate caches for `L` for in-place evaluation with `u`-like input vectors.
+
+# Arguments
+
+  - `L`: Operator to prepare.
+  - `u`: Prototype vector or matrix whose shape determines compatible scratch.
+
+# Returns
+
+`L` or a cached replacement. The returned operator must have the same action,
+size, and trait values as the input operator.
+
+# Interface Rules
+
+Call this before repeated `mul!` or callable in-place evaluations when the
+operator needs scratch storage. A custom type that needs storage should
+implement `cache_self` for its own buffers and `cache_internals` for child
+operators.
 """
 cache_operator(L, u) = L
 
@@ -217,6 +287,17 @@ $SIGNATURES
 
 Replace `op`'s cache with `new_cache`. Only ever called with a `new_cache` of exactly
 the same type as the one it replaces, so `op`'s type is unchanged.
+
+# Arguments
+
+  - `op`: Cached operator whose scratch should be replaced.
+  - `new_cache`: Cache with the same type, shape, and aliasing layout as the
+    existing cache.
+
+# Returns
+
+An operator with `new_cache` installed. Implementations must preserve the
+operator action and type parameters.
 """
 update_cache(op::AbstractSciMLOperator, new_cache) = @reset op.cache = new_cache
 
@@ -293,6 +374,17 @@ that is checked against buffers that already exist. This additionally claims tha
 that is what the caller compares before any buffer exists. Leave it undefined when the cache
 depends on anything else — `FunctionOperator` does, because it sizes buffers from
 `traits.sizes`, which `size` does not expose.
+
+# Arguments
+
+  - `op`: Operator that may adopt the supplied cache.
+  - `cache`: An interchangeable cache from another operator.
+  - `v`: Prototype action vector or matrix used to build child caches.
+
+# Returns
+
+An operator using `cache`, or `nothing` to decline. Returning an operator that
+silently allocates a different cache is a contract violation.
 """
 adopt_cache(::AbstractSciMLOperator, cache, v) = nothing
 
@@ -360,6 +452,15 @@ Base.iszero(::AbstractSciMLOperator) = false # TODO
 $SIGNATURES
 
 Check if `adjoint(L)` is lazily defined.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when `adjoint(L)` is supported without relying on an
+unadvertised conversion fallback.
 """
 has_adjoint(L::AbstractSciMLOperator) = false # L', adjoint(L)
 """
@@ -367,6 +468,15 @@ $SIGNATURES
 
 Check if `expmv!(w, L, v, t)`, equivalent to `mul!(w, exp(t * A), v)`, is
 defined for `Number` `t`, and `AbstractArray`s `w, v` of appropriate sizes.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when the in-place exponential action is part of the operator's
+supported contract.
 """
 has_expmv!(L::AbstractSciMLOperator) = false # expmv!(v, L, t, u)
 """
@@ -374,18 +484,42 @@ $SIGNATURES
 
 Check if `expmv(L, v, t)`, equivalent to `exp(t * A) * v`, is defined for
 `Number` `t`, and `AbstractArray` `u` of appropriate size.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when the out-of-place exponential action is supported.
 """
 has_expmv(L::AbstractSciMLOperator) = false # v = exp(L, t, u)
 """
 $SIGNATURES
 
-Check if `exp(L)` is defined lazily defined.
+Check if `exp(L)` is defined lazily.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when `exp(L)` is a supported lazy operation.
 """
 has_exp(L::AbstractSciMLOperator) = islinear(L)
 """
 $SIGNATURES
 
 Check if `L * v` is defined for `AbstractArray` `u` of appropriate size.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when `L * v` is supported for compatible action arrays.
 """
 has_mul(L::AbstractSciMLOperator) = true # du = L*u
 """
@@ -393,12 +527,30 @@ $SIGNATURES
 
 Check if `mul!(w, L, v)` is defined for `AbstractArray`s `w, v` of
 appropriate sizes.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when the in-place multiplication and its return-value contract
+are supported for compatible arrays.
 """
 has_mul!(L::AbstractSciMLOperator) = true # mul!(du, L, u)
 """
 $SIGNATURES
 
 Check if `L \\ v` is defined for `AbstractArray` `v` of appropriate size.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when the out-of-place solve is supported for compatible right-hand
+sides.
 """
 has_ldiv(L::AbstractSciMLOperator) = false # du = L\u
 """
@@ -406,6 +558,14 @@ $SIGNATURES
 
 Check if `ldiv!(w, L, v)` is defined for `AbstractArray`s `w, v` of
 appropriate sizes.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when the in-place solve is supported for compatible arrays.
 """
 has_ldiv!(L::AbstractSciMLOperator) = false # ldiv!(du, L, u)
 
@@ -416,6 +576,15 @@ $SIGNATURES
 
 Checks if an `L`'s state is constant or needs to be updated by calling
 `update_coefficients`.
+
+# Arguments
+
+  - `L`: Operator or operator-like object to inspect.
+
+# Returns
+
+`true` when updating with supported `(u, p, t; kwargs...)` values cannot change
+the operator action. A stateful leaf must override this trait explicitly.
 """
 isconstant(
     ::Union{# LinearAlgebra
@@ -432,6 +601,16 @@ isconstant(L) = false
     isconvertible(L) -> Bool
 
 Checks if `L` can be cheaply converted to an `AbstractMatrix` via eager fusion.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` only when `convert(AbstractMatrix, L)` is a supported operation for the
+current operator state. This trait does not require eager conversion to be the
+preferred execution path.
 """
 isconvertible(L::AbstractSciMLOperator) = all(isconvertible, getops(L))
 
@@ -459,6 +638,21 @@ end
 
 Convert `SciMLOperator` to a concrete type via eager fusion. This method is a
 no-op for types that are already concrete.
+
+# Arguments
+
+  - `L`: Matrix-like or scalar operator to materialize.
+
+# Returns
+
+An `AbstractMatrix` for matrix-like operators or a `Number` for scalar
+operators, with the same current action as `L`.
+
+# Errors
+
+Throws the conversion error from `L` when the operator does not support the
+requested concrete representation. Check `isconvertible(L)` before relying
+on eager matrix materialization.
 """
 function concretize(
         L::Union{# LinearAlgebra
@@ -489,6 +683,15 @@ end
 $SIGNATURES
 
 Checks if `L` is a linear operator.
+
+# Arguments
+
+  - `L`: Operator to inspect.
+
+# Returns
+
+`true` when the action is linear in the action vector, even if the operator
+state depends on `(u, p, t)`.
 """
 islinear(::AbstractSciMLOperator) = false
 islinear(L) = false
@@ -552,6 +755,16 @@ has_adjoint(
 
 """
 Checks if `size(L, 1) == size(L, 2)`.
+
+# Arguments
+
+  - `L`: Matrix-like object or operator to inspect.
+
+# Returns
+
+`true` for a square operator and `false` for a rectangular operator or vector.
+For multiple arguments, the result is the elementwise conjunction of their
+individual square predicates.
 """
 issquare(L) = ndims(L) >= 2 && size(L, 1) == size(L, 2)
 issquare(::AbstractVector) = false

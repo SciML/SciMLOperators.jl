@@ -64,6 +64,7 @@ end
 SciMLOperators.islinear(::GenericDiagonalOperator) = true
 SciMLOperators.isconvertible(::GenericDiagonalOperator) = true
 SciMLOperators.has_concretization(::GenericDiagonalOperator) = true
+SciMLOperators.isconstant(::GenericDiagonalOperator) = false
 
 function SciMLOperators.update_coefficients(
         L::GenericDiagonalOperator, u, p, t; scale = p
@@ -86,7 +87,7 @@ end
     @test size(L) == (2, 2)
     @test issquare(L)
     @test islinear(L)
-    @test isconstant(L)
+    @test !isconstant(L)
     @test isconvertible(L)
     @test has_concretization(L)
     @test has_mul(L)
@@ -111,4 +112,54 @@ end
 
     L(w, v, nothing, 3.0, 0.0, 2.0, 0.5)
     @test w == [56.0, 105.0]
+end
+
+mutable struct GenericScalarOperator <: SciMLOperators.AbstractSciMLScalarOperator{Float64}
+    value::Float64
+end
+
+Base.convert(::Type{Number}, L::GenericScalarOperator) = L.value
+SciMLOperators.isconstant(::GenericScalarOperator) = false
+SciMLOperators.has_ldiv(L::GenericScalarOperator) = !iszero(L.value)
+SciMLOperators.has_ldiv!(L::GenericScalarOperator) = !iszero(L.value)
+
+function SciMLOperators.update_coefficients(
+        L::GenericScalarOperator, u, p, t; scale = p
+    )
+    return GenericScalarOperator(scale)
+end
+
+function SciMLOperators.update_coefficients!(
+        L::GenericScalarOperator, u, p, t; scale = p
+    )
+    L.value = scale
+    return nothing
+end
+
+@testset "AbstractSciMLScalarOperator generic interface" begin
+    L = GenericScalarOperator(2.0)
+    v = [4.0, 5.0]
+    w = [7.0, 11.0]
+
+    @test size(L) == ()
+    @test islinear(L)
+    @test !isconstant(L)
+    @test has_mul(L)
+    @test has_mul!(L)
+    @test has_ldiv(L)
+    @test has_ldiv!(L)
+    @test has_concretization(L)
+    @test concretize(L) == 2.0
+    @test L * v == [8.0, 10.0]
+    @test mul!(copy(w), L, v) == [8.0, 10.0]
+
+    updated = update_coefficients(L, nothing, 3.0, 0.0)
+    @test updated !== L
+    @test updated * v == [12.0, 15.0]
+    @test L(v, nothing, 4.0, 0.0) == [16.0, 20.0]
+
+    @test update_coefficients!(L, nothing, 5.0, 0.0) === nothing
+    @test L * v == [20.0, 25.0]
+    L(w, v, nothing, 3.0, 0.0)
+    @test w == [12.0, 15.0]
 end

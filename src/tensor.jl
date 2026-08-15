@@ -14,7 +14,35 @@ TensorProductOperator(A, B, C) = A ⊗ B ⊗ C
 ```
 where `M = size(B, 2)`, and `N = size(A, 2)`
 
-# Example
+# Arguments
+
+  - `A`: Left tensor factor, an `AbstractMatrix` or
+    `AbstractSciMLOperator`.
+  - `B`: Right tensor factor, an `AbstractMatrix` or
+    `AbstractSciMLOperator`.
+  - `ops...`: Additional factors for the variadic constructor.
+
+# Returns
+
+A lazy `TensorProductOperator` with the product size and action. Applying it
+does not form the full Kronecker matrix; `cache_operator` may be used before
+repeated in-place multiplication.
+
+# Interface Rules
+
+The factors must have compatible matrix dimensions for the requested action.
+The vector or batch input is interpreted using the tensor-product layout, and
+the output has the same batch shape with the product leading dimension.
+Use `convert(AbstractMatrix, L)` only when every factor supports eager
+materialization.
+
+# Errors
+
+Application throws a dimension error when the input does not match the
+product's leading dimension. Eager conversion throws when any factor lacks a
+concrete matrix representation.
+
+# Examples
 
 ```
 using SciMLOperators, LinearAlgebra

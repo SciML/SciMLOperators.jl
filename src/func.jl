@@ -311,6 +311,17 @@ Trait keyword arguments must be truthful and uniform across `op`, `op_adjoint`,
   - `ishermitian` - `true` if the operator is linear and hermitian. Defaults to `false`.
   - `isposdef` - `true` if the operator is linear and positive-definite. Defaults to `false`.
   - `kwargs` - Keyword arguments for cache initialization. If `accepted_kwargs` is provided, the corresponding keyword arguments must be passed.
+
+# Returns
+
+A matrix-free `FunctionOperator` whose size, element type, cache layout, and
+traits are inferred from `input`, `output`, and the trait keyword arguments.
+
+# Errors
+
+Construction throws when the input and output prototypes have incompatible
+dimensions, when a requested batch layout is invalid, or when the callable
+does not satisfy the selected in-place/out-of-place contract.
 """
 function FunctionOperator(
         op,
