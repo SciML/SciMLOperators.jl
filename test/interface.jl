@@ -4,6 +4,7 @@ using LinearAlgebra, SciMLOperators, Test
     owner_public_names = (
         :AbstractSciMLOperator,
         :AbstractSciMLScalarOperator,
+        :AbstractWOperator,
         :ScaledOperator,
         :AddedOperator,
         :ComposedOperator,
@@ -112,6 +113,43 @@ end
 
     L(w, v, nothing, 3.0, 0.0, 2.0, 0.5)
     @test w == [56.0, 105.0]
+end
+
+mutable struct GenericWOperator <: SciMLOperators.AbstractWOperator{Float64}
+    matrix::Matrix{Float64}
+    stale::Bool
+end
+
+Base.size(W::GenericWOperator) = size(W.matrix)
+Base.:*(W::GenericWOperator, v::AbstractVector) = W.matrix * v
+function LinearAlgebra.mul!(w::AbstractVector, W::GenericWOperator, v::AbstractVector)
+    mul!(w, W.matrix, v)
+    return w
+end
+SciMLOperators.jacobian_stale(W::GenericWOperator) = W.stale
+function SciMLOperators.mark_jacobian_updated!(W::GenericWOperator)
+    W.stale = true
+    return W
+end
+function SciMLOperators.mark_jacobian_current!(W::GenericWOperator)
+    W.stale = false
+    return W
+end
+
+@testset "AbstractWOperator generic interface" begin
+    W = GenericWOperator([2.0 0.0; 0.0 3.0], true)
+    v = [4.0, 5.0]
+    w = zeros(2)
+
+    @test size(W) == (2, 2)
+    @test W * v == [8.0, 15.0]
+    @test mul!(w, W, v) === w
+    @test w == [8.0, 15.0]
+    @test jacobian_stale(W)
+    @test mark_jacobian_current!(W) === W
+    @test !jacobian_stale(W)
+    @test mark_jacobian_updated!(W) === W
+    @test jacobian_stale(W)
 end
 
 mutable struct GenericScalarOperator <: SciMLOperators.AbstractSciMLScalarOperator{Float64}

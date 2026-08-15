@@ -402,6 +402,7 @@ export update_coefficients!,
 # Documented but not exported: core abstract types, lazy-algebra result types,
 # and developer extension hooks used through qualified access downstream.
 @public AbstractSciMLOperator, AbstractSciMLScalarOperator,
+    AbstractWOperator,
     ScaledOperator, AddedOperator, ComposedOperator,
     InvertedOperator, AdjointOperator, TransposedOperator,
     AddedScalarOperator, ComposedScalarOperator, InvertedScalarOperator,
