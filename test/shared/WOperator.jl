@@ -117,37 +117,44 @@ end
     @test isconvertible(WOperator{true}(matfree_M, gamma, concrete_J, u)) == false
 end
 
-@testset "Jacobian generation counter" begin
+@testset "Jacobian staleness flag" begin
     n = 6
     J = rand(n, n)
     u = rand(n)
     W = WOperator{true}(I, 0.25, J, u)
 
+    # Starts stale: nobody has factorized this Jacobian yet.
+    @test jacobian_stale(W)
+    @test mark_jacobian_current!(W) === W
+    @test !jacobian_stale(W)
+
     # A new gamma is visible in the field; an in-place write to J is not, which is the
-    # whole reason the counter exists.
-    @test jacobian_version(W) == 0
+    # whole reason the flag exists.
     update_coefficients!(W; gamma = 0.5)
-    @test jacobian_version(W) == 0
+    @test !jacobian_stale(W)
 
     J .= rand(n, n)
     @test mark_jacobian_updated!(W) === W
-    @test jacobian_version(W) == 1
+    @test jacobian_stale(W)
     mark_jacobian_updated!(W)
-    @test jacobian_version(W) == 2
+    @test jacobian_stale(W)          # idempotent, unlike a counter
+    mark_jacobian_current!(W)
+    @test !jacobian_stale(W)
 
-    @test jacobian_version(copy(W)) == 2
+    mark_jacobian_updated!(W)
+    @test jacobian_stale(copy(W))
 
     # For the in-place, plain-matrix case `_concrete_form` is maintained by the owner
     # (OrdinaryDiffEq's `jacobian2W!`), so `Matrix(W)` is deliberately stale after an
-    # in-place write to `J` — which is the invisibility the counter exists to cover.
+    # in-place write to `J` — which is the invisibility the flag exists to cover.
     @test !(Matrix(W) ≈ J - Matrix(I(n)) / 0.5)
-    # Rebuilt from the current gamma and J, it agrees again.
     Wop = WOperator{true}(I, 0.5, MatrixOperator(J), u)
     @test Matrix(Wop) ≈ J - Matrix(I(n)) / 0.5
 
-    # Safe to call unconditionally on anything.
+    # Safe to call unconditionally on anything; conservatively stale when untracked.
     A = rand(2, 2)
     @test mark_jacobian_updated!(A) === A
-    @test jacobian_version(A) == 0
-    @test jacobian_version(nothing) == 0
+    @test mark_jacobian_current!(A) === A
+    @test jacobian_stale(A)
+    @test jacobian_stale(nothing)
 end

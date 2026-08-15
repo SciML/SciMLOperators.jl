@@ -304,8 +304,9 @@ export
     TensorSumOperator,
     WOperator,
     StaticWOperator,
-    jacobian_version,
-    mark_jacobian_updated!
+    jacobian_stale,
+    mark_jacobian_updated!,
+    mark_jacobian_current!
 
 export update_coefficients!,
     update_coefficients, isconstant,
