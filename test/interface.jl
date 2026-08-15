@@ -126,6 +126,12 @@ function LinearAlgebra.mul!(w::AbstractVector, W::GenericWOperator, v::AbstractV
     mul!(w, W.matrix, v)
     return w
 end
+function LinearAlgebra.mul!(
+        w::AbstractVector, W::GenericWOperator, v::AbstractVector, α, β
+    )
+    mul!(w, W.matrix, v, α, β)
+    return w
+end
 SciMLOperators.jacobian_stale(W::GenericWOperator) = W.stale
 function SciMLOperators.mark_jacobian_updated!(W::GenericWOperator)
     W.stale = true
@@ -142,9 +148,12 @@ end
     w = zeros(2)
 
     @test size(W) == (2, 2)
+    @test has_mul!(W)
     @test W * v == [8.0, 15.0]
     @test mul!(w, W, v) === w
     @test w == [8.0, 15.0]
+    @test mul!(w, W, v, 2.0, 0.5) === w
+    @test w == [20.0, 37.5]
     @test jacobian_stale(W)
     @test mark_jacobian_current!(W) === W
     @test !jacobian_stale(W)

@@ -7,10 +7,13 @@ should not be used as a user-facing construction target.
 
 # Interface Rules
 
-A concrete subtype must provide `size`, matrix-like `*`, and `mul!` with the
-same shape and return-value rules as [`AbstractSciMLOperator`](@ref). It must
-also expose enough state for the implicit solver that owns it to update the
-Jacobian and mass-matrix actions. Define `isconvertible` and
+A concrete subtype must provide `size`, matrix-like `*`, and
+`mul!(out, W, x)` with the same shape and return-value rules as
+[`AbstractSciMLOperator`](@ref). If `has_mul!(W)` is true, it must also
+provide `mul!(out, W, x, alpha, beta)` implementing
+`out = alpha * (W * x) + beta * out`, and both mutating methods must return
+`out`. It must also expose enough state for the implicit solver that owns it
+to update the Jacobian and mass-matrix actions. Define `isconvertible` and
 `convert(AbstractMatrix, W)` only when materialization is supported.
 
 If a consumer caches a Jacobian-dependent factorization, it should implement
