@@ -163,12 +163,26 @@ $(UPDATE_COEFFS_WARNING)
 
 Lazy scalar algebra is defined for `AbstractSciMLScalarOperator`s. The
 interface supports lazy addition, subtraction, multiplication, and division.
-Updates must return a number with the intended scalar action; in-place scalar
-updates are not supported because numbers are immutable.
+Updates must return a number with the intended scalar action. The underlying
+number is immutable, but `ScalarOperator` itself is mutable, so
+`update_coefficients!` may replace its stored value and returns `nothing`.
+
+# Returns
+
+A `ScalarOperator` storing the current scalar value and the configured
+out-of-place update function.
+
+# Errors
+
+An update function that does not return a number, or a keyword that is not
+listed in `accepted_kwargs`, causes the corresponding update or evaluation to
+throw.
 
 # Examples
 
 ```
+using SciMLOperators
+
 v = rand(4)
 u = rand(4)
 w = zeros(4)

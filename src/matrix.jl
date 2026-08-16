@@ -49,18 +49,32 @@ adjoints, and transposes. An update function must preserve the dimensions and
 mathematical meaning of `A`; use `FunctionOperator` when the action itself is
 nonlinear in the input vector.
 
+# Returns
+
+A `MatrixOperator` whose current action is `A`. When update functions are
+provided, the returned operator stores them and applies them through the
+documented update interface.
+
+# Errors
+
+Construction throws if `A` is not an `AbstractMatrix` or if a supplied update
+function returns a value incompatible with the matrix action. Passing a
+keyword not listed in `accepted_kwargs` is rejected by the keyword filter.
+
 # Examples
 
 Out-of-place update and usage
 
 ```
+using LinearAlgebra, SciMLOperators
+
 v = rand(4)
 u = rand(4)
 p = rand(4, 4)
 t = rand()
 
 mat_update = (A, u, p, t; scale = 0.0) -> t * p
-M = MatrixOperator(0.0; update_func = mat_update, accepted_kwargs = Val((:scale,)))
+M = MatrixOperator(zeros(4, 4); update_func = mat_update, accepted_kwargs = Val((:scale,)))
 
 L = M * M + 3I
 L = cache_operator(L, v)
@@ -403,7 +417,23 @@ Updates must preserve the diagonal's leading dimension. For multidimensional
 `diag`, the operator acts elementwise while reporting a matrix size based on
 its leading dimension.
 
+# Returns
+
+A `DiagonalOperator` backed by `diag` and the configured update functions.
+
+# Errors
+
+Construction or update throws when a supplied diagonal update changes the
+leading dimension or returns an incompatible value.
+
 # Examples
+
+```julia
+using SciMLOperators
+
+D = DiagonalOperator([2.0, 3.0])
+D * [4.0, 5.0] == [8.0, 15.0]
+```
 """
 function DiagonalOperator(
         diag::AbstractVector;

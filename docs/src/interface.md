@@ -12,6 +12,9 @@ update_coefficients
 update_coefficients!
 cache_operator
 concretize
+jacobian_stale
+mark_jacobian_updated!
+mark_jacobian_current!
 SciMLOperators.DEFAULT_UPDATE_FUNC
 ```
 
@@ -36,6 +39,16 @@ SciMLOperators.NoKwargFilter
 ```
 
 ## Developer Extension Hooks
+
+The names in this section are qualified, developer-facing extension points.
+They are documented so solver packages can depend on a stable contract, but
+they are not general user construction APIs. Downstream solver developers
+should extend the documented methods rather than relying on private fields or
+unexported implementation helpers.
+
+```@docs
+SciMLOperators.AbstractWOperator
+```
 
 ```@docs
 SciMLOperators.has_tensor_outer_mul_fast
