@@ -6,6 +6,7 @@ the SciML ecosystem.
 module SciMLOperators
 
 using DocStringExtensions: DocStringExtensions, FIELDS, SIGNATURES, TYPEDEF
+using PrecompileTools: @compile_workload, @setup_workload
 using SciMLPublic: @public
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Bidiagonal, Factorization, I,
@@ -362,6 +363,7 @@ include("func.jl")
 include("tensor.jl")
 include("woperator.jl")
 include("adapt.jl")
+include("precompile.jl")
 
 export
     IdentityOperator,
