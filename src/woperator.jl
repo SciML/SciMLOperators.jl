@@ -482,12 +482,6 @@ end
 
 has_concretization(::AbstractWOperator) = true
 
-# A `WOperator` is only as concretizable as the pieces it holds, the same way a
-# `ScaledOperator` is. Answering an unconditional `true` made one over a matrix-free
-# Jacobian claim a concrete form it cannot produce, so callers that guard on this trait
-# still threw from `convert`. Left on the abstract type for subtypes that carry their
-# concrete form some other way.
-# See https://github.com/SciML/LinearSolve.jl/issues/1236.
 function has_concretization(W::WOperator)
     return has_concretization(W.mass_matrix) & has_concretization(W.J)
 end
