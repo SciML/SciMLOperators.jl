@@ -210,3 +210,25 @@ end
     L(w, v, nothing, 3.0, 0.0)
     @test w == [12.0, 15.0]
 end
+
+# A `WOperator` used to answer `true` here regardless of what it held, so one over a
+# matrix-free Jacobian claimed a concrete form it cannot produce and callers guarding on
+# the trait still threw from `convert`.
+# See https://github.com/SciML/LinearSolve.jl/issues/1236.
+@testset "has_concretization follows a WOperator's Jacobian" begin
+    n = 6
+    J = rand(n, n)
+    fj(v, u, p, t) = J * v
+    fj(w, v, u, p, t) = mul!(w, J, v)
+    Jfree = FunctionOperator(fj, zeros(n), zeros(n); islinear = true)
+
+    Wfree = SciMLOperators.WOperator{true}(I, 0.1, Jfree, zeros(n))
+    Wdense = SciMLOperators.WOperator{true}(I, 0.1, J, zeros(n))
+
+    @test !has_concretization(Wfree)
+    @test has_concretization(Wdense)
+
+    # The trait has to agree with what `convert` will actually do.
+    @test_throws MethodError convert(AbstractMatrix, Wfree)
+    @test convert(AbstractMatrix, Wdense) ≈ J - I / 0.1
+end
