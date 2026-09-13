@@ -199,6 +199,9 @@ end
     w = copy(v)
     @test α * _mul(A, v) + β * w ≈ mul!(w, op2, v, α, β)
 
+    w = copy(v)
+    @test α * _mul(A, v) + β * w ≈ mul!(w, op1, v, α, β)
+
     w = rand(N, K)
     @test _div(A, w) ≈ op1 \ w ≈ ldiv!(v, op2, w)
     w = copy(v)

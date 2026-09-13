@@ -954,13 +954,21 @@ function LinearAlgebra.mul!(w::AbstractArray, L::FunctionOperator{true}, v::Abst
 end
 
 function LinearAlgebra.mul!(
-        w::AbstractArray, L::FunctionOperator{false}, v::AbstractArray,
-        args...
+        w::AbstractArray, L::FunctionOperator{false}, v::AbstractArray
     )
     _sizecheck(L, v, w)
     V, W, vec_output = _unvec(L, v, w)
     W .= L.op(V, L.u, L.p, L.t; L.traits.kwargs...)
     return vec_output ? vec(W) : W
+end
+
+function LinearAlgebra.mul!(
+        w::AbstractArray, L::FunctionOperator{false}, v::AbstractArray, α, β
+    )
+    _sizecheck(L, v, w)
+    V, W, _ = _unvec(L, v, w)
+    W .= α .* L.op(V, L.u, L.p, L.t; L.traits.kwargs...) .+ β .* W
+    return w
 end
 
 function LinearAlgebra.mul!(
