@@ -380,6 +380,10 @@ for T in SCALINGNUMBERTYPES[2:end]
     end
 end
 
+# 1/λ in the precision of `L`, as for arrays (`inv(2)` is a Float64)
+_inverse_scaling(λ, L) = inv(λ)
+_inverse_scaling(λ::Number, L) = one(eltype(L)) / λ
+
 for T in SCALINGNUMBERTYPES
     @eval function ScaledOperator(λ::$T, L::ScaledOperator)
         λ = λ * L.λ
@@ -390,10 +394,10 @@ for T in SCALINGNUMBERTYPES
         @eval Base.:*(λ::$T, L::$LT) = ScaledOperator(λ, L)
         @eval Base.:*(L::$LT, λ::$T) = ScaledOperator(λ, L)
 
-        @eval Base.:\(λ::$T, L::$LT) = ScaledOperator(inv(λ), L)
+        @eval Base.:\(λ::$T, L::$LT) = ScaledOperator(_inverse_scaling(λ, L), L)
         @eval Base.:\(L::$LT, λ::$T) = ScaledOperator(λ, inv(L))
 
-        @eval Base.:/(L::$LT, λ::$T) = ScaledOperator(inv(λ), L)
+        @eval Base.:/(L::$LT, λ::$T) = ScaledOperator(_inverse_scaling(λ, L), L)
         @eval Base.:/(λ::$T, L::$LT) = ScaledOperator(λ, inv(L))
     end
 end
