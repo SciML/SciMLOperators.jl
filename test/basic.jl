@@ -255,6 +255,19 @@ end
     @test eltype(minusA.λ) == eltype(A.A)
 end
 
+@testset "Division by a number" begin
+    A = MatrixOperator(rand(ComplexF32, N, N))
+    B = MatrixOperator(rand(ComplexF32, N, N))
+    v = rand(ComplexF32, N, K)
+
+    # As for arrays, an integer divisor keeps the precision and a Float64 one promotes
+    for (op, M) in ((A / 2, A.A / 2), (2 \ A, 2 \ A.A), ((A + B) / 2, (A.A + B.A) / 2))
+        @test eltype(op) == ComplexF32
+        @test op * v ≈ M * v
+    end
+    @test eltype(A / 2.0) == ComplexF64
+end
+
 @testset "ScaledOperator" begin
     A = rand(N, N)
     D = Diagonal(rand(N))
