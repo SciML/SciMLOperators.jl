@@ -798,6 +798,15 @@ end
     orig_w = copy(w)
     @test mul!(w, opv, v, α, β) ≈ α * (AB * v) + β * orig_w
 
+    # Batched 5-arg path (LoopVectorization @turbo kernel when loaded):
+    # β = 0 must ignore destination contents (BLAS semantics).
+    V = rand(n1 * n2, K)
+    w_nan = fill(NaN, m1 * m2, K)
+    w_zero = zeros(m1 * m2, K)
+    mul!(w_nan, opm, V, 2.0, 0.0)
+    mul!(w_zero, opm, V, 2.0, 0.0)
+    @test w_nan == w_zero
+
     if square
         # `c5` is the one slot besides `c1` a vector input can reach.
         opv_F = cache_operator(factorize(op), rand(n1 * n2))
