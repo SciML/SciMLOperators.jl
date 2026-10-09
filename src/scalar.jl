@@ -373,10 +373,7 @@ end
 Base.conj(L::AddedScalarOperator) = AddedScalarOperator(conj.(L.ops))
 
 function update_coefficients(L::AddedScalarOperator, u, p, t; kwargs...)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
-    end
+    ops = map(op -> update_coefficients(op, u, p, t; kwargs...), L.ops)
 
     return AddedScalarOperator(ops)
 end

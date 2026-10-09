@@ -194,10 +194,7 @@ function Base.conj(L::TensorProductOperator)
 end
 
 function update_coefficients(L::TensorProductOperator, u, p, t; kwargs...)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
-    end
+    ops = map(op -> update_coefficients(op, u, p, t; kwargs...), L.ops)
 
     return @reset L.ops = ops
 end
@@ -354,10 +351,7 @@ end
 Base.conj(L::TensorSumOperator) = TensorSumOperator(map(conj, L.ops)...)
 
 function update_coefficients(L::TensorSumOperator, u, p, t; kwargs...)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
-    end
+    ops = map(op -> update_coefficients(op, u, p, t; kwargs...), L.ops)
     return TensorSumOperator(ops...)
 end
 
