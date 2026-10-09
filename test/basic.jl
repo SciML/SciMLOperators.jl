@@ -618,6 +618,36 @@ end
     @test iscached(op)
     u = rand(N)
     @test ldiv!(rand(N), op, u) ≈ op \ u
+
+    # ComposedOperator in-place apply must invoke each update_func exactly once.
+    update_count = Ref(0)
+    λ = ScalarOperator(0.0; update_func = (a, u, p, t) -> (update_count[] += 1; t))
+    A = rand(N, N)
+    B = rand(N, N)
+    L = cache_operator((λ * MatrixOperator(A)) * MatrixOperator(B), zeros(N))
+    u = rand(N)
+    v = rand(N)
+    w = zeros(N)
+    p = nothing
+    t = 1.7
+    α = 2.3
+    β = 0.4
+
+    expected4 = (t * A) * (B * v)
+    update_count[] = 0
+    fill!(w, 0)
+    L(w, v, u, p, t)
+    @test update_count[] == 1
+    @test w ≈ expected4
+    @test convert(Number, L.ops[1].λ) == t
+
+    expected5 = α * expected4 + β * ones(N)
+    update_count[] = 0
+    fill!(w, 1)
+    L(w, v, u, p, t, α, β)
+    @test update_count[] == 1
+    @test w ≈ expected5
+    @test convert(Number, L.ops[1].λ) == t
 end
 
 @testset "has_concretization composites" begin

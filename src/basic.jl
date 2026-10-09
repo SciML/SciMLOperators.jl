@@ -1285,7 +1285,6 @@ end
     end
 
     return quote
-        update_coefficients!(L, u, p, t; kwargs...)
         @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
 
         $(exprs...)
@@ -1297,7 +1296,6 @@ end
 function (L::ComposedOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
     )
-    update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
 
     cache = L.cache[end]
