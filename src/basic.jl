@@ -71,11 +71,19 @@ for op in (:*, :\)
     end
 end
 
+@inline function _identity_copy!(
+        w::AbstractVecOrMat, ii::IdentityOperator, v::AbstractVecOrMat
+    )
+    if size(v, 1) != ii.len || size(w) != size(v)
+        throw(DimensionMismatch("cannot apply IdentityOperator($(ii.len)) with destination size $(size(w)) and action size $(size(v))"))
+    end
+    return copyto!(w, v)
+end
+
 @inline function LinearAlgebra.mul!(
         w::AbstractVecOrMat, ii::IdentityOperator, v::AbstractVecOrMat
     )
-    @assert size(v, 1) == ii.len
-    return copy!(w, v)
+    return _identity_copy!(w, ii, v)
 end
 
 @inline function LinearAlgebra.mul!(
@@ -90,8 +98,7 @@ end
 end
 
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, ii::IdentityOperator, v::AbstractVecOrMat)
-    @assert size(v, 1) == ii.len
-    return copy!(w, v)
+    return _identity_copy!(w, ii, v)
 end
 
 function LinearAlgebra.ldiv!(ii::IdentityOperator, v::AbstractVecOrMat)
@@ -110,8 +117,7 @@ end
 @inline function (ii::IdentityOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
     )
-    @assert size(v, 1) == ii.len
-    return copy!(w, v)
+    return _identity_copy!(w, ii, v)
 end
 
 # In-place with scaling: w = α*(ii*v) + β*w

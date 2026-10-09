@@ -92,6 +92,18 @@ end
     v = copy(u)
     @test ldiv!(Id, u) ≈ v
 
+    # Wrong-length destination must throw and must not resize the caller's buffer
+    v1 = rand(N)
+    for w_bad in (zeros(N - 1), zeros(N + 1))
+        w_len = length(w_bad)
+        @test_throws DimensionMismatch mul!(w_bad, Id, v1)
+        @test length(w_bad) == w_len
+        @test_throws DimensionMismatch ldiv!(w_bad, Id, v1)
+        @test length(w_bad) == w_len
+        @test_throws DimensionMismatch Id(w_bad, v1, v1, p, t)
+        @test length(w_bad) == w_len
+    end
+
     for op in (*, ∘)
         @test op(Id, A) isa MatrixOperator
         @test op(A, Id) isa MatrixOperator
