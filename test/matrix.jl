@@ -806,6 +806,26 @@ end
     end
 end
 
+@testset "TensorProductOperator BigFloat cache_operator" begin
+    A = MatrixOperator(rand(BigFloat, 2, 2))
+    B = MatrixOperator(rand(BigFloat, 3, 3))
+    C = MatrixOperator(rand(BigFloat, 2, 2))
+
+    opAB = TensorProductOperator(A, B)
+    v2 = rand(BigFloat, size(opAB, 2))
+    w2 = zeros(BigFloat, size(opAB, 1))
+    opAB_c = cache_operator(opAB, v2)
+    mul!(w2, opAB_c, v2)
+    @test w2 ≈ convert(AbstractMatrix, opAB) * v2
+
+    opABC = TensorProductOperator(A, B, C)
+    v3 = rand(BigFloat, size(opABC, 2))
+    w3 = zeros(BigFloat, size(opABC, 1))
+    opABC_c = cache_operator(opABC, v3)
+    mul!(w3, opABC_c, v3)
+    @test w3 ≈ convert(AbstractMatrix, opABC) * v3
+end
+
 @testset "TensorSumOperator" begin
     A = rand(3, 3)
     B = rand(4, 4)
