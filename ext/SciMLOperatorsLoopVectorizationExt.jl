@@ -32,12 +32,22 @@ function SciMLOperators.tensor_outer_mul_fast!(
     C = reshape(C, (mi, no, k))
     W = reshape(w, (mi, mo, k))
 
-    @turbo for j in 1:k, m in 1:mo, i in 1:mi
-        acc = zero(eltype(w))
-        for o in 1:no
-            acc += A[m, o] * C[i, o, j]
+    if iszero(β)
+        @turbo for j in 1:k, m in 1:mo, i in 1:mi
+            acc = zero(eltype(w))
+            for o in 1:no
+                acc += A[m, o] * C[i, o, j]
+            end
+            W[i, m, j] = α * acc
         end
-        W[i, m, j] = α * acc + β * W[i, m, j]
+    else
+        @turbo for j in 1:k, m in 1:mo, i in 1:mi
+            acc = zero(eltype(w))
+            for o in 1:no
+                acc += A[m, o] * C[i, o, j]
+            end
+            W[i, m, j] = α * acc + β * W[i, m, j]
+        end
     end
 
     return w

@@ -152,6 +152,19 @@ end
     w_orig = copy(v)
     @test mul!(v, Z, u, α, β) ≈ α * (0 * u) + β * w_orig
 
+    # β = 0 must ignore destination contents (BLAS semantics)
+    v = rand(N, K)
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    mul!(w_nan, Z, v, 2.0, 0.0)
+    mul!(w_zero, Z, v, 2.0, 0.0)
+    @test w_nan == w_zero
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    Z(w_nan, v, u, p, t, 2.0, 0.0)
+    Z(w_zero, v, u, p, t, 2.0, 0.0)
+    @test w_nan == w_zero
+
     for op in (*, ∘)
         @test op(Z, A) isa NullOperator
         @test op(A, Z) isa NullOperator
@@ -328,6 +341,15 @@ end
     @test ldiv!(v, op, w) ≈ (α * D) \ w
     w = copy(v)
     @test ldiv!(op, w) ≈ (α * D) \ v
+
+    # Zero scale: β = 0 must ignore destination contents (BLAS semantics)
+    op0 = ScaledOperator(0.0, MatrixOperator(A))
+    v = rand(N, K)
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    mul!(w_nan, op0, v, 2.0, 0.0)
+    mul!(w_zero, op0, v, 2.0, 0.0)
+    @test w_nan == w_zero
 end
 
 @testset "AddedOperator" begin
@@ -395,6 +417,14 @@ end
     v = rand(N, K)
     w_orig = copy(v)
     @test mul!(v, op, u, α, β) ≈ α * (A + B) * u + β * w_orig
+
+    # β = 0 must ignore destination contents (BLAS semantics)
+    v = rand(N, K)
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    mul!(w_nan, op, v, 2.0, 0.0)
+    mul!(w_zero, op, v, 2.0, 0.0)
+    @test w_nan == w_zero
 
     # Test flattening of nested AddedOperators via direct constructor
     A = MatrixOperator(rand(N, N))
