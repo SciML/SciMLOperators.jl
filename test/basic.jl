@@ -7,6 +7,7 @@ using SciMLOperators: IdentityOperator,
     ScaledOperator,
     AddedOperator,
     ComposedOperator,
+    AddedScalarOperator,
     AdjointOperator,
     TransposedOperator,
     InvertedOperator, AbstractAdjointVecOrMat,
@@ -636,6 +637,19 @@ end
     Ltsr = TensorProductOperator(α2 * A2, B2)
     @test Ltsr isa TensorProductOperator
     @inferred update_coefficients(Ltsr, rand(2 * 3), p, t)
+
+    α3 = ScalarOperator(1.0; update_func = (a, u, p, t) -> t)
+    A3 = MatrixOperator(rand(2, 2))
+    B3 = MatrixOperator(rand(3, 3))
+    Lsum = TensorSumOperator(α3 * A3, B3)
+    @test Lsum isa TensorSumOperator
+    @inferred update_coefficients(Lsum, rand(2 * 3), p, t)
+
+    α4 = ScalarOperator(1.0; update_func = (a, u, p, t) -> t)
+    β4 = ScalarOperator(2.0; update_func = (a, u, p, t) -> t + 1)
+    Ladd = α4 + β4
+    @test Ladd isa AddedScalarOperator
+    @inferred update_coefficients(Ladd, u, p, t)
 end
 
 @testset "has_concretization composites" begin
