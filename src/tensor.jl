@@ -464,12 +464,13 @@ function _cache_self_c1_c5(L::TensorProductOperator, v::AbstractVecOrMat)
     mo, no = size(outer)
     k = size(v, 2)
 
-    c1 = outer isa IdentityOperator ? nothing : fill!(similar(v, (mi, no * k)), false) # c1 = inner * v
+    c1 = outer isa IdentityOperator ? nothing :
+        fill!(similar(v, (mi, no * k)), zero(eltype(v))) # c1 = inner * v
 
     if mapreduce(issquare, &, L.ops)
         c5 = c1
     else
-        c5 = fill!(similar(v, (ni, mo * k)), false) # c5 = inner \ v
+        c5 = fill!(similar(v, (ni, mo * k)), zero(eltype(v))) # c5 = inner \ v
     end
 
     return c1, c5
@@ -499,18 +500,21 @@ function cache_self(L::TensorProductOperator, v::AbstractMatrix)
     c1, c5 = _cache_self_c1_c5(L, v)
 
     # 3 arg mul!
-    c2 = is_outer_identity ? nothing : fill!(similar(v, (no, mi, k)), false) # permute (2, 1, 3)
-    c3 = is_outer_identity ? nothing : fill!(similar(v, (mo, mi * k)), false) # c3 = outer * c2
+    c2 = is_outer_identity ? nothing :
+        fill!(similar(v, (no, mi, k)), zero(eltype(v))) # permute (2, 1, 3)
+    c3 = is_outer_identity ? nothing :
+        fill!(similar(v, (mo, mi * k)), zero(eltype(v))) # c3 = outer * c2
 
     # 5 arg mul!
-    c4 = is_outer_identity ? nothing : fill!(similar(v, (mo * mi, k)), false) # cache v in 5 arg mul!
+    c4 = is_outer_identity ? nothing :
+        fill!(similar(v, (mo * mi, k)), zero(eltype(v))) # cache v in 5 arg mul!
 
     # 3 arg ldiv!
     if mapreduce(issquare, &, L.ops)
         c6, c7 = c2, c3
     else
-        c6 = fill!(similar(v, (mo, ni, k)), false) # permute (2, 1, 3)
-        c7 = fill!(similar(v, (no, ni * k)), false) # c7 = outer \ c6
+        c6 = fill!(similar(v, (mo, ni, k)), zero(eltype(v))) # permute (2, 1, 3)
+        c7 = fill!(similar(v, (no, ni * k)), zero(eltype(v))) # c7 = outer \ c6
     end
 
     @reset L.cache = (c1, c2, c3, c4, c5, c6, c7)
