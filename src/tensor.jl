@@ -410,7 +410,7 @@ end
 function (L::TensorSumOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
     )
-    L = update_coefficients(L, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
     L = cache_operator(L, v)
     return mul!(w, L, v)
 end
@@ -418,7 +418,7 @@ end
 function (L::TensorSumOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
     )
-    L = update_coefficients(L, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
     L = cache_operator(L, v)
     return mul!(w, L, v, α, β)
 end

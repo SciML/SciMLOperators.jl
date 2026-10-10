@@ -864,6 +864,27 @@ end
     B_update = MatrixOperator(zeros(4, 4); update_func = (B, u, p, t) -> p[2] * Matrix(I, 4, 4))
     L_update = kronsum(A_update, B_update)
     @test L_update(v, u, (2.0, 3.0), t) ≈ 5v
+
+    # In-place apply must mutate coefficients (not discard an OOP update).
+    A_iip = MatrixOperator(zeros(3, 3); update_func = (A, u, p, t) -> t * Matrix(I, 3, 3))
+    B_iip = MatrixOperator(Matrix{Float64}(I, 4, 4))
+    L_iip = cache_operator(kronsum(A_iip, B_iip), zeros(12))
+    vi = rand(12)
+    wi = zeros(12)
+    L_iip(wi, vi, vi, nothing, 3.0)
+    @test L_iip.ops[1].A ≈ 3.0 * Matrix(I, 3, 3)
+    wi2 = similar(wi)
+    mul!(wi2, L_iip, vi)
+    @test wi ≈ wi2
+
+    M_iip = MatrixOperator(Matrix{Float64}(I, 12, 12))
+    L_comp = cache_operator(L_iip * M_iip, zeros(12))
+    # Reset factor so a successful child update is observable.
+    fill!(L_comp.ops[1].ops[1].A, 0)
+    L_comp(wi, vi, vi, nothing, 3.0)
+    @test L_comp.ops[1].ops[1].A ≈ 3.0 * Matrix(I, 3, 3)
+    mul!(wi2, L_comp, vi)
+    @test wi ≈ wi2
 end
 
 @testset "Sparse conversion tests" begin

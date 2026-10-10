@@ -618,8 +618,9 @@ end
     @test iscached(op)
     u = rand(N)
     @test ldiv!(rand(N), op, u) ≈ op \ u
+end
 
-    # ComposedOperator in-place apply must invoke each update_func exactly once.
+@testset "ComposedOperator update_func once" begin
     update_count = Ref(0)
     λ = ScalarOperator(0.0; update_func = (a, u, p, t) -> (update_count[] += 1; t))
     A = rand(N, N)
