@@ -1029,10 +1029,7 @@ end
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 function update_coefficients(L::ComposedOperator, u, p, t; kwargs...)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
-    end
+    ops = map(op -> update_coefficients(op, u, p, t; kwargs...), L.ops)
 
     return @reset L.ops = ops
 end
