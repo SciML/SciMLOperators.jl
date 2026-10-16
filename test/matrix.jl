@@ -887,6 +887,45 @@ end
     @test wi ≈ wi2
 end
 
+@testset "TensorSumOperator in-place apply with immutable coefficient storage" begin
+    A0 = reshape(1.0:4.0, 2, 2)
+    ncalls = Ref(0)
+    A = MatrixOperator(A0; update_func = (A, u, p, t) -> (ncalls[] += 1; t .* A))
+    B = MatrixOperator(Matrix{Float64}(I, 2, 2))
+    L = kronsum(A, B)
+    t = 2.0
+    v = rand(4)
+    w0 = rand(4)
+    α, β = 0.7, 0.3
+    expected = kron(t .* collect(A0), I(2)) + kron(I(2), I(2))
+
+    for Lt in (L, cache_operator(L, v))
+        w = zeros(4)
+        ncalls[] = 0
+        Lt(w, v, v, nothing, t)
+        @test w ≈ expected * v
+        @test ncalls[] == 1
+
+        w = copy(w0)
+        ncalls[] = 0
+        Lt(w, v, v, nothing, t, α, β)
+        @test w ≈ α * expected * v + β * w0
+        @test ncalls[] == 1
+    end
+    @test L.ops[1].A === A0
+
+    λ = ScalarOperator(0.0; update_func = (a, u, p, t) -> t)
+    Ls = cache_operator(λ * L, v)
+    w = zeros(4)
+    Ls(w, v, v, nothing, t)
+    @test w ≈ t * expected * v
+
+    Lc = cache_operator(L * MatrixOperator(Matrix{Float64}(I, 4, 4)), v)
+    w = zeros(4)
+    Lc(w, v, v, nothing, t)
+    @test w ≈ expected * v
+end
+
 @testset "Sparse conversion tests" begin
     A = rand(2, 2)
     opA = MatrixOperator(A)

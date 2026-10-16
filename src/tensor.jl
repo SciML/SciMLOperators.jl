@@ -407,10 +407,16 @@ function (L::TensorSumOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     return L * v
 end
 
+function _update_coefficients_iip(L::TensorSumOperator, u, p, t; kwargs...)
+    _inplace_updatable(L) || return update_coefficients(L, u, p, t; kwargs...)
+    update_coefficients!(L, u, p, t; kwargs...)
+    return L
+end
+
 function (L::TensorSumOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t; kwargs...
     )
-    update_coefficients!(L, u, p, t; kwargs...)
+    L = _update_coefficients_iip(L, u, p, t; kwargs...)
     L = cache_operator(L, v)
     return mul!(w, L, v)
 end
@@ -418,7 +424,7 @@ end
 function (L::TensorSumOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
     )
-    update_coefficients!(L, u, p, t; kwargs...)
+    L = _update_coefficients_iip(L, u, p, t; kwargs...)
     L = cache_operator(L, v)
     return mul!(w, L, v, α, β)
 end
