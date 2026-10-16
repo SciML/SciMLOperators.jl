@@ -798,12 +798,43 @@ end
     orig_w = copy(w)
     @test mul!(w, opv, v, α, β) ≈ α * (AB * v) + β * orig_w
 
+    # Batched 5-arg path (LoopVectorization @turbo kernel when loaded):
+    # β = 0 must ignore destination contents (BLAS semantics).
+    V = rand(n1 * n2, K)
+    w_nan = fill(NaN, m1 * m2, K)
+    w_zero = zeros(m1 * m2, K)
+    mul!(w_nan, opm, V, 2.0, 0.0)
+    mul!(w_zero, opm, V, 2.0, 0.0)
+    @test w_nan == w_zero
+
     if square
         # `c5` is the one slot besides `c1` a vector input can reach.
         opv_F = cache_operator(factorize(op), rand(n1 * n2))
         y = rand(m1 * m2)
         @test ldiv!(zeros(n1 * n2), opv_F, y) ≈ AB \ y
     end
+end
+
+@testset "TensorProductOperator non-isbits cache_operator ($T)" for T in (
+        BigFloat, ComplexF32,
+    )
+    A = MatrixOperator(rand(T, 2, 2))
+    B = MatrixOperator(rand(T, 3, 3))
+    C = MatrixOperator(rand(T, 2, 2))
+
+    opAB = TensorProductOperator(A, B)
+    v2 = rand(T, size(opAB, 2))
+    w2 = zeros(T, size(opAB, 1))
+    opAB_c = cache_operator(opAB, v2)
+    mul!(w2, opAB_c, v2)
+    @test w2 ≈ convert(AbstractMatrix, opAB) * v2
+
+    opABC = TensorProductOperator(A, B, C)
+    v3 = rand(T, size(opABC, 2))
+    w3 = zeros(T, size(opABC, 1))
+    opABC_c = cache_operator(opABC, v3)
+    mul!(w3, opABC_c, v3)
+    @test w3 ≈ convert(AbstractMatrix, opABC) * v3
 end
 
 @testset "TensorSumOperator" begin

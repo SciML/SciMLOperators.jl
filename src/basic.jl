@@ -260,7 +260,7 @@ function LinearAlgebra.mul!(
     )
     @assert size(v, 1) == nn.N
     @assert size(w, 1) == nn.M
-    return lmul!(β, w)
+    return iszero(β) ? fill!(w, false) : lmul!(β, w)
 end
 
 # Out-of-place: v is action vector, u is update vector
@@ -282,7 +282,7 @@ function (nn::NullOperator)(
     )
     @assert size(v, 1) == nn.N
     @assert size(w, 1) == nn.M
-    lmul!(β, w)
+    iszero(β) ? fill!(w, false) : lmul!(β, w)
     return w
 end
 
@@ -534,7 +534,7 @@ end
         α,
         β
     )
-    iszero(L.λ) && return lmul!(β, w)
+    iszero(L.λ) && return iszero(β) ? fill!(w, false) : lmul!(β, w)
     a = convert(Number, L.λ * α)
     return mul!(w, L.L, v, a, β)
 end
@@ -853,8 +853,8 @@ end
     )
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    applications = [:(mul!(w, L.ops[$i], v, α, true)) for i in 1:N]
-    return Expr(:block, :(lmul!(β, w)), applications..., :w)
+    applications = [:(mul!(w, L.ops[$i], v, α, true)) for i in 2:N]
+    return Expr(:block, :(mul!(w, L.ops[1], v, α, β)), applications..., :w)
 end
 
 # Out-of-place: v is action vector, u is update vector
@@ -1034,10 +1034,7 @@ end
 LinearAlgebra.opnorm(L::ComposedOperator) = prod(opnorm, L.ops)
 
 function update_coefficients(L::ComposedOperator, u, p, t; kwargs...)
-    ops = ()
-    for op in L.ops
-        ops = (ops..., update_coefficients(op, u, p, t; kwargs...))
-    end
+    ops = map(op -> update_coefficients(op, u, p, t; kwargs...), L.ops)
 
     return @reset L.ops = ops
 end

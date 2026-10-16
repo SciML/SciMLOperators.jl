@@ -7,6 +7,7 @@ using SciMLOperators: IdentityOperator,
     ScaledOperator,
     AddedOperator,
     ComposedOperator,
+    AddedScalarOperator,
     AdjointOperator,
     TransposedOperator,
     InvertedOperator, AbstractAdjointVecOrMat,
@@ -151,6 +152,19 @@ end
     v = rand(N, K)
     w_orig = copy(v)
     @test mul!(v, Z, u, α, β) ≈ α * (0 * u) + β * w_orig
+
+    # β = 0 must ignore destination contents (BLAS semantics)
+    v = rand(N, K)
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    mul!(w_nan, Z, v, 2.0, 0.0)
+    mul!(w_zero, Z, v, 2.0, 0.0)
+    @test w_nan == w_zero
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    Z(w_nan, v, u, p, t, 2.0, 0.0)
+    Z(w_zero, v, u, p, t, 2.0, 0.0)
+    @test w_nan == w_zero
 
     for op in (*, ∘)
         @test op(Z, A) isa NullOperator
@@ -328,6 +342,15 @@ end
     @test ldiv!(v, op, w) ≈ (α * D) \ w
     w = copy(v)
     @test ldiv!(op, w) ≈ (α * D) \ v
+
+    # Zero scale: β = 0 must ignore destination contents (BLAS semantics)
+    op0 = ScaledOperator(0.0, MatrixOperator(A))
+    v = rand(N, K)
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    mul!(w_nan, op0, v, 2.0, 0.0)
+    mul!(w_zero, op0, v, 2.0, 0.0)
+    @test w_nan == w_zero
 end
 
 @testset "AddedOperator" begin
@@ -395,6 +418,14 @@ end
     v = rand(N, K)
     w_orig = copy(v)
     @test mul!(v, op, u, α, β) ≈ α * (A + B) * u + β * w_orig
+
+    # β = 0 must ignore destination contents (BLAS semantics)
+    v = rand(N, K)
+    w_nan = fill(NaN, N, K)
+    w_zero = zeros(N, K)
+    mul!(w_nan, op, v, 2.0, 0.0)
+    mul!(w_zero, op, v, 2.0, 0.0)
+    @test w_nan == w_zero
 
     # Test flattening of nested AddedOperators via direct constructor
     A = MatrixOperator(rand(N, N))
@@ -649,6 +680,37 @@ end
     @test update_count[] == 1
     @test w ≈ expected5
     @test convert(Number, L.ops[1].λ) == t
+end
+
+@testset "update_coefficients type stability" begin
+    u = rand(N)
+    p = nothing
+    t = 1.0
+    α = ScalarOperator(1.0; update_func = (a, u, p, t) -> t)
+    A = MatrixOperator(rand(N, N))
+    Lcomp = (α * A) * A
+    @test Lcomp isa ComposedOperator
+    @inferred update_coefficients(Lcomp, u, p, t)
+
+    α2 = ScalarOperator(1.0; update_func = (a, u, p, t) -> t)
+    A2 = MatrixOperator(rand(2, 2))
+    B2 = MatrixOperator(rand(3, 3))
+    Ltsr = TensorProductOperator(α2 * A2, B2)
+    @test Ltsr isa TensorProductOperator
+    @inferred update_coefficients(Ltsr, rand(2 * 3), p, t)
+
+    α3 = ScalarOperator(1.0; update_func = (a, u, p, t) -> t)
+    A3 = MatrixOperator(rand(2, 2))
+    B3 = MatrixOperator(rand(3, 3))
+    Lsum = TensorSumOperator(α3 * A3, B3)
+    @test Lsum isa TensorSumOperator
+    @inferred update_coefficients(Lsum, rand(2 * 3), p, t)
+
+    α4 = ScalarOperator(1.0; update_func = (a, u, p, t) -> t)
+    β4 = ScalarOperator(2.0; update_func = (a, u, p, t) -> t + 1)
+    Ladd = α4 + β4
+    @test Ladd isa AddedScalarOperator
+    @inferred update_coefficients(Ladd, u, p, t)
 end
 
 @testset "has_concretization composites" begin
