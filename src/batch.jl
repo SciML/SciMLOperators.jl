@@ -124,6 +124,11 @@ function update_coefficients!(L::BatchedDiagonalOperator, u, p, t; kwargs...)
     return nothing
 end
 
+function _inplace_updatable(L::BatchedDiagonalOperator)
+    return isnothingfunc(L.update_func) || !isnothingfunc(L.update_func!) ||
+        ArrayInterface.ismutable(L.diag)
+end
+
 getops(L::BatchedDiagonalOperator) = (L.diag,)
 
 # Copy method to avoid aliasing

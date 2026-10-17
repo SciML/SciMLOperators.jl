@@ -153,6 +153,11 @@ function update_coefficients!(L::AbstractSciMLOperator, u, p, t; kwargs...)
     return nothing
 end
 
+# Whether `update_coefficients!(L, ...)` can update every coefficient in place,
+# i.e. no leaf would have to reject an out-of-place `update_func` on immutable storage.
+_inplace_updatable(L) = true
+_inplace_updatable(L::AbstractSciMLOperator) = all(_inplace_updatable, getops(L))
+
 ###
 # operator evaluation interface
 ###
