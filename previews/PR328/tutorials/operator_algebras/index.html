@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Demonstration of Operator Algebras and Kron · SciMLOperators.jl</title><meta name="title" content="Demonstration of Operator Algebras and Kron · SciMLOperators.jl"/><meta property="og:title" content="Demonstration of Operator Algebras and Kron · SciMLOperators.jl"/><meta property="twitter:title" content="Demonstration of Operator Algebras and Kron · SciMLOperators.jl"/><meta name="description" content="Documentation for SciMLOperators.jl."/><meta property="og:description" content="Documentation for SciMLOperators.jl."/><meta property="twitter:description" content="Documentation for SciMLOperators.jl."/><meta property="og:url" content="https://docs.sciml.ai/SciMLOperators/stable/tutorials/operator_algebras/"/><meta property="twitter:url" content="https://docs.sciml.ai/SciMLOperators/stable/tutorials/operator_algebras/"/><link rel="canonical" href="https://docs.sciml.ai/SciMLOperators/stable/tutorials/operator_algebras/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="SciMLOperators.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">SciMLOperators.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started with Matrix-Free Operators in Julia</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href>Demonstration of Operator Algebras and Kron</a></li><li><a class="tocitem" href="../fftw/">FFT Tutorial</a></li></ul></li><li><a class="tocitem" href="../../interface/">The <code>AbstractSciMLOperator</code> Interface</a></li><li><a class="tocitem" href="../../premade_operators/">Premade Operators</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Demonstration of Operator Algebras and Kron</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Demonstration of Operator Algebras and Kron</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/SciML/SciMLOperators.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/SciML/SciMLOperators.jl/blob/master/docs/src/tutorials/operator_algebras.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="operator_algebras"><a class="docs-heading-anchor" href="#operator_algebras">Demonstration of Operator Algebras and Kron</a><a id="operator_algebras-1"></a><a class="docs-heading-anchor-permalink" href="#operator_algebras" title="Permalink"></a></h1><p>Let <code>M</code>, <code>D</code>, <code>F</code> be matrix-based, diagonal-matrix-based, and function-based <code>SciMLOperators</code> respectively. Here are some examples of composing operators in order to build more complex objects and using their operations.</p><pre><code class="language-julia hljs">using SciMLOperators, LinearAlgebra
+N = 4
+function f(v, u, p, t)
+    u .* v
+end
+function f(w, v, u, p, t)
+    w .= u .* v
+end
+
+u = rand(4)
+p = nothing # parameter struct
+t = 0.0     # time
+
+M = MatrixOperator(rand(N, N))
+D = DiagonalOperator(rand(N))
+F = FunctionOperator(f, zeros(N), zeros(N); u, p, t)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FunctionOperator(4 × 4)</code></pre><p>Then, the following codes just work.</p><pre><code class="language-julia hljs">L1 = 2M + 3F + LinearAlgebra.I + rand(N, N)
+L2 = D * F * M&#39;
+L3 = kron(M, D, F)
+L4 = lu(M) \ D
+L5 = [M; D]&#39; * [M F; F D] * [F; D]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">((((MatrixOperator(4 × 4) * MatrixOperator(4 × 4)) + (DiagonalOperator(4 × 4) * FunctionOperator(4 × 4))) * FunctionOperator(4 × 4)) + (((MatrixOperator(4 × 4) * FunctionOperator(4 × 4)) + (DiagonalOperator(4 × 4) * DiagonalOperator(4 × 4))) * DiagonalOperator(4 × 4)))</code></pre><p>Each <code>L#</code> can be applied to <code>AbstractVector</code>s of appropriate sizes:</p><pre><code class="language-julia hljs">v = rand(N)
+w = L1(v, u, p, t) # == L1 * v
+
+v_kron = rand(N^3)
+w_kron = L3(v_kron, u, p, t) # == L3 * v_kron</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">64-element reshape(transpose(::Matrix{Float64}), 64) with eltype Float64:
+ 0.6901127092440833
+ 0.7363609963762971
+ 0.3445370822180002
+ 0.5721110796247402
+ 0.7112652593887376
+ 0.3382581180278839
+ 0.7447891362783301
+ 0.4489297726775179
+ 0.38919523948305873
+ 0.9354872848557488
+ ⋮
+ 0.26426263335423084
+ 0.24469360164614148
+ 0.44005201738072575
+ 0.4136342650850617
+ 0.4102580827538948
+ 0.03771813679930613
+ 0.04754378509562287
+ 0.03190759302936312
+ 0.017848680194277978</code></pre><p>For mutating operator evaluations, call <code>cache_operator</code> to generate an in-place cache, so the operation is nonallocating.</p><pre><code class="language-julia hljs">α, β = rand(2)
+
+# allocate cache
+L2 = cache_operator(L2, u)
+L4 = cache_operator(L4, u)
+
+# allocation-free evaluation
+L2(w, v, u, p, t) # == mul!(w, L2, v)
+L4(w, v, u, p, t, α, β) # == mul!(w, L4, v, α, β)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Float64}:
+  0.32098765361200454
+  0.336682492482255
+ -0.08984578729896808
+  0.3239209190995277</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../getting_started/">« Getting Started with Matrix-Free Operators in Julia</a><a class="docs-footer-nextpage" href="../fftw/">FFT Tutorial »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.0 on <span class="colophon-date" title="Tuesday 18 November 2025 15:30">Tuesday 18 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
