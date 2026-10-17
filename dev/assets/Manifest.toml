@@ -2,7 +2,7 @@
 
 julia_version = "1.13.2"
 manifest_format = "2.1"
-project_hash = "85de83066c6f1136c0218fd4786f4eef3dfc5590"
+project_hash = "b42d60aa08bee932d7acd4048e3c80b5d78efc62"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -460,9 +460,9 @@ version = "1.0.0"
 
 [[deps.SciMLOperators]]
 deps = ["Accessors", "Adapt", "ArrayInterface", "DocStringExtensions", "LinearAlgebra", "PrecompileTools", "SciMLPublic"]
-path = "/home/runner/work/SciMLOperators.jl/SciMLOperators.jl"
+path = "/home/runner/_work/SciMLOperators.jl/SciMLOperators.jl"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
-version = "1.30.3"
+version = "1.30.4"
 
     [deps.SciMLOperators.extensions]
     SciMLOperatorsLoopVectorizationExt = "LoopVectorization"
