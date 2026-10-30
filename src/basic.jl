@@ -905,7 +905,12 @@ applied first.
 
 # Interface Rules
 
-Updates are forwarded to every component. Call `cache_operator` before
+Updates are forwarded to every component. The in-place applications
+`L(w, v, u, p, t)` and `L(w, v, u, p, t, α, β)` update each component exactly
+once, through that component's own in-place call, immediately before it is
+applied (rightmost component first). A custom component used inside a
+composition must therefore update its own coefficients in its in-place call.
+Call `cache_operator` before
 repeated in-place application when intermediate storage is required. The
 composition is linear, convertible, or supports a trait only when all
 components satisfy the corresponding contract.
@@ -1282,7 +1287,6 @@ end
     end
 
     return quote
-        update_coefficients!(L, u, p, t; kwargs...)
         @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
 
         $(exprs...)
@@ -1294,7 +1298,6 @@ end
 function (L::ComposedOperator)(
         w::AbstractVecOrMat, v::AbstractVecOrMat, u, p, t, α, β; kwargs...
     )
-    update_coefficients!(L, u, p, t; kwargs...)
     @assert iscached(L) "Cache needs to be set up for ComposedOperator. Call cache_operator(L, u) first."
 
     cache = L.cache[end]
