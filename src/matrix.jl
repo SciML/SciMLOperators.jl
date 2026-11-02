@@ -270,6 +270,11 @@ function update_coefficients!(L::MatrixOperator, u, p, t; kwargs...)
     return nothing
 end
 
+function _inplace_updatable(L::MatrixOperator)
+    return isnothingfunc(L.update_func) || !isnothingfunc(L.update_func!) ||
+        ArrayInterface.ismutable(L.A)
+end
+
 # Out-of-place: v is action vector, u is update vector
 function (L::MatrixOperator)(v::AbstractVecOrMat, u, p, t; kwargs...)
     L = update_coefficients(L, u, p, t; kwargs...)
