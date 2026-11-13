@@ -526,14 +526,15 @@ Base.:-(α::AbstractSciMLScalarOperator{T}) where {T} = (-one(T)) * α
 
 @generated function update_coefficients(L::ComposedScalarOperator, u, p, t; kwargs...)
     N = length(L.parameters[2].parameters)
-    updates = [:(update_coefficients(L.ops[$i], u, p, t; kwargs...)) for i in 1:N]
-    return :(ComposedScalarOperator($(Expr(:tuple, updates...))))
+    return :(ComposedScalarOperator(@ntuple $N i -> update_coefficients(L.ops[i], u, p, t; kwargs...)))
 end
 
 @generated function update_coefficients!(L::ComposedScalarOperator, u, p, t; kwargs...)
     N = length(L.parameters[2].parameters)
-    updates = [:(update_coefficients!(L.ops[$i], u, p, t; kwargs...)) for i in 1:N]
-    return Expr(:block, updates..., :(nothing))
+    return quote
+        @nexprs $N i -> update_coefficients!(L.ops[i], u, p, t; kwargs...)
+        return nothing
+    end
 end
 
 function (α::ComposedScalarOperator)(v::AbstractArray, u, p, t; kwargs...)
