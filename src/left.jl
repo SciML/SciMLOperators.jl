@@ -20,6 +20,9 @@ function LinearAlgebra.mul!(
     return v
 end
 
+# Generic fallback through (L' u')'. `MatrixOperator`, `ScaledOperator`, `AddedOperator` and
+# `ComposedOperator` multiply from the right directly instead, because the destination op(v)
+# is a wrapper that the kernels of array types such as `SparseMatrixCSC` do not accept.
 function LinearAlgebra.mul!(
         v::AbstractVecOrMat,
         u::AbstractVecOrMat,
@@ -28,7 +31,8 @@ function LinearAlgebra.mul!(
         β
     )
     op = (u isa Transpose) | (v isa Transpose) ? transpose : adjoint
-    mul!(op(v), op(L), op(u), α, β)
+    # (α u L + β v)' = α' L' u' + β' v'
+    mul!(op(v), op(L), op(u), op(α), op(β))
     return v
 end
 

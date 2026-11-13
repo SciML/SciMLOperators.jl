@@ -778,6 +778,40 @@ end
     end
 end
 
+@testset "Multiplication from the right" begin
+    A = rand(ComplexF64, N, N)
+    B = sprand(ComplexF64, N, N, 0.5)
+    u = rand(ComplexF64, N, N)
+    α = rand(ComplexF64)
+    β = rand(ComplexF64)
+    allocs(v, u, L, α, β) = @allocated mul!(v, u, L, α, β)
+
+    for L in (
+            MatrixOperator(A),
+            MatrixOperator(B),
+            (1 + 2im) * MatrixOperator(B),
+            MatrixOperator(A) + 2 * MatrixOperator(B),
+            MatrixOperator(A) * MatrixOperator(B),
+            ScalarOperator(2im) * (MatrixOperator(B') * MatrixOperator(B)) + MatrixOperator(A),
+            # through the generic fallback (L' u')'
+            TensorProductOperator(rand(ComplexF64, 2, 2), rand(ComplexF64, 4, 4)),
+        )
+        L = cache_operator(L, u)
+        M = convert(AbstractMatrix, L)
+
+        v = rand(ComplexF64, N, N)
+        @test mul!(copy(v), u, L) ≈ u * M
+        @test mul!(copy(v), u, L, α, β) ≈ α * u * M + β * v
+        L isa TensorProductOperator || @test allocs(v, u, L, α, β) == 0
+
+        # more rows than the cache was set up for
+        L isa TensorProductOperator && continue
+        uK = rand(ComplexF64, K, N)
+        vK = rand(ComplexF64, K, N)
+        @test mul!(copy(vK), uK, L, α, β) ≈ α * uK * M + β * vK
+    end
+end
+
 @testset "InvertedOperator" begin
     s = rand(N)
     D = Diagonal(s) |> MatrixOperator
