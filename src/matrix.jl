@@ -350,35 +350,17 @@ end
 end
 
 # v = u * L
-@inline function LinearAlgebra.mul!(
-        v::AbstractVecOrMat, u::AbstractVecOrMat, L::MatrixOperator
-    )
-    return mul!(v, u, L.A)
-end
-@inline function LinearAlgebra.mul!(
-        v::AbstractVecOrMat,
-        u::AbstractVecOrMat,
-        L::MatrixOperator,
-        α,
-        β
-    )
-    return mul!(v, u, L.A, α, β)
-end
+@inline LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::MatrixOperator) = mul!(v, u, L.A)
+@inline LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::MatrixOperator, α, β) = mul!(v, u, L.A, α, β)
 
-# These methods are used when the operator is applied from the right through the generic
-# fallback in left.jl. We do this to avoid to fall into generic methods that would be inefficient
-for (op, VType) in (
-        (:transpose, :AbstractTransposedVecOrMat),
-        (:adjoint, :AbstractAdjointVecOrMat),
-    )
-    @eval @inline LinearAlgebra.mul!(w::$VType, L::MatrixOperator, v::AbstractVecOrMat) = mul!(parent(w), $op(v), $op(L.A))
-    @eval @inline LinearAlgebra.mul!(
-        w::$VType,
-        L::MatrixOperator,
-        v::AbstractVecOrMat,
-        α,
-        β
-    ) = mul!(parent(w), $op(v), $op(L.A), $op(α), $op(β))
+# For a destination w = op(W), as the generic fallback for u * L in left.jl passes, compute
+# W = op(L * v) = op(v) * op(L.A): the kernels of array types like `SparseMatrixCSC` do not take w.
+for (op, VType) in ((:transpose, :AbstractTransposedVecOrMat), (:adjoint, :AbstractAdjointVecOrMat))
+    @eval LinearAlgebra.mul!(w::$VType, L::MatrixOperator, v::AbstractVecOrMat) = mul!(w, L, v, true, false)
+    @eval function LinearAlgebra.mul!(w::$VType, L::MatrixOperator, v::AbstractVecOrMat, α, β)
+        mul!(parent(w), $op(v), $op(L.A), $op(α), $op(β))
+        return w
+    end
 end
 
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)

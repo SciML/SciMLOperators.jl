@@ -758,12 +758,23 @@ end
 
         @test AAt.L === AA
         @test op(u) isa VType
+    end
+end
+
+@testset "Multiplication and division from the right" begin
+    # Adjoint and transposed operators, applied to adjoint and transposed arrays
+    for (op, LType) in ((adjoint, AdjointOperator), (transpose, TransposedOperator))
+        A = rand(N, N)
+        D = Bidiagonal(rand(N, N), :L)
+        u = rand(N, K)
+        α = rand()
+        β = rand()
+
+        AAt = LType(MatrixOperator(A))
+        DDt = LType(MatrixOperator(D))
 
         @test op(u) * AAt ≈ op(A * u)
         @test op(u) / AAt ≈ op(A \ u)
-
-        # Not implementing separate test for adjoint/transpose operators
-        # since they typically rely on the base operator implementations
 
         v = rand(N, K)
         @test mul!(op(v), op(u), AAt) ≈ op(A * u)
@@ -776,15 +787,20 @@ end
         v = copy(u)
         @test ldiv!(op(u), DDt) ≈ op(D \ v)
     end
-end
 
-@testset "Multiplication from the right" begin
     A = rand(ComplexF64, N, N)
     B = sprand(ComplexF64, N, N, 0.5)
     u = rand(ComplexF64, N, N)
     α = rand(ComplexF64)
     β = rand(ComplexF64)
     allocs(v, u, L, α, β) = @allocated mul!(v, u, L, α, β)
+
+    # MatrixOperator with an adjoint or transposed destination, as passed by the generic fallback
+    for op in (adjoint, transpose)
+        v = rand(ComplexF64, N, N)
+        @test mul!(op(copy(v)), MatrixOperator(B), op(u)) ≈ B * op(u)
+        @test mul!(op(copy(v)), MatrixOperator(B), op(u), α, β) ≈ α * B * op(u) + β * op(v)
+    end
 
     for L in (
             MatrixOperator(A),
