@@ -545,6 +545,13 @@ end
     return mul!(w, L.L, v, a, β)
 end
 
+# v = u * L
+LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::ScaledOperator) = mul!(v, u, L, true, false)
+@inline function LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::ScaledOperator, α, β)
+    iszero(L.λ) && return iszero(β) ? fill!(v, false) : lmul!(β, v)
+    return mul!(v, u, L.L, convert(Number, L.λ * α), β)
+end
+
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::ScaledOperator, v::AbstractVecOrMat)
     ldiv!(w, L.L, v)
     return ldiv!(L.λ, w)
@@ -861,6 +868,17 @@ end
     N = length(ops_types)
     applications = [:(mul!(w, L.ops[$i], v, α, true)) for i in 2:N]
     return Expr(:block, :(mul!(w, L.ops[1], v, α, β)), applications..., :w)
+end
+
+# v = u * L
+LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::AddedOperator) = mul!(v, u, L, true, false)
+@generated function LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::AddedOperator, α, β)
+    N = length(L.parameters[2].parameters)  # Number of operators
+    return quote
+        mul!(v, u, L.ops[1], α, β)
+        @nexprs $(N - 1) i -> mul!(v, u, L.ops[i + 1], α, true)
+        return v
+    end
 end
 
 # Out-of-place: v is action vector, u is update vector
@@ -1211,6 +1229,28 @@ function LinearAlgebra.mul!(
     mul!(w, L, v)
     lmul!(α, w)
     return axpy!(β, cache, w)
+end
+
+# v = u * L = ((u * L.ops[1]) * L.ops[2]) ⋯ * L.ops[N]
+LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::ComposedOperator) = mul!(v, u, L, true, false)
+@generated function LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::ComposedOperator, α, β)
+    N = length(L.parameters[2].parameters)  # Number of operators
+    return quote
+        w_0 = u
+        @nexprs $(N - 1) i -> w_i = _right_mul(L, i, w_{i - 1})
+        return mul!(v, $(Symbol(:w_, N - 1)), L.ops[$N], α, β)
+    end
+end
+
+# w * L.ops[i], into the i-th slot of the cache if it fits. The cache is laid out for L * v,
+# and its slots fit when the operators are square and act on square matrices.
+@inline function _right_mul(L::ComposedOperator, i, w)
+    op = L.ops[i]
+    sz = (size(w, 1), size(op, 2))
+    T = promote_type(eltype(w), eltype(op))
+    cache = isnothing(L.cache) ? nothing : L.cache[i]
+    fits = cache isa AbstractArray && size(cache) == sz && promote_type(eltype(cache), T) == eltype(cache)
+    return mul!(fits ? cache : similar(w, T, sz), w, op)
 end
 
 @generated function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::ComposedOperator, v::AbstractVecOrMat)

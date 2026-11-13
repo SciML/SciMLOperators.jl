@@ -758,12 +758,23 @@ end
 
         @test AAt.L === AA
         @test op(u) isa VType
+    end
+end
+
+@testset "Multiplication and division from the right" begin
+    # Adjoint and transposed operators, applied to adjoint and transposed arrays
+    for (op, LType) in ((adjoint, AdjointOperator), (transpose, TransposedOperator))
+        A = rand(N, N)
+        D = Bidiagonal(rand(N, N), :L)
+        u = rand(N, K)
+        α = rand()
+        β = rand()
+
+        AAt = LType(MatrixOperator(A))
+        DDt = LType(MatrixOperator(D))
 
         @test op(u) * AAt ≈ op(A * u)
         @test op(u) / AAt ≈ op(A \ u)
-
-        # Not implementing separate test for adjoint/transpose operators
-        # since they typically rely on the base operator implementations
 
         v = rand(N, K)
         @test mul!(op(v), op(u), AAt) ≈ op(A * u)
@@ -775,6 +786,45 @@ end
         @test ldiv!(op(v), op(u), DDt) ≈ op(D \ u)
         v = copy(u)
         @test ldiv!(op(u), DDt) ≈ op(D \ v)
+    end
+
+    A = rand(ComplexF64, N, N)
+    B = sprand(ComplexF64, N, N, 0.5)
+    u = rand(ComplexF64, N, N)
+    α = rand(ComplexF64)
+    β = rand(ComplexF64)
+    allocs(v, u, L, α, β) = @allocated mul!(v, u, L, α, β)
+
+    # MatrixOperator with an adjoint or transposed destination, as passed by the generic fallback
+    for op in (adjoint, transpose)
+        v = rand(ComplexF64, N, N)
+        @test mul!(op(copy(v)), MatrixOperator(B), op(u)) ≈ B * op(u)
+        @test mul!(op(copy(v)), MatrixOperator(B), op(u), α, β) ≈ α * B * op(u) + β * op(v)
+    end
+
+    for L in (
+            MatrixOperator(A),
+            MatrixOperator(B),
+            (1 + 2im) * MatrixOperator(B),
+            MatrixOperator(A) + 2 * MatrixOperator(B),
+            MatrixOperator(A) * MatrixOperator(B),
+            ScalarOperator(2im) * (MatrixOperator(B') * MatrixOperator(B)) + MatrixOperator(A),
+            # through the generic fallback (L' u')'
+            TensorProductOperator(rand(ComplexF64, 2, 2), rand(ComplexF64, 4, 4)),
+        )
+        L = cache_operator(L, u)
+        M = convert(AbstractMatrix, L)
+
+        v = rand(ComplexF64, N, N)
+        @test mul!(copy(v), u, L) ≈ u * M
+        @test mul!(copy(v), u, L, α, β) ≈ α * u * M + β * v
+        L isa TensorProductOperator || @test allocs(v, u, L, α, β) == 0
+
+        # more rows than the cache was set up for
+        L isa TensorProductOperator && continue
+        uK = rand(ComplexF64, K, N)
+        vK = rand(ComplexF64, K, N)
+        @test mul!(copy(vK), uK, L, α, β) ≈ α * uK * M + β * vK
     end
 end
 

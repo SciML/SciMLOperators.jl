@@ -349,16 +349,19 @@ end
     return mul!(w, L.A, v, α, β)
 end
 
-# These methods are used when the operator is applied from the right
-# We do this to avoid to fall into generic methods that would be inefficient
-@inline LinearAlgebra.mul!(w::AbstractTransposedVecOrMat, L::MatrixOperator, v::AbstractVecOrMat) = mul!(parent(w), transpose(v), transpose(L.A))
-@inline LinearAlgebra.mul!(
-    w::AbstractTransposedVecOrMat,
-    L::MatrixOperator,
-    v::AbstractVecOrMat,
-    α,
-    β
-) = mul!(parent(w), transpose(v), transpose(L.A), α, β)
+# v = u * L
+@inline LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::MatrixOperator) = mul!(v, u, L.A)
+@inline LinearAlgebra.mul!(v::AbstractVecOrMat, u::AbstractVecOrMat, L::MatrixOperator, α, β) = mul!(v, u, L.A, α, β)
+
+# For a destination w = op(W), as the generic fallback for u * L in left.jl passes, compute
+# W = op(L * v) = op(v) * op(L.A): the kernels of array types like `SparseMatrixCSC` do not take w.
+for (op, VType) in ((:transpose, :AbstractTransposedVecOrMat), (:adjoint, :AbstractAdjointVecOrMat))
+    @eval LinearAlgebra.mul!(w::$VType, L::MatrixOperator, v::AbstractVecOrMat) = mul!(w, L, v, true, false)
+    @eval function LinearAlgebra.mul!(w::$VType, L::MatrixOperator, v::AbstractVecOrMat, α, β)
+        mul!(parent(w), $op(v), $op(L.A), $op(α), $op(β))
+        return w
+    end
+end
 
 function LinearAlgebra.ldiv!(w::AbstractVecOrMat, L::MatrixOperator, v::AbstractVecOrMat)
     return ldiv!(w, L.A, v)
