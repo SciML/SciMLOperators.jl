@@ -818,7 +818,10 @@ end
         v = rand(ComplexF64, N, N)
         @test mul!(copy(v), u, L) ≈ u * M
         @test mul!(copy(v), u, L, α, β) ≈ α * u * M + β * v
-        L isa TensorProductOperator || @test allocs(v, u, L, α, β) == 0
+        # Before Julia 1.12, LinearAlgebra's five-argument mul! of dense matrices allocates
+        if !(L isa TensorProductOperator) && VERSION >= v"1.12"
+            @test allocs(v, u, L, α, β) == 0
+        end
 
         # more rows than the cache was set up for
         L isa TensorProductOperator && continue
