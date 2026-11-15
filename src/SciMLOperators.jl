@@ -16,7 +16,8 @@ using LinearAlgebra: LinearAlgebra, Adjoint, Bidiagonal, Factorization, I,
 import ArrayInterface
 # MacroTools dependency removed - using explicit method forwarding instead
 import Accessors: @reset
-using Base.Cartesian: @nexprs
+
+using Base.Cartesian: @nexprs, @ntuple
 
 using Adapt: Adapt
 

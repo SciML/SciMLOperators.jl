@@ -797,15 +797,16 @@ end
 @generated function update_coefficients(L::AddedOperator, u, p, t; kwargs...)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    updates = [:(update_coefficients(L.ops[$i], u, p, t; kwargs...)) for i in 1:N]
-    return :(AddedOperator($(Expr(:tuple, updates...))))
+    return :(AddedOperator(@ntuple $N i -> update_coefficients(L.ops[i], u, p, t; kwargs...)))
 end
 
 @generated function update_coefficients!(L::AddedOperator, u, p, t; kwargs...)
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    updates = [:(update_coefficients!(L.ops[$i], u, p, t; kwargs...)) for i in 1:N]
-    return Expr(:block, updates..., :(nothing))
+    return quote
+        @nexprs $N i -> update_coefficients!(L.ops[i], u, p, t; kwargs...)
+        return nothing
+    end
 end
 
 getops(L::AddedOperator) = L.ops
@@ -853,8 +854,11 @@ end
     )
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    applications = [:(mul!(w, L.ops[$i], v, true, true)) for i in 2:N]
-    return Expr(:block, :(mul!(w, L.ops[1], v)), applications..., :w)
+    return quote
+        mul!(w, L.ops[1], v)
+        @nexprs $(N - 1) i -> mul!(w, L.ops[i + 1], v, true, true)
+        return w
+    end
 end
 
 @generated function LinearAlgebra.mul!(
@@ -866,8 +870,11 @@ end
     )
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    applications = [:(mul!(w, L.ops[$i], v, α, true)) for i in 2:N]
-    return Expr(:block, :(mul!(w, L.ops[1], v, α, β)), applications..., :w)
+    return quote
+        mul!(w, L.ops[1], v, α, β)
+        @nexprs $(N - 1) i -> mul!(w, L.ops[i + 1], v, α, true)
+        return w
+    end
 end
 
 # v = u * L
@@ -895,8 +902,11 @@ end
 
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    applications = [:(L.ops[$i](w, v, u, p, t, true, true; kwargs...)) for i in 2:N]
-    return Expr(:block, :(L.ops[1](w, v, u, p, t; kwargs...)), applications..., :w)
+    return quote
+        L.ops[1](w, v, u, p, t; kwargs...)
+        @nexprs $(N - 1) i -> L.ops[i + 1](w, v, u, p, t, true, true; kwargs...)
+        return w
+    end
 end
 
 # In-place with scaling: w = α*(L*v) + β*w
@@ -905,11 +915,13 @@ end
     )
     # We don't need to update coefficients of L, as op(w, v, u, p, t) will do it for each op
 
-    T = L.parameters[1]
     ops_types = L.parameters[2].parameters
     N = length(ops_types)
-    applications = [:(L.ops[$i](w, v, u, p, t, α, true; kwargs...)) for i in 2:N]
-    return Expr(:block, :(L.ops[1](w, v, u, p, t, α, β; kwargs...)), applications..., :w)
+    return quote
+        L.ops[1](w, v, u, p, t, α, β; kwargs...)
+        @nexprs $(N - 1) i -> L.ops[i + 1](w, v, u, p, t, α, true; kwargs...)
+        return w
+    end
 end
 
 """
